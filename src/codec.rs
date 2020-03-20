@@ -1,9 +1,10 @@
 //! Defines the `Encode` trait and implement it for the MQTT types.
 
 use crate::types::*;
-use std::io::{Error, Write, ErrorKind};
+use std::io::{Error, ErrorKind, Write};
 
 const ERROR_MSG_STRING_TOO_LONG: &str = "UTF-8 Type cannot exceed 65,535 bytes";
+const ERROR_MSG_DATA_TOO_LONG: &str = "Binary streams cannot exceed 65,535 bytes";
 
 /// The Encode trait describes how to write a type into an MQTT stream.
 pub trait Encode {
@@ -49,6 +50,39 @@ impl Encode for UTF8String {
     }
 }
 
+impl Encode for VariableByteInteger {
+    fn encode<W>(&self, writer: &mut W) -> Result<usize, Error>
+    where
+        W: Write,
+    {
+        match self {
+            VariableByteInteger::One(b0) => writer.write(&[*b0]),
+            VariableByteInteger::Two(b1, b0) => writer.write(&[*b1, *b0]),
+            VariableByteInteger::Three(b2, b1, b0) => writer.write(&[*b2, *b1, *b0]),
+            VariableByteInteger::Four(b3, b2, b1, b0) => writer.write(&[*b3, *b2, *b1, *b0]),
+        }
+    }
+}
+
+impl Encode for BinaryData {
+    fn encode<W>(&self, writer: &mut W) -> Result<usize, Error>
+    where
+        W: Write,
+    {
+        let data = &self.0;
+        let len = data.len();
+        if len > i16::max_value() as usize {
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                ERROR_MSG_DATA_TOO_LONG,
+            ));
+        }
+        writer.write(&(len as u16).to_be_bytes())?;
+        writer.write_all(data)?;
+        Ok(2 + len)
+    }
+}
+
 #[cfg(test)]
 mod unit_encode {
 
@@ -83,9 +117,9 @@ mod unit_encode {
         assert_eq!(bytes, 4);
         assert_eq!(result, expected, "Encoding {:?} failed", input);
     }
-    
+
     #[test]
-    fn encode_utf8_string_00() {
+    fn encode_utf8_string() {
         let input = UTF8String(Vec::from("A𪛔".as_bytes()));
         let mut result: Vec<u8> = Vec::new();
         let expected = vec![0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94];
@@ -93,7 +127,7 @@ mod unit_encode {
         assert_eq!(bytes, 7);
         assert_eq!(result, expected, "Encoding {:?} failed", input);
     }
-    
+
     #[test]
     fn encode_utf8_string_empty() {
         let input = UTF8String(Vec::new());
@@ -103,4 +137,106 @@ mod unit_encode {
         assert_eq!(bytes, 2);
         assert_eq!(result, expected, "Encoding {:?} failed", input);
     }
+
+    #[test]
+    fn encode_variable_byte_integer_one_lower_bound() {
+        let input = VariableByteInteger::One(0_u8);
+        let mut result: Vec<u8> = Vec::new();
+        let expected = vec![0x00];
+        let bytes = input.encode(&mut result).unwrap();
+        assert_eq!(bytes, 1);
+        assert_eq!(result, expected, "Encoding {:?} failed", input);
+    }
+
+    #[test]
+    fn encode_variable_byte_integer_one_upper_bound() {
+        let input = VariableByteInteger::One(127_u8);
+        let mut result: Vec<u8> = Vec::new();
+        let expected = vec![0x7F];
+        let bytes = input.encode(&mut result).unwrap();
+        assert_eq!(bytes, 1);
+        assert_eq!(result, expected, "Encoding {:?} failed", input);
+    }
+
+    #[test]
+    fn encode_variable_byte_integer_two_lower_bound() {
+        let input = VariableByteInteger::Two(128_u8, 01_u8);
+        let mut result: Vec<u8> = Vec::new();
+        let expected = vec![0x80, 0x01];
+        let bytes = input.encode(&mut result).unwrap();
+        assert_eq!(bytes, 2);
+        assert_eq!(result, expected, "Encoding {:?} failed", input);
+    }
+
+    #[test]
+    fn encode_variable_byte_integer_two_upper_bound() {
+        let input = VariableByteInteger::Two(255_u8, 127_u8);
+        let mut result: Vec<u8> = Vec::new();
+        let expected = vec![0xFF, 0x7F];
+        let bytes = input.encode(&mut result).unwrap();
+        assert_eq!(bytes, 2);
+        assert_eq!(result, expected, "Encoding {:?} failed", input);
+    }
+
+    
+    #[test]
+    fn encode_variable_byte_integer_three_lower_bound() {
+        let input = VariableByteInteger::Three(128_u8, 128_u8, 01_u8);
+        let mut result: Vec<u8> = Vec::new();
+        let expected = vec![0x80, 0x80, 0x01];
+        let bytes = input.encode(&mut result).unwrap();
+        assert_eq!(bytes, 3);
+        assert_eq!(result, expected, "Encoding {:?} failed", input);
+    }
+
+    #[test]
+    fn encode_variable_byte_integer_three_upper_bound() {
+        let input = VariableByteInteger::Three(255_u8, 255_u8, 127_u8);
+        let mut result: Vec<u8> = Vec::new();
+        let expected = vec![0xFF, 0xFF, 0x7F];
+        let bytes = input.encode(&mut result).unwrap();
+        assert_eq!(bytes, 3);
+        assert_eq!(result, expected, "Encoding {:?} failed", input);
+    }
+    
+    #[test]
+    fn encode_variable_byte_integer_four_lower_bound() {
+        let input = VariableByteInteger::Four(128_u8, 128_u8, 128_u8, 01_u8);
+        let mut result: Vec<u8> = Vec::new();
+        let expected = vec![0x80, 0x80, 0x80, 0x01];
+        let bytes = input.encode(&mut result).unwrap();
+        assert_eq!(bytes, 4);
+        assert_eq!(result, expected, "Encoding {:?} failed", input);
+    }
+
+    #[test]
+    fn encode_variable_byte_integer_four_upper_bound() {
+        let input = VariableByteInteger::Four(255_u8, 255_u8, 255_u8, 127_u8);
+        let mut result: Vec<u8> = Vec::new();
+        let expected = vec![0xFF, 0xFF, 0xFF, 0x7F];
+        let bytes = input.encode(&mut result).unwrap();
+        assert_eq!(bytes, 4);
+        assert_eq!(result, expected, "Encoding {:?} failed", input);
+    }
+
+    #[test]
+    fn encode_binarydata() {
+        let input = BinaryData(Vec::from("A𪛔".as_bytes()));
+        let mut result: Vec<u8> = Vec::new();
+        let expected = vec![0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94];
+        let bytes = input.encode(&mut result).unwrap();
+        assert_eq!(bytes, 7);
+        assert_eq!(result, expected, "Encoding {:?} failed", input);
+    }
+
+    #[test]
+    fn encode_binarydata_empty() {
+        let input = BinaryData(Vec::new());
+        let mut result: Vec<u8> = Vec::new();
+        let expected = vec![0x00, 0x00];
+        let bytes = input.encode(&mut result).unwrap();
+        assert_eq!(bytes, 2);
+        assert_eq!(result, expected, "Encoding {:?} failed", input);
+    }
+
 }
