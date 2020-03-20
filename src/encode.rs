@@ -44,7 +44,7 @@ impl Encode for UTF8String {
                 ERROR_MSG_STRING_TOO_LONG,
             ));
         }
-        writer.write(&(len as u16).to_be_bytes())?;
+        writer.write_all(&(len as u16).to_be_bytes())?;
         writer.write_all(data)?;
         Ok(2 + len)
     }
@@ -72,12 +72,9 @@ impl Encode for BinaryData {
         let data = &self.0;
         let len = data.len();
         if len > i16::max_value() as usize {
-            return Err(Error::new(
-                ErrorKind::InvalidData,
-                ERROR_MSG_DATA_TOO_LONG,
-            ));
+            return Err(Error::new(ErrorKind::InvalidData, ERROR_MSG_DATA_TOO_LONG));
         }
-        writer.write(&(len as u16).to_be_bytes())?;
+        writer.write_all(&(len as u16).to_be_bytes())?;
         writer.write_all(data)?;
         Ok(2 + len)
     }
@@ -178,7 +175,6 @@ mod unit_encode {
         assert_eq!(result, expected, "Encoding {:?} failed", input);
     }
 
-    
     #[test]
     fn encode_variable_byte_integer_three_lower_bound() {
         let input = VariableByteInteger::Three(128_u8, 128_u8, 01_u8);
@@ -198,7 +194,7 @@ mod unit_encode {
         assert_eq!(bytes, 3);
         assert_eq!(result, expected, "Encoding {:?} failed", input);
     }
-    
+
     #[test]
     fn encode_variable_byte_integer_four_lower_bound() {
         let input = VariableByteInteger::Four(128_u8, 128_u8, 128_u8, 01_u8);
@@ -238,5 +234,4 @@ mod unit_encode {
         assert_eq!(bytes, 2);
         assert_eq!(result, expected, "Encoding {:?} failed", input);
     }
-
 }

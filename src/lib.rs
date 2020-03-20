@@ -1,7 +1,9 @@
 //! `sage_mqtt` is a set of traits and
 
-mod codec;
+mod encode;
 mod types;
 
-pub use codec::*;
-pub use types::*;
+pub use encode::Encode;
+pub use types::{
+    BinaryData, Bits, FourByteInteger, TwoByteInteger, UTF8String, VariableByteInteger,
+};
