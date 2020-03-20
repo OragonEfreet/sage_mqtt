@@ -1,3 +1,7 @@
-mod encode;
+//! `sage_mqtt` is a set of traits and
 
-pub use encode::*;
+mod codec;
+mod types;
+
+pub use codec::*;
+pub use types::*;
