@@ -1,10 +1,6 @@
-// use sage_mqtt::*;
+use sage_mqtt::VariableByteInteger;
 // use std::io;
 
 fn main() {
-    // let stdout = io::stdout();
-    // let mut handle = stdout.lock();
-
-    // let s = "Test";
-    // s.encode(&mut handle).unwrap();
+    println!(">>> {:X?}", VariableByteInteger::from(1984_u16));
 }
