@@ -227,8 +227,21 @@ impl From<VariableByteInteger> for u32 {
 /// Binary Data is represented by a Two Byte Integer length which indicates the
 /// number of data bytes, followed by that number of bytes. Thus, the length of
 /// Binary Data is limited to the range of 0 to 65,535 Bytes.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct BinaryData(pub Vec<u8>);
+
+impl From<Vec<u8>> for BinaryData {
+    fn from(data: Vec<u8>) -> Self {
+        BinaryData(data)
+    }
+}
+
+impl From<BinaryData> for Vec<u8> {
+    fn from(data: BinaryData) -> Self {
+        data.0
+    }
+}
+
 
 #[cfg(test)]
 mod unit_types {
@@ -589,6 +602,22 @@ mod unit_types {
         assert_eq!(
             u32::from(VariableByteInteger::Four(0xFF, 0xFF, 0xFF, 0x7F)),
             268_435_455_u32
+        );
+    }
+
+    #[test]
+    fn convert_vec8_to_binary_data() {
+        assert_eq!(
+            BinaryData::from(vec![0xDE, 0xEA, 0xDB, 0xEE, 0xF0]),
+            BinaryData(vec![0xDE, 0xEA, 0xDB, 0xEE, 0xF0])
+        );
+    }
+
+    #[test]
+    fn convert_binary_data_to_vec8() {
+        assert_eq!(
+            Vec::from(BinaryData(vec![0xDE, 0xEA, 0xDB, 0xEE, 0xF0])),
+            vec![0xDE, 0xEA, 0xDB, 0xEE, 0xF0]
         );
     }
 }
