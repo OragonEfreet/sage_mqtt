@@ -195,7 +195,6 @@ impl From<VariableByteInteger> for u8 {
     }
 }
 
-
 impl From<VariableByteInteger> for u16 {
     fn from(vbi: VariableByteInteger) -> Self {
         let a: u32 = vbi.into();
@@ -514,8 +513,7 @@ mod unit_types {
         let result: u32 = input.into();
         assert_eq!(expected, result);
     }
-    
-    
+
     #[test]
     fn convert_variablebyteinteger_128_to_u8() {
         let input = VariableByteInteger::Two(0x80, 0x01);
@@ -523,7 +521,7 @@ mod unit_types {
         let result: u8 = input.into();
         assert_eq!(expected, result);
     }
-        
+
     #[test]
     fn convert_variablebyteinteger_128_to_u16() {
         let input = VariableByteInteger::Two(0x80, 0x01);
@@ -539,8 +537,7 @@ mod unit_types {
         let result: u32 = input.into();
         assert_eq!(expected, result);
     }
-    
-    
+
     #[test]
     fn convert_variablebyteinteger_16_383_to_u8() {
         let input = VariableByteInteger::Two(0xFF, 0x7F);
@@ -548,7 +545,7 @@ mod unit_types {
         let result: u8 = input.into();
         assert_eq!(expected, result);
     }
-    
+
     #[test]
     fn convert_variablebyteinteger_16_383_to_u16() {
         let input = VariableByteInteger::Two(0xFF, 0x7F);
@@ -564,8 +561,7 @@ mod unit_types {
         let result: u32 = input.into();
         assert_eq!(expected, result);
     }
-    
-    
+
     #[test]
     fn convert_variablebyteinteger_16_384_to_u8() {
         let input = VariableByteInteger::Three(0x80, 0x80, 0x01);
@@ -574,7 +570,6 @@ mod unit_types {
         assert_eq!(expected, result);
     }
 
-        
     #[test]
     fn convert_variablebyteinteger_16_384_to_u16() {
         let input = VariableByteInteger::Three(0x80, 0x80, 0x01);
@@ -591,8 +586,6 @@ mod unit_types {
         assert_eq!(expected, result);
     }
 
-    
-    
     #[test]
     fn convert_variablebyteinteger_2_097_151_to_u8() {
         let input = VariableByteInteger::Three(0xFF, 0xFF, 0x7F);
@@ -600,7 +593,7 @@ mod unit_types {
         let result: u8 = input.into();
         assert_eq!(expected, result);
     }
-    
+
     #[test]
     fn convert_variablebyteinteger_2_097_151_to_u16() {
         let input = VariableByteInteger::Three(0xFF, 0xFF, 0x7F);
@@ -608,7 +601,7 @@ mod unit_types {
         let result: u16 = input.into();
         assert_eq!(expected, result);
     }
-    
+
     #[test]
     fn convert_variablebyteinteger_2_097_151_to_u32() {
         let input = VariableByteInteger::Three(0xFF, 0xFF, 0x7F);
@@ -616,8 +609,7 @@ mod unit_types {
         let result: u32 = input.into();
         assert_eq!(expected, result);
     }
-    
-    
+
     #[test]
     fn convert_variablebyteinteger_2_097_152_to_u8() {
         let input = VariableByteInteger::Four(0x80, 0x80, 0x80, 0x01);
@@ -625,7 +617,7 @@ mod unit_types {
         let result: u8 = input.into();
         assert_eq!(expected, result);
     }
-    
+
     #[test]
     fn convert_variablebyteinteger_2_097_152_to_u16() {
         let input = VariableByteInteger::Four(0x80, 0x80, 0x80, 0x01);
@@ -633,8 +625,7 @@ mod unit_types {
         let result: u16 = input.into();
         assert_eq!(expected, result);
     }
-    
-    
+
     #[test]
     fn convert_variablebyteinteger_2_097_152_to_u32() {
         let input = VariableByteInteger::Four(0x80, 0x80, 0x80, 0x01);
@@ -643,8 +634,6 @@ mod unit_types {
         assert_eq!(expected, result);
     }
 
-    
-    
     #[test]
     fn convert_variablebyteinteger_268_435_455_to_u8() {
         let input = VariableByteInteger::Four(0xFF, 0xFF, 0xFF, 0x7F);
@@ -660,7 +649,7 @@ mod unit_types {
         let result: u16 = input.into();
         assert_eq!(expected, result);
     }
-    
+
     #[test]
     fn convert_variablebyteinteger_268_435_455_to_u32() {
         let input = VariableByteInteger::Four(0xFF, 0xFF, 0xFF, 0x7F);
@@ -668,8 +657,4 @@ mod unit_types {
         let result: u32 = input.into();
         assert_eq!(expected, result);
     }
-
-
-
 }
-
