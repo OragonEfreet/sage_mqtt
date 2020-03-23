@@ -1,4 +1,5 @@
 //! Defines the types used within MQTT streams
+use std::convert::TryFrom;
 
 /// Bits in a byte are labelled 7 to 0. Bit number 7 is the most significant
 /// bit.
@@ -118,6 +119,11 @@ impl From<UTF8String> for String {
 /// following in the representation. Thus, each byte encodes 128 values and a
 /// "continuation bit". The maximum number of bytes in the Variable Byte
 /// Integer field is four.
+///
+/// When an unsigned integer is converted to `VariableByteInteger`, the smallest
+/// representation is used.
+/// Upon converting from and to `u8`, `u16` and `u32`, the overflow will result
+/// in the maximum value of the target type.
 #[derive(Debug, PartialEq, Eq)]
 pub enum VariableByteInteger {
     /// From `0` (`0x00`) to `127` (`0x7F`)
@@ -178,16 +184,46 @@ impl From<u32> for VariableByteInteger {
     }
 }
 
-// Decoding from VBI
-// multiplier = 1
-// value = 0
-// do
-//    encodedByte = 'next byte from stream'
-//    value += (encodedByte AND 127) * multiplier
-//    if (multiplier > 128*128*128)
-//       throw Error(Malformed Variable Byte Integer)
-//    multiplier *= 128
-// while ((encodedByte AND 128) != 0)
+impl From<VariableByteInteger> for u8 {
+    fn from(vbi: VariableByteInteger) -> Self {
+        let a: u32 = vbi.into();
+        if let Ok(value) = u8::try_from(a) {
+            value
+        } else {
+            std::u8::MAX
+        }
+    }
+}
+
+
+impl From<VariableByteInteger> for u16 {
+    fn from(vbi: VariableByteInteger) -> Self {
+        let a: u32 = vbi.into();
+        if let Ok(value) = u16::try_from(a) {
+            value
+        } else {
+            std::u16::MAX
+        }
+    }
+}
+
+impl From<VariableByteInteger> for u32 {
+    fn from(vbi: VariableByteInteger) -> Self {
+        match vbi {
+            VariableByteInteger::One(byte) => byte as u32,
+            VariableByteInteger::Two(b0, b1) => (b1 as u32 * 128_u32) + (b0 & 127_u8) as u32,
+            VariableByteInteger::Three(b0, b1, b2) => {
+                (b2 as u32 * 16_384_u32) + ((b1 & 127_u8) as u32 * 128_u32) + (b0 & 127_u8) as u32
+            }
+            VariableByteInteger::Four(b0, b1, b2, b3) => {
+                (b3 as u32 * 2_097_152_u32)
+                    + ((b2 & 127_u8) as u32 * 16_384_u32)
+                    + ((b1 & 127_u8) as u32 * 128_u32)
+                    + (b0 & 127_u8) as u32
+            }
+        }
+    }
+}
 
 /// Binary Data is represented by a Two Byte Integer length which indicates the
 /// number of data bytes, followed by that number of bytes. Thus, the length of
@@ -398,7 +434,7 @@ mod unit_types {
         let result: VariableByteInteger = input.into();
         assert_eq!(expected, result);
     }
-    
+
     #[test]
     fn convert_127_u32_to_variablebyte_integer() {
         let input = 127_u32;
@@ -406,7 +442,7 @@ mod unit_types {
         let result: VariableByteInteger = input.into();
         assert_eq!(expected, result);
     }
-    
+
     #[test]
     fn convert_128_u32_to_variablebyte_integer() {
         let input = 128_u32;
@@ -414,7 +450,7 @@ mod unit_types {
         let result: VariableByteInteger = input.into();
         assert_eq!(expected, result);
     }
-    
+
     #[test]
     fn convert_16_383_u32_to_variablebyte_integer() {
         let input = 16_383_u32;
@@ -422,7 +458,7 @@ mod unit_types {
         let result: VariableByteInteger = input.into();
         assert_eq!(expected, result);
     }
-    
+
     #[test]
     fn convert_16_384_u32_to_variablebyte_integer() {
         let input = 16_384_u32;
@@ -430,7 +466,7 @@ mod unit_types {
         let result: VariableByteInteger = input.into();
         assert_eq!(expected, result);
     }
-    
+
     #[test]
     fn convert_2_097_151_u32_to_variablebyte_integer() {
         let input = 2_097_151_u32;
@@ -438,7 +474,7 @@ mod unit_types {
         let result: VariableByteInteger = input.into();
         assert_eq!(expected, result);
     }
-    
+
     #[test]
     fn convert_2_097_152_u32_to_variablebyte_integer() {
         let input = 2_097_152_u32;
@@ -446,7 +482,7 @@ mod unit_types {
         let result: VariableByteInteger = input.into();
         assert_eq!(expected, result);
     }
-    
+
     #[test]
     fn convert_268_435_455_u32_to_variablebyte_integer() {
         let input = 268_435_455_u32;
@@ -454,14 +490,186 @@ mod unit_types {
         let result: VariableByteInteger = input.into();
         assert_eq!(expected, result);
     }
+
+    #[test]
+    fn convert_variablebyteinteger_127_to_u8() {
+        let input = VariableByteInteger::One(0x7F);
+        let expected = 127_u8;
+        let result: u8 = input.into();
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn convert_variablebyteinteger_127_to_u16() {
+        let input = VariableByteInteger::One(0x7F);
+        let expected = 127_u16;
+        let result: u16 = input.into();
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn convert_variablebyteinteger_127_to_u32() {
+        let input = VariableByteInteger::One(0x7F);
+        let expected = 127_u32;
+        let result: u32 = input.into();
+        assert_eq!(expected, result);
+    }
     
+    
+    #[test]
+    fn convert_variablebyteinteger_128_to_u8() {
+        let input = VariableByteInteger::Two(0x80, 0x01);
+        let expected = 128_u8;
+        let result: u8 = input.into();
+        assert_eq!(expected, result);
+    }
+        
+    #[test]
+    fn convert_variablebyteinteger_128_to_u16() {
+        let input = VariableByteInteger::Two(0x80, 0x01);
+        let expected = 128_u16;
+        let result: u16 = input.into();
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn convert_variablebyteinteger_128_to_u32() {
+        let input = VariableByteInteger::Two(0x80, 0x01);
+        let expected = 128_u32;
+        let result: u32 = input.into();
+        assert_eq!(expected, result);
+    }
+    
+    
+    #[test]
+    fn convert_variablebyteinteger_16_383_to_u8() {
+        let input = VariableByteInteger::Two(0xFF, 0x7F);
+        let expected = std::u8::MAX;
+        let result: u8 = input.into();
+        assert_eq!(expected, result);
+    }
+    
+    #[test]
+    fn convert_variablebyteinteger_16_383_to_u16() {
+        let input = VariableByteInteger::Two(0xFF, 0x7F);
+        let expected = 16_383_u16;
+        let result: u16 = input.into();
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn convert_variablebyteinteger_16_383_to_u32() {
+        let input = VariableByteInteger::Two(0xFF, 0x7F);
+        let expected = 16_383_u32;
+        let result: u32 = input.into();
+        assert_eq!(expected, result);
+    }
+    
+    
+    #[test]
+    fn convert_variablebyteinteger_16_384_to_u8() {
+        let input = VariableByteInteger::Three(0x80, 0x80, 0x01);
+        let expected = std::u8::MAX;
+        let result: u8 = input.into();
+        assert_eq!(expected, result);
+    }
+
+        
+    #[test]
+    fn convert_variablebyteinteger_16_384_to_u16() {
+        let input = VariableByteInteger::Three(0x80, 0x80, 0x01);
+        let expected = 16_384_u16;
+        let result: u16 = input.into();
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn convert_variablebyteinteger_16_384_to_u32() {
+        let input = VariableByteInteger::Three(0x80, 0x80, 0x01);
+        let expected = 16_384_u32;
+        let result: u32 = input.into();
+        assert_eq!(expected, result);
+    }
+
+    
+    
+    #[test]
+    fn convert_variablebyteinteger_2_097_151_to_u8() {
+        let input = VariableByteInteger::Three(0xFF, 0xFF, 0x7F);
+        let expected = std::u8::MAX;
+        let result: u8 = input.into();
+        assert_eq!(expected, result);
+    }
+    
+    #[test]
+    fn convert_variablebyteinteger_2_097_151_to_u16() {
+        let input = VariableByteInteger::Three(0xFF, 0xFF, 0x7F);
+        let expected = std::u16::MAX;
+        let result: u16 = input.into();
+        assert_eq!(expected, result);
+    }
+    
+    #[test]
+    fn convert_variablebyteinteger_2_097_151_to_u32() {
+        let input = VariableByteInteger::Three(0xFF, 0xFF, 0x7F);
+        let expected = 2_097_151_u32;
+        let result: u32 = input.into();
+        assert_eq!(expected, result);
+    }
+    
+    
+    #[test]
+    fn convert_variablebyteinteger_2_097_152_to_u8() {
+        let input = VariableByteInteger::Four(0x80, 0x80, 0x80, 0x01);
+        let expected = std::u8::MAX;
+        let result: u8 = input.into();
+        assert_eq!(expected, result);
+    }
+    
+    #[test]
+    fn convert_variablebyteinteger_2_097_152_to_u16() {
+        let input = VariableByteInteger::Four(0x80, 0x80, 0x80, 0x01);
+        let expected = std::u16::MAX;
+        let result: u16 = input.into();
+        assert_eq!(expected, result);
+    }
+    
+    
+    #[test]
+    fn convert_variablebyteinteger_2_097_152_to_u32() {
+        let input = VariableByteInteger::Four(0x80, 0x80, 0x80, 0x01);
+        let expected = 2_097_152_u32;
+        let result: u32 = input.into();
+        assert_eq!(expected, result);
+    }
+
+    
+    
+    #[test]
+    fn convert_variablebyteinteger_268_435_455_to_u8() {
+        let input = VariableByteInteger::Four(0xFF, 0xFF, 0xFF, 0x7F);
+        let expected = std::u8::MAX;
+        let result: u8 = input.into();
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn convert_variablebyteinteger_268_435_455_to_u16() {
+        let input = VariableByteInteger::Four(0xFF, 0xFF, 0xFF, 0x7F);
+        let expected = std::u16::MAX;
+        let result: u16 = input.into();
+        assert_eq!(expected, result);
+    }
+    
+    #[test]
+    fn convert_variablebyteinteger_268_435_455_to_u32() {
+        let input = VariableByteInteger::Four(0xFF, 0xFF, 0xFF, 0x7F);
+        let expected = 268_435_455_u32;
+        let result: u32 = input.into();
+        assert_eq!(expected, result);
+    }
+
+
+
 }
 
-// /// From `0` (`0x00`) to `127` (`0x7F`)
-// One(u8),
-// /// From `128` (`0x80, `0x01`) to `16,383` (`0xFF`, `0x7F`)
-// Two(u8, u8),
-// /// From `16,384` (`0x80, `0x80, `0x01`) to `2,097,151` (`0xFF`, `0xFF`, `0x7F`)
-// Three(u8, u8, u8),
-// /// From `2,097,151` (`0x80, `0x80, `0x80, `0x01`) to `268,435,455` (`0xFF`, `0xFF`, `0xFF`, `0x7F`)
-// Four(u8, u8, u8, u8),
