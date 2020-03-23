@@ -242,6 +242,21 @@ impl From<BinaryData> for Vec<u8> {
     }
 }
 
+/// An UTF8-String pair consists in two UTF-8 encoded strings.
+#[derive(Debug, PartialEq, Eq)]
+pub struct UTF8StringPair(pub UTF8String, pub UTF8String);
+
+impl From<(String, String)> for UTF8StringPair {
+    fn from(pair: (String, String)) -> Self {
+        UTF8StringPair(pair.0.into(), pair.1.into())
+    }
+}
+
+impl From<UTF8StringPair> for (String, String) {
+    fn from(pair: UTF8StringPair) -> Self {
+        (pair.0.into(), pair.1.into())
+    }
+}
 
 #[cfg(test)]
 mod unit_types {
@@ -619,5 +634,26 @@ mod unit_types {
             Vec::from(BinaryData(vec![0xDE, 0xEA, 0xDB, 0xEE, 0xF0])),
             vec![0xDE, 0xEA, 0xDB, 0xEE, 0xF0]
         );
+    }
+
+    #[test]
+    fn convert_string_tuple_to_utf8stringpair() {
+        assert_eq!(
+            UTF8StringPair::from((String::from("A𪛔"), String::from("B𪛔"))),
+            UTF8StringPair(
+                UTF8String(vec![0x41, 0xF0, 0xAA, 0x9B, 0x94]),
+                UTF8String(vec![0x42, 0xF0, 0xAA, 0x9B, 0x94])
+            )
+        );
+    }
+
+    #[test]
+    fn convert_utf8stringpair_to_string_tuple() {
+        let value: (String, String) = UTF8StringPair(
+            UTF8String(vec![0x41, 0xF0, 0xAA, 0x9B, 0x94]),
+            UTF8String(vec![0x42, 0xF0, 0xAA, 0x9B, 0x94]),
+        )
+        .into();
+        assert_eq!(value, (String::from("A𪛔"), String::from("B𪛔")));
     }
 }
