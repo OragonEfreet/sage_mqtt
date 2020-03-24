@@ -1,48 +1,45 @@
 //! Defines the `Encode` trait and implement it for the MQTT types.
 
-use crate::types::*;
-use std::io::{Error, ErrorKind, Write};
+use crate::{Result as MyResult, BinaryData, Bits, FourByteInteger, TwoByteInteger, UTF8String, VariableByteInteger};
+use std::io::{Error as IOError, ErrorKind, Write};
 
-const ERROR_MSG_STRING_TOO_LONG: &str = "UTF-8 Type cannot exceed 65,535 bytes";
-const ERROR_MSG_DATA_TOO_LONG: &str = "Binary streams cannot exceed 65,535 bytes";
+// const ERROR_MSG_STRING_TOO_LONG: &str = "UTF-8 Type cannot exceed 65,535 bytes";
+// const ERROR_MSG_DATA_TOO_LONG: &str = "Binary streams cannot exceed 65,535 bytes";
 
 /// The Encode trait describes how to write a type into an MQTT stream.
 pub trait Encode {
     /// Encodes `this` and writes it into `write`, returning how many bytes
     /// were written.
-    fn encode<W: Write>(&self, writer: &mut W) -> Result<usize, Error>;
+    fn encode<W: Write>(&self, writer: &mut W) -> MyResult<usize>;
 }
 
 impl Encode for Bits {
-    fn encode<W: Write>(&self, writer: &mut W) -> Result<usize, Error> {
-        writer.write(&[self.0])
+    fn encode<W: Write>(&self, writer: &mut W) -> MyResult<usize> {
+        Ok(writer.write(&[self.0])?)
     }
 }
 
 impl Encode for TwoByteInteger {
-    fn encode<W: Write>(&self, writer: &mut W) -> Result<usize, Error> {
-        writer.write(&self.0.to_be_bytes())
+    fn encode<W: Write>(&self, writer: &mut W) -> MyResult<usize> {
+        Ok(writer.write(&self.0.to_be_bytes())?)
     }
 }
 
 impl Encode for FourByteInteger {
-    fn encode<W: Write>(&self, writer: &mut W) -> Result<usize, Error> {
-        writer.write(&self.0.to_be_bytes())
+    fn encode<W: Write>(&self, writer: &mut W) -> MyResult<usize> {
+        Ok(writer.write(&self.0.to_be_bytes())?)
     }
 }
 
 impl Encode for UTF8String {
-    fn encode<W>(&self, writer: &mut W) -> Result<usize, Error>
+    fn encode<W>(&self, writer: &mut W) -> MyResult<usize>
     where
         W: Write,
     {
         let data = &self.0;
         let len = data.len();
         if len > i16::max_value() as usize {
-            return Err(Error::new(
-                ErrorKind::InvalidData,
-                ERROR_MSG_STRING_TOO_LONG,
-            ));
+            return Err(IOError::new(ErrorKind::InvalidData, "Something went wrong").into());
         }
         writer.write_all(&(len as u16).to_be_bytes())?;
         writer.write_all(data)?;
@@ -51,28 +48,32 @@ impl Encode for UTF8String {
 }
 
 impl Encode for VariableByteInteger {
-    fn encode<W>(&self, writer: &mut W) -> Result<usize, Error>
+    fn encode<W>(&self, writer: &mut W) -> MyResult<usize>
     where
         W: Write,
     {
-        match self {
-            VariableByteInteger::One(b0) => writer.write(&[*b0]),
-            VariableByteInteger::Two(b1, b0) => writer.write(&[*b1, *b0]),
-            VariableByteInteger::Three(b2, b1, b0) => writer.write(&[*b2, *b1, *b0]),
-            VariableByteInteger::Four(b3, b2, b1, b0) => writer.write(&[*b3, *b2, *b1, *b0]),
-        }
+        let bytes = match self {
+            VariableByteInteger::One(b0) => writer.write(&[*b0])?,
+            VariableByteInteger::Two(b1, b0) => writer.write(&[*b1, *b0])?,
+            VariableByteInteger::Three(b2, b1, b0) => writer.write(&[*b2, *b1, *b0])?,
+            VariableByteInteger::Four(b3, b2, b1, b0) => writer.write(&[*b3, *b2, *b1, *b0])?,
+        };
+        Ok(bytes)
     }
 }
 
 impl Encode for BinaryData {
-    fn encode<W>(&self, writer: &mut W) -> Result<usize, Error>
+    fn encode<W>(&self, writer: &mut W) -> MyResult<usize>
     where
         W: Write,
     {
         let data = &self.0;
         let len = data.len();
         if len > i16::max_value() as usize {
-            return Err(Error::new(ErrorKind::InvalidData, ERROR_MSG_DATA_TOO_LONG));
+            return Err(IOError::new(
+                ErrorKind::InvalidData,
+                "ERROR_MSG_DATA_TOO_LONG",
+            ).into());
         }
         writer.write_all(&(len as u16).to_be_bytes())?;
         writer.write_all(data)?;
