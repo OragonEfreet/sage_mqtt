@@ -1,6 +1,9 @@
 //! Defines the `Encode` trait and implement it for the MQTT types.
 
-use crate::{Result as MyResult, BinaryData, Bits, FourByteInteger, TwoByteInteger, UTF8String, VariableByteInteger};
+use crate::{
+    BinaryData, Bits, FourByteInteger, Result as MyResult, TwoByteInteger, UTF8String,
+    VariableByteInteger,
+};
 use std::io::{Error as IOError, ErrorKind, Write};
 
 // const ERROR_MSG_STRING_TOO_LONG: &str = "UTF-8 Type cannot exceed 65,535 bytes";
@@ -70,10 +73,7 @@ impl Encode for BinaryData {
         let data = &self.0;
         let len = data.len();
         if len > i16::max_value() as usize {
-            return Err(IOError::new(
-                ErrorKind::InvalidData,
-                "ERROR_MSG_DATA_TOO_LONG",
-            ).into());
+            return Err(IOError::new(ErrorKind::InvalidData, "ERROR_MSG_DATA_TOO_LONG").into());
         }
         writer.write_all(&(len as u16).to_be_bytes())?;
         writer.write_all(data)?;
