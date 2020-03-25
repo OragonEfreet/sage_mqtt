@@ -1,4 +1,8 @@
-//! `sage_mqtt` is a set of traits and
+//! `sage_mqtt` is a an encoding/decoding library for MQTT 5.0 protocol.
+//! The library consists in pivot types, such as `UTF8String` that can be
+//! written to and read from a stream as well as converted to standard Rust
+//! types.
+
 #[allow(unused_macros)]
 macro_rules! assert_matches {
     ($expression:expr, $( $pattern:pat )|+ $( if $guard: expr )?) => {

@@ -1,12 +1,12 @@
 [package]
 name = "sage_mqtt"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Kevin D'ORANGE <kevin.dorange@gmail.com>"]
 edition = "2018"
 description = "Manipulate MQTT 5.0 data types"
 readme = "README.md"
 repository = "https://github.com/OragonEfreet/sage_mqtt"
-license-file = "LICENCE"
+license = "MIT"
 keywords = ["mqtt"]
 categories = ["data-structures", "encoding"]
 
