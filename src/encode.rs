@@ -1,42 +1,37 @@
-//! Defines the `Encode` trait and implement it for the MQTT types.
-
 use crate::{
-    BinaryData, Bits, Error, FourByteInteger, Result as MyResult, TwoByteInteger, UTF8String,
+    BinaryData, Bits, Error, FourByteInteger, Result as SageResult, TwoByteInteger, UTF8String,
     VariableByteInteger,
 };
 use std::io::{Cursor, Error as IOError, ErrorKind, Write};
 use unicode_reader::CodePoints;
 
-// const ERROR_MSG_STRING_TOO_LONG: &str = "UTF-8 Type cannot exceed 65,535 bytes";
-// const ERROR_MSG_DATA_TOO_LONG: &str = "Binary streams cannot exceed 65,535 bytes";
-
-/// The Encode trait describes how to write a type into an MQTT stream.
+/// The `Encode` trait describes how to write a type into an MQTT stream.
 pub trait Encode {
     /// Encodes `this` and writes it into `write`, returning how many bytes
     /// were written.
-    fn encode<W: Write>(&self, writer: &mut W) -> MyResult<usize>;
+    fn encode<W: Write>(&self, writer: &mut W) -> SageResult<usize>;
 }
 
 impl Encode for Bits {
-    fn encode<W: Write>(&self, writer: &mut W) -> MyResult<usize> {
+    fn encode<W: Write>(&self, writer: &mut W) -> SageResult<usize> {
         Ok(writer.write(&[self.0])?)
     }
 }
 
 impl Encode for TwoByteInteger {
-    fn encode<W: Write>(&self, writer: &mut W) -> MyResult<usize> {
+    fn encode<W: Write>(&self, writer: &mut W) -> SageResult<usize> {
         Ok(writer.write(&self.0.to_be_bytes())?)
     }
 }
 
 impl Encode for FourByteInteger {
-    fn encode<W: Write>(&self, writer: &mut W) -> MyResult<usize> {
+    fn encode<W: Write>(&self, writer: &mut W) -> SageResult<usize> {
         Ok(writer.write(&self.0.to_be_bytes())?)
     }
 }
 
 impl Encode for UTF8String {
-    fn encode<W>(&self, writer: &mut W) -> MyResult<usize>
+    fn encode<W>(&self, writer: &mut W) -> SageResult<usize>
     where
         W: Write,
     {
@@ -61,7 +56,7 @@ impl Encode for UTF8String {
 }
 
 impl Encode for VariableByteInteger {
-    fn encode<W>(&self, writer: &mut W) -> MyResult<usize>
+    fn encode<W>(&self, writer: &mut W) -> SageResult<usize>
     where
         W: Write,
     {
@@ -76,7 +71,7 @@ impl Encode for VariableByteInteger {
 }
 
 impl Encode for BinaryData {
-    fn encode<W>(&self, writer: &mut W) -> MyResult<usize>
+    fn encode<W>(&self, writer: &mut W) -> SageResult<usize>
     where
         W: Write,
     {

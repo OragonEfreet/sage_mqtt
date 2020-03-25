@@ -10,10 +10,12 @@ macro_rules! assert_matches {
     }
 }
 
+mod decode;
 mod encode;
 mod error;
 mod types;
 
+pub use decode::Decode;
 pub use encode::Encode;
 pub use error::{Error, Result};
 pub use types::{
