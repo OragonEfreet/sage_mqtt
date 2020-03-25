@@ -1,4 +1,10 @@
 //! `sage_mqtt` is a set of traits and
+#[allow(unused_macros)]
+macro_rules! assert_matches {
+    ($expression:expr, $( $pattern:pat )|+ $( if $guard: expr )?) => {
+        assert!(matches!($expression, $( $pattern )|+ $( if $guard )?))
+    }
+}
 
 mod encode;
 mod error;

@@ -154,10 +154,8 @@ mod unit_encode {
     fn conformance_mqtt_1_5_4_1() {
         let input = UTF8String(vec![0xD8, 0x00]);
         let mut test_stream = Vec::new();
-        assert!(matches!(
-            input.encode(&mut test_stream),
-            Err(Error::MalformedPacket)
-        ));
+        assert_matches!(input.encode(&mut test_stream), Err(Error::MalformedPacket));
+        assert_eq!(test_stream.len(), 0);
     }
 
     /// A UTF-8 Encoded String MUST NOT include an encoding of the null
@@ -166,10 +164,8 @@ mod unit_encode {
     fn conformance_mqtt_1_5_4_2() {
         let input = UTF8String(vec![0x00, 0x00]);
         let mut test_stream = Vec::new();
-        assert!(matches!(
-            input.encode(&mut test_stream),
-            Err(Error::MalformedPacket)
-        ));
+        assert_matches!(input.encode(&mut test_stream), Err(Error::MalformedPacket));
+        assert_eq!(test_stream.len(), 0);
     }
 
     #[test]
