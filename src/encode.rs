@@ -4,7 +4,8 @@ use crate::{
     BinaryData, Bits, Error, FourByteInteger, Result as MyResult, TwoByteInteger, UTF8String,
     VariableByteInteger,
 };
-use std::io::{Error as IOError, ErrorKind, Write};
+use std::io::{Cursor, Error as IOError, ErrorKind, Write};
+use unicode_reader::CodePoints;
 
 // const ERROR_MSG_STRING_TOO_LONG: &str = "UTF-8 Type cannot exceed 65,535 bytes";
 // const ERROR_MSG_DATA_TOO_LONG: &str = "Binary streams cannot exceed 65,535 bytes";
@@ -39,9 +40,13 @@ impl Encode for UTF8String {
     where
         W: Write,
     {
-        let data = &self.0;
-
-        if let Ok(_) = String::from_utf8(data.to_vec()) {
+        let mut codepoints = CodePoints::from(Cursor::new(&self.0));
+        if codepoints.all(|x| match x {
+            Ok('\u{0}') => false,
+            Ok(_) => true,
+            _ => false, // Will be an IO Error
+        }) {
+            let data = &self.0;
             let len = data.len();
             if len > i16::max_value() as usize {
                 return Err(Error::MalformedPacket);
@@ -148,6 +153,18 @@ mod unit_encode {
     #[test]
     fn conformance_mqtt_1_5_4_1() {
         let input = UTF8String(vec![0xD8, 0x00]);
+        let mut test_stream = Vec::new();
+        assert!(matches!(
+            input.encode(&mut test_stream),
+            Err(Error::MalformedPacket)
+        ));
+    }
+
+    /// A UTF-8 Encoded String MUST NOT include an encoding of the null
+    /// character U+0000
+    #[test]
+    fn conformance_mqtt_1_5_4_2() {
+        let input = UTF8String(vec![0x00, 0x00]);
         let mut test_stream = Vec::new();
         assert!(matches!(
             input.encode(&mut test_stream),
