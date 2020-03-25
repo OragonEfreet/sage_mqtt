@@ -359,6 +359,30 @@ mod unit_types {
             String::from("")
         );
     }
+
+    // When creating a variable byte integer, the encoded value MUST use the
+    /// minimum number of bytes necessary to represent the value.
+    #[test]
+    fn conformance_mqtt_1_5_5_1() {
+        assert_eq!(
+            VariableByteInteger::from(42_u16),
+            VariableByteInteger::One(0x2A)
+        );
+
+        assert_eq!(
+            VariableByteInteger::from(42_u32),
+            VariableByteInteger::One(0x2A)
+        );
+        assert_eq!(
+            VariableByteInteger::from(1984_u32),
+            VariableByteInteger::Two(0xC0, 0x0F)
+        );
+        assert_eq!(
+            VariableByteInteger::from(51966_u32),
+            VariableByteInteger::Three(0xFE, 0x95, 0x03)
+        );
+    }
+
     #[test]
     fn convert_u8_to_variablebyteinteger() {
         assert_eq!(
@@ -368,42 +392,10 @@ mod unit_types {
     }
 
     #[test]
-    fn convert_u16_to_variablebyteinteger_one() {
-        assert_eq!(
-            VariableByteInteger::from(42_u16),
-            VariableByteInteger::One(0x2A)
-        );
-    }
-
-    #[test]
     fn convert_u16_to_variablebyteinteger_two() {
         assert_eq!(
             VariableByteInteger::from(1984_u16),
             VariableByteInteger::Two(0xC0, 0x0F)
-        );
-    }
-
-    #[test]
-    fn convert_u32_to_variablebyteinteger_one() {
-        assert_eq!(
-            VariableByteInteger::from(42_u32),
-            VariableByteInteger::One(0x2A)
-        );
-    }
-
-    #[test]
-    fn convert_u32_to_variablebyteinteger_two() {
-        assert_eq!(
-            VariableByteInteger::from(1984_u32),
-            VariableByteInteger::Two(0xC0, 0x0F)
-        );
-    }
-
-    #[test]
-    fn convert_u32_to_variablebyteinteger_three() {
-        assert_eq!(
-            VariableByteInteger::from(51966_u32),
-            VariableByteInteger::Three(0xFE, 0x95, 0x03)
         );
     }
 
