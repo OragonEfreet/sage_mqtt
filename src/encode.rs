@@ -122,7 +122,7 @@ mod unit_encode {
     }
 
     #[test]
-    fn encode_utf8_string() {
+    fn encode_utf8string() {
         let input = UTF8String(Vec::from("A𪛔".as_bytes()));
         let mut result = Vec::new();
         let expected = vec![0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94];
@@ -132,7 +132,7 @@ mod unit_encode {
     }
 
     #[test]
-    fn encode_utf8_string_empty() {
+    fn encode_utf8string_empty() {
         let input = UTF8String(Vec::new());
         let mut result = Vec::new();
         let expected = vec![0x00, 0x00];
@@ -146,7 +146,7 @@ mod unit_encode {
     // RFC 3629 [RFC3629]. In particular, the character data MUST NOT include
     // encodings of code points between U+D800 and U+DFFF [MQTT-1.5.4-1]
     #[test]
-    fn conformance_mqtt_1_5_4_1() {
+    fn encode_conformance_mqtt_1_5_4_1() {
         let input = UTF8String(vec![0xD8, 0x00]);
         let mut test_stream = Vec::new();
         assert_matches!(input.encode(&mut test_stream), Err(Error::MalformedPacket));
@@ -156,7 +156,7 @@ mod unit_encode {
     /// A UTF-8 Encoded String MUST NOT include an encoding of the null
     /// character U+0000
     #[test]
-    fn conformance_mqtt_1_5_4_2() {
+    fn encode_conformance_mqtt_1_5_4_2() {
         let input = UTF8String(vec![0x00, 0x00]);
         let mut test_stream = Vec::new();
         assert_matches!(input.encode(&mut test_stream), Err(Error::MalformedPacket));

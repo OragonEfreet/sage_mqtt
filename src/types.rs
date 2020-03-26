@@ -140,7 +140,9 @@ pub enum VariableByteInteger {
 }
 
 impl Default for VariableByteInteger {
-    fn default() -> Self {VariableByteInteger::One(0_u8)}
+    fn default() -> Self {
+        VariableByteInteger::One(0_u8)
+    }
 }
 
 impl From<u8> for VariableByteInteger {

@@ -3,6 +3,4 @@
 
 fn main() {
     //let vbi = VariableByteInteger::from(1984_u16);
-
-
 }
