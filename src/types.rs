@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 /// Bits in a byte are labelled 7 to 0. Bit number 7 is the most significant
 /// bit.
 /// This type can be converted from and to `u8`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub struct Bits(pub u8);
 
 impl From<u8> for Bits {
@@ -22,7 +22,7 @@ impl From<Bits> for u8 {
 /// big-endian. That means the most significant byte (MSB) is presented first
 /// on the stream.
 /// This type can be converted from `u8` and `u16` and to `u8`, `u16` and `u32`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub struct TwoByteInteger(pub u16);
 
 impl From<u8> for TwoByteInteger {
@@ -59,7 +59,7 @@ impl From<TwoByteInteger> for u64 {
 /// big-endian. That means the most significant byte (MSB) is presented first
 /// on the stream.
 /// This type can be converted from `u8`, `u16` and `u32` and to `u32` and `u64`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub struct FourByteInteger(pub u32);
 
 impl From<u8> for FourByteInteger {
@@ -96,7 +96,7 @@ impl From<FourByteInteger> for u64 {
 /// stream is prefixed with a two-byte size information with MSB first.
 /// Because of that, a string cannot be longer that 65,535 bytes.
 /// This type can be converted from and to `String`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub struct UTF8String(pub Vec<u8>);
 
 impl From<String> for UTF8String {
@@ -137,6 +137,10 @@ pub enum VariableByteInteger {
     Three(u8, u8, u8),
     /// From `2,097,151` (`0x80, `0x80, `0x80, `0x01`) to `268,435,455` (`0xFF`, `0xFF`, `0xFF`, `0x7F`)
     Four(u8, u8, u8, u8),
+}
+
+impl Default for VariableByteInteger {
+    fn default() -> Self {VariableByteInteger::One(0_u8)}
 }
 
 impl From<u8> for VariableByteInteger {
@@ -231,7 +235,7 @@ impl From<VariableByteInteger> for u32 {
 /// number of data bytes, followed by that number of bytes. Thus, the length of
 /// Binary Data is limited to the range of 0 to 65,535 Bytes.
 /// This type can be converted from and to `Vec<u8>`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub struct BinaryData(pub Vec<u8>);
 
 impl From<Vec<u8>> for BinaryData {
@@ -248,7 +252,7 @@ impl From<BinaryData> for Vec<u8> {
 
 /// An UTF8-String pair consists in two UTF-8 encoded strings.
 /// An `UTF8StringPair` can be converted from and to `(String, String)`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub struct UTF8StringPair(pub UTF8String, pub UTF8String);
 
 impl From<(String, String)> for UTF8StringPair {
