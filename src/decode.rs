@@ -15,80 +15,91 @@ pub trait Decode: Sized {
 impl Decode for Bits {
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
         let mut buf = [0u8; 1];
-        reader.read_exact(&mut buf)?;
-        Ok(Bits(buf[0]))
-    }
-}
-
-impl Decode for TwoByteInteger {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let mut buf = [0_u8; 2];
-        reader.read_exact(&mut buf)?;
-        Ok(TwoByteInteger(((buf[0] as u16) << 8) | buf[1] as u16))
-    }
-}
-
-impl Decode for FourByteInteger {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let mut buf = [0_u8; 4];
-        reader.read_exact(&mut buf)?;
-        Ok(FourByteInteger(
-            ((buf[0] as u32) << 24)
-                | ((buf[1] as u32) << 16)
-                | ((buf[2] as u32) << 8)
-                | (buf[3] as u32),
-        ))
-    }
-}
-
-impl Decode for UTF8String {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let size: u16 = TwoByteInteger::decode(reader)?.into();
-        let size = size as usize;
-        let mut buffer = Vec::with_capacity(size);
-        unsafe {
-            buffer.set_len(size);
-        }
-        reader.read_exact(&mut buffer)?;
-
-        let mut codepoints = CodePoints::from(Cursor::new(&buffer));
-        if codepoints.all(|x| match x {
-            Ok('\u{0}') => false,
-            Ok(_) => true,
-            _ => false, // Will be an IO Error
-        }) {
-            Ok(UTF8String(buffer))
+        if reader.read_exact(&mut buf).is_ok() {
+            Ok(Bits(buf[0]))
         } else {
             Err(Error::MalformedPacket)
         }
     }
 }
 
+impl Decode for TwoByteInteger {
+    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
+        let mut buf = [0_u8; 2];
+        if reader.read_exact(&mut buf).is_ok() {
+            Ok(TwoByteInteger(((buf[0] as u16) << 8) | buf[1] as u16))
+        } else {
+            Err(Error::MalformedPacket)
+        }
+    }
+}
+
+impl Decode for FourByteInteger {
+    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
+        let mut buf = [0_u8; 4];
+        if reader.read_exact(&mut buf).is_ok() {
+            Ok(FourByteInteger(
+                ((buf[0] as u32) << 24)
+                    | ((buf[1] as u32) << 16)
+                    | ((buf[2] as u32) << 8)
+                    | (buf[3] as u32),
+            ))
+        } else {
+            Err(Error::MalformedPacket)
+        }
+    }
+}
+
+impl Decode for UTF8String {
+    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
+        let mut chunk = reader.take(2);
+        let size: u16 = TwoByteInteger::decode(&mut chunk)?.into();
+        let size = size as usize;
+
+        let mut data_buffer: Vec<u8> = Vec::with_capacity(size);
+        if size > 0 {
+            let mut chunk = reader.take(size as u64);
+            match chunk.read_to_end(&mut data_buffer) {
+                Ok(n) if n == size => {
+                    let mut codepoints = CodePoints::from(Cursor::new(&data_buffer));
+                    if codepoints.all(|x| match x {
+                        Ok('\u{0}') => false,
+                        Ok(_) => true,
+                        _ => false, // Will be an IO Error
+                    }) {
+                        Ok(UTF8String(data_buffer))
+                    } else {
+                        Err(Error::MalformedPacket)
+                    }
+                }
+                _ => Err(Error::MalformedPacket),
+            }
+        } else {
+            Ok(Default::default())
+        }
+    }
+}
+
 impl Decode for VariableByteInteger {
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let mut buffer = vec![0u8; 1];
+        let mut b = vec![0u8; 4];
 
-        reader.read_exact(&mut buffer)?;
-        let b0 = buffer[0];
-        if b0 & 128u8 == 0u8 {
-            return Ok(VariableByteInteger::One(b0));
+        for i in 0..4 {
+            if reader.read_exact(&mut b[i..i + 1]).is_ok() {
+                if b[i] & 128u8 == 0u8 {
+                    match i {
+                        0 => return Ok(VariableByteInteger::One(b[0])),
+                        1 => return Ok(VariableByteInteger::Two(b[0], b[1])),
+                        2 => return Ok(VariableByteInteger::Three(b[0], b[1], b[2])),
+                        _ => break,
+                    }
+                }
+            } else {
+                return Err(Error::MalformedPacket);
+            }
         }
 
-        reader.read_exact(&mut buffer)?;
-        let b1 = buffer[0];
-        if b1 & 128u8 == 0u8 {
-            return Ok(VariableByteInteger::Two(b0, b1));
-        }
-
-        reader.read_exact(&mut buffer)?;
-        let b2 = buffer[0];
-        if b2 & 128u8 == 0u8 {
-            return Ok(VariableByteInteger::Three(b0, b1, b2));
-        }
-
-        reader.read_exact(&mut buffer)?;
-        let b3 = buffer[0];
-        Ok(VariableByteInteger::Four(b0, b1, b2, b3))
+        Ok(VariableByteInteger::Four(b[0], b[1], b[2], b[3]))
     }
 }
 
@@ -96,13 +107,18 @@ impl Decode for BinaryData {
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
         let mut chunk = reader.take(2);
         let size: u16 = TwoByteInteger::decode(&mut chunk)?.into();
-        let mut data_buffer: Vec<u8> = Vec::with_capacity(size as usize);
-        println!("The size is -> {}", size);
+        let size = size as usize;
+
+        let mut data_buffer: Vec<u8> = Vec::with_capacity(size);
         if size > 0 {
             let mut chunk = reader.take(size as u64);
-            chunk.read_to_end(&mut data_buffer)?;
+            match chunk.read_to_end(&mut data_buffer) {
+                Ok(n) if n == size => Ok(BinaryData::from(data_buffer)),
+                _ => Err(Error::MalformedPacket),
+            }
+        } else {
+            Ok(Default::default())
         }
-        Ok(BinaryData::from(data_buffer))
     }
 }
 
@@ -118,6 +134,12 @@ mod unit_decode {
     }
 
     #[test]
+    fn decode_bits_eof() {
+        let mut test_stream: Cursor<[u8; 0]> = Default::default();
+        assert_matches!(Bits::decode(&mut test_stream), Err(Error::MalformedPacket));
+    }
+
+    #[test]
     fn decode_twobyte_integer() {
         let mut test_stream = Cursor::new([0x07, 0xC0]);
         assert_eq!(
@@ -127,11 +149,29 @@ mod unit_decode {
     }
 
     #[test]
+    fn decode_twobyte_integer_eof() {
+        let mut test_stream = Cursor::new([0x07]);
+        assert_matches!(
+            TwoByteInteger::decode(&mut test_stream),
+            Err(Error::MalformedPacket)
+        );
+    }
+
+    #[test]
     fn decode_fourbyte_integer() {
         let mut test_stream = Cursor::new([0x00, 0x03, 0x5B, 0x60]);
         assert_eq!(
             FourByteInteger::decode(&mut test_stream).unwrap(),
             FourByteInteger(220_000_u32)
+        );
+    }
+
+    #[test]
+    fn decode_fourbyte_integer_eof() {
+        let mut test_stream = Cursor::new([0x07]);
+        assert_matches!(
+            FourByteInteger::decode(&mut test_stream),
+            Err(Error::MalformedPacket)
         );
     }
 
@@ -150,6 +190,15 @@ mod unit_decode {
         assert_eq!(
             UTF8String::decode(&mut test_stream).unwrap(),
             UTF8String(Vec::from("A𪛔".as_bytes()))
+        );
+    }
+
+    #[test]
+    fn decode_utf8string_eof() {
+        let mut test_stream = Cursor::new([0x00, 0x05, 0x41]);
+        assert_matches!(
+            UTF8String::decode(&mut test_stream),
+            Err(Error::MalformedPacket)
         );
     }
 
@@ -244,6 +293,15 @@ mod unit_decode {
     }
 
     #[test]
+    fn decode_variable_byte_integer_eof() {
+        let mut test_stream: Cursor<[u8; 0]> = Default::default();
+        assert_matches!(
+            VariableByteInteger::decode(&mut test_stream),
+            Err(Error::MalformedPacket)
+        );
+    }
+
+    #[test]
     fn decode_binary_data() {
         let mut test_stream = Cursor::new([0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
         assert_eq!(
@@ -258,6 +316,15 @@ mod unit_decode {
         assert_eq!(
             BinaryData::decode(&mut test_stream).unwrap(),
             BinaryData(Default::default())
+        );
+    }
+
+    #[test]
+    fn decode_binary_data_eof() {
+        let mut test_stream = Cursor::new([0x00, 0x05, 0x41]);
+        assert_matches!(
+            BinaryData::decode(&mut test_stream),
+            Err(Error::MalformedPacket)
         );
     }
 }
