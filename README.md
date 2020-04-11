@@ -16,5 +16,5 @@ It defines a set of "pivot types" used to parse to and from streams:
 - `UTF8String` and `UTF8StringPair`
 - `BinaryData`
 
-They all implement custom `Encode` and `Decode` (not implemented yet) traits which are used to write in any standard [Write](https://doc.rust-lang.org/std/io/trait.Write.html) and [Read](https://doc.rust-lang.org/std/io/trait.Read.html) traits respectively. 
+They all implement custom `Encode` and `Decode` traits which takes benefit from any standard [Write](https://doc.rust-lang.org/std/io/trait.Write.html) and [Read](https://doc.rust-lang.org/std/io/trait.Read.html) traits respectively. 
 
