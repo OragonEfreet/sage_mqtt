@@ -67,7 +67,11 @@ impl Decode for UTF8String {
                         Ok(_) => true,
                         _ => false, // Will be an IO Error
                     }) {
-                        Ok(UTF8String(data_buffer))
+                        if let Ok(string) = String::from_utf8(data_buffer) {
+                            Ok(UTF8String(string))
+                        } else {
+                            Err(Error::MalformedPacket)
+                        }
                     } else {
                         Err(Error::MalformedPacket)
                     }
@@ -189,7 +193,7 @@ mod unit_decode {
         let mut test_stream = Cursor::new([0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
         assert_eq!(
             UTF8String::decode(&mut test_stream).unwrap(),
-            UTF8String(Vec::from("A𪛔".as_bytes()))
+            UTF8String::from("A𪛔")
         );
     }
 
