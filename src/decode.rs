@@ -86,24 +86,27 @@ impl Decode for UTF8String {
 
 impl Decode for VariableByteInteger {
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let mut b = vec![0u8; 4];
+        let mut multiplier = 1_u32;
+        let mut value = 0_u32;
 
-        for i in 0..4 {
-            if reader.read_exact(&mut b[i..i + 1]).is_ok() {
-                if b[i] & 128u8 == 0u8 {
-                    match i {
-                        0 => return Ok(VariableByteInteger::One(b[0])),
-                        1 => return Ok(VariableByteInteger::Two(b[0], b[1])),
-                        2 => return Ok(VariableByteInteger::Three(b[0], b[1], b[2])),
-                        _ => break,
-                    }
+        loop {
+            let mut buffer = vec![0u8; 1];
+            if reader.read_exact(&mut buffer).is_ok() {
+                let encoded_byte = buffer[0];
+                value += ((encoded_byte & 127u8) as u32) * multiplier;
+                if multiplier > 2_097_152 {
+                    return Err(Error::MalformedPacket);
+                }
+                multiplier *= 128;
+                if encoded_byte & 128u8 == 0 {
+                    break;
                 }
             } else {
                 return Err(Error::MalformedPacket);
             }
         }
 
-        Ok(VariableByteInteger::Four(b[0], b[1], b[2], b[3]))
+        Ok(VariableByteInteger(value))
     }
 }
 
@@ -229,7 +232,7 @@ mod unit_decode {
         let mut test_stream = Cursor::new([0x00]);
         assert_eq!(
             VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger::One(0_u8)
+            VariableByteInteger(0)
         );
     }
 
@@ -238,7 +241,7 @@ mod unit_decode {
         let mut test_stream = Cursor::new([0x7F]);
         assert_eq!(
             VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger::One(127_u8)
+            VariableByteInteger(127)
         );
     }
 
@@ -247,7 +250,7 @@ mod unit_decode {
         let mut test_stream = Cursor::new([0x80, 0x01]);
         assert_eq!(
             VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger::Two(128_u8, 01_u8)
+            VariableByteInteger(128)
         );
     }
 
@@ -256,7 +259,7 @@ mod unit_decode {
         let mut test_stream = Cursor::new([0xFF, 0x7F]);
         assert_eq!(
             VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger::Two(255_u8, 127_u8)
+            VariableByteInteger(16_383)
         );
     }
 
@@ -265,7 +268,7 @@ mod unit_decode {
         let mut test_stream = Cursor::new([0x80, 0x80, 0x01]);
         assert_eq!(
             VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger::Three(128_u8, 128_u8, 01_u8)
+            VariableByteInteger(16_384)
         );
     }
 
@@ -274,7 +277,7 @@ mod unit_decode {
         let mut test_stream = Cursor::new([0xFF, 0xFF, 0x7F]);
         assert_eq!(
             VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger::Three(255_u8, 255_u8, 127_u8)
+            VariableByteInteger(2_097_151)
         );
     }
 
@@ -283,7 +286,7 @@ mod unit_decode {
         let mut test_stream = Cursor::new([0x80, 0x80, 0x80, 0x01]);
         assert_eq!(
             VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger::Four(128_u8, 128_u8, 128_u8, 01_u8)
+            VariableByteInteger(2_097_152)
         );
     }
 
@@ -292,7 +295,7 @@ mod unit_decode {
         let mut test_stream = Cursor::new([0xFF, 0xFF, 0xFF, 0x7F]);
         assert_eq!(
             VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger::Four(255_u8, 255_u8, 255_u8, 127_u8)
+            VariableByteInteger(268_435_455)
         );
     }
 

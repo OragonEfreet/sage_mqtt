@@ -50,13 +50,20 @@ impl Encode for VariableByteInteger {
     where
         W: Write,
     {
-        let bytes = match self {
-            VariableByteInteger::One(b0) => writer.write(&[*b0])?,
-            VariableByteInteger::Two(b1, b0) => writer.write(&[*b1, *b0])?,
-            VariableByteInteger::Three(b2, b1, b0) => writer.write(&[*b2, *b1, *b0])?,
-            VariableByteInteger::Four(b3, b2, b1, b0) => writer.write(&[*b3, *b2, *b1, *b0])?,
-        };
-        Ok(bytes)
+        let mut n_encoded_bytes = 0;
+        let mut x = self.0;
+        loop {
+            let mut encoded_byte = (x % 128) as u8;
+            x /= 128;
+            if x > 0 {
+                encoded_byte |= 128u8;
+            }
+            n_encoded_bytes += writer.write(&[encoded_byte])?;
+            if x == 0 {
+                break;
+            }
+        }
+        Ok(n_encoded_bytes)
     }
 }
 
@@ -132,7 +139,7 @@ mod unit_encode {
     }
     #[test]
     fn encode_variable_byte_integer_one_lower_bound() {
-        let input = VariableByteInteger::One(0_u8);
+        let input = VariableByteInteger(0);
         let mut result = Vec::new();
         let expected = vec![0x00];
         let bytes = input.encode(&mut result).unwrap();
@@ -142,7 +149,7 @@ mod unit_encode {
 
     #[test]
     fn encode_variable_byte_integer_one_upper_bound() {
-        let input = VariableByteInteger::One(127_u8);
+        let input = VariableByteInteger(127);
         let mut result = Vec::new();
         let expected = vec![0x7F];
         let bytes = input.encode(&mut result).unwrap();
@@ -152,7 +159,7 @@ mod unit_encode {
 
     #[test]
     fn encode_variable_byte_integer_two_lower_bound() {
-        let input = VariableByteInteger::Two(128_u8, 01_u8);
+        let input = VariableByteInteger(128);
         let mut result = Vec::new();
         let expected = vec![0x80, 0x01];
         let bytes = input.encode(&mut result).unwrap();
@@ -162,7 +169,7 @@ mod unit_encode {
 
     #[test]
     fn encode_variable_byte_integer_two_upper_bound() {
-        let input = VariableByteInteger::Two(255_u8, 127_u8);
+        let input = VariableByteInteger(16_383);
         let mut result = Vec::new();
         let expected = vec![0xFF, 0x7F];
         let bytes = input.encode(&mut result).unwrap();
@@ -172,7 +179,7 @@ mod unit_encode {
 
     #[test]
     fn encode_variable_byte_integer_three_lower_bound() {
-        let input = VariableByteInteger::Three(128_u8, 128_u8, 01_u8);
+        let input = VariableByteInteger(16_384);
         let mut result = Vec::new();
         let expected = vec![0x80, 0x80, 0x01];
         let bytes = input.encode(&mut result).unwrap();
@@ -182,7 +189,7 @@ mod unit_encode {
 
     #[test]
     fn encode_variable_byte_integer_three_upper_bound() {
-        let input = VariableByteInteger::Three(255_u8, 255_u8, 127_u8);
+        let input = VariableByteInteger(2_097_151);
         let mut result = Vec::new();
         let expected = vec![0xFF, 0xFF, 0x7F];
         let bytes = input.encode(&mut result).unwrap();
@@ -192,7 +199,7 @@ mod unit_encode {
 
     #[test]
     fn encode_variable_byte_integer_four_lower_bound() {
-        let input = VariableByteInteger::Four(128_u8, 128_u8, 128_u8, 01_u8);
+        let input = VariableByteInteger(2_097_152);
         let mut result = Vec::new();
         let expected = vec![0x80, 0x80, 0x80, 0x01];
         let bytes = input.encode(&mut result).unwrap();
@@ -202,7 +209,7 @@ mod unit_encode {
 
     #[test]
     fn encode_variable_byte_integer_four_upper_bound() {
-        let input = VariableByteInteger::Four(255_u8, 255_u8, 255_u8, 127_u8);
+        let input = VariableByteInteger(268_435_455);
         let mut result = Vec::new();
         let expected = vec![0xFF, 0xFF, 0xFF, 0x7F];
         let bytes = input.encode(&mut result).unwrap();
