@@ -289,8 +289,8 @@ impl Decode for Vec<Property> {
         let len: u64 = VariableByteInteger::decode(reader)?.into();
         let mut buffer = reader.take(len);
 
-        while let Ok(property) = Property::decode(&mut buffer) {
-            properties.push(property);
+        while buffer.limit() > 0 {
+            properties.push(Property::decode(&mut buffer)?);
         }
 
         Ok(properties)
