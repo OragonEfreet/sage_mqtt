@@ -155,6 +155,12 @@ impl From<VariableByteInteger> for u32 {
     }
 }
 
+impl From<VariableByteInteger> for u64 {
+    fn from(value: VariableByteInteger) -> Self {
+        value.0 as u64
+    }
+}
+
 /// Binary Data is represented by a Two Byte Integer length which indicates the
 /// number of data bytes, followed by that number of bytes. Thus, the length of
 /// Binary Data is limited to the range of 0 to 65,535 Bytes.

@@ -4,7 +4,7 @@ use crate::{
 };
 use std::io::{Read, Write};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Property {
     PayloadFormatIndicator(u8),
     MessageExpiryInterval(u32),
@@ -272,9 +272,12 @@ impl Decode for Property {
 impl Encode for Vec<Property> {
     fn encode<W: Write>(&self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = 0;
+        let mut buffer = Vec::new();
         for property in self {
-            n_bytes += property.encode(writer)?;
+            n_bytes += property.encode(&mut buffer)?;
         }
+        n_bytes += VariableByteInteger(n_bytes as u32).encode(writer)?;
+        writer.write_all(&buffer)?;
         Ok(n_bytes)
     }
 }
@@ -283,11 +286,11 @@ impl Decode for Vec<Property> {
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
         let mut properties = Vec::new();
 
-        let n_properties: u32 = VariableByteInteger::decode(reader)?.into();
-        properties.reserve(n_properties as usize);
+        let len: u64 = VariableByteInteger::decode(reader)?.into();
+        let mut buffer = reader.take(len);
 
-        for _ in 0..n_properties {
-            properties.push(Property::decode(reader)?);
+        while let Ok(property) = Property::decode(&mut buffer) {
+            properties.push(property);
         }
 
         Ok(properties)
