@@ -1,7 +1,4 @@
-use crate::{
-    Bits, Decode, Encode, Error, Property, PropertyId, Result as SageResult, TwoByteInteger,
-    VariableByteInteger,
-};
+use crate::{Bits, Decode, Encode, Error, Result as SageResult};
 use std::io::{Read, Write};
 
 /// The control packet type is present as the first element of the fixed header
@@ -30,6 +27,26 @@ pub enum ControlPacketType {
     PINGRESP,
     DISCONNECT,
     AUTH,
+}
+
+enum PayloadRequirements {
+    None,
+    Required,
+    Optional,
+}
+
+impl From<ControlPacketType> for PayloadRequirements {
+    fn from(value: ControlPacketType) -> Self {
+        match value {
+            ControlPacketType::PUBLISH { .. } => PayloadRequirements::Optional,
+            ControlPacketType::CONNECT
+            | ControlPacketType::SUBSCRIBE
+            | ControlPacketType::SUBACK
+            | ControlPacketType::UNSUBSCRIBE
+            | ControlPacketType::UNSUBACK => PayloadRequirements::Required,
+            _ => PayloadRequirements::None,
+        }
+    }
 }
 
 impl ControlPacketType {
@@ -101,7 +118,7 @@ impl Encode for ControlPacketType {
 impl Decode for ControlPacketType {
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
         let packet_type: u8 = Bits::decode(reader)?.into();
-        let packet_type = match (packet_type >> 4, packet_type & 0b00001111) {
+        let packet_type = match (packet_type >> 4, packet_type & 0b0000_1111) {
             (0b0000, 0b0000) => ControlPacketType::RESERVED,
             (0b0001, 0b0000) => ControlPacketType::CONNECT,
             (0b0010, 0b0000) => ControlPacketType::CONNACK,

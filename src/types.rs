@@ -1,3 +1,18 @@
+#[derive(Default, Debug, PartialEq, Eq)]
+pub struct Byte(pub u8);
+
+impl From<u8> for Byte {
+    fn from(value: u8) -> Self {
+        Byte(value)
+    }
+}
+
+impl From<Byte> for u8 {
+    fn from(value: Byte) -> Self {
+        value.0
+    }
+}
+
 /// Bits in a byte are labelled 7 to 0. Bit number 7 is the most significant
 /// bit.
 /// This type can be converted from and to `u8`.

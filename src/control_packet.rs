@@ -1,6 +1,6 @@
 use crate::{
-    Bits, ControlPacketType, Decode, Encode, Error, Property, PropertyId, Result as SageResult,
-    TwoByteInteger, VariableByteInteger,
+    ControlPacketType, Decode, Encode, Error, Property, Result as SageResult, TwoByteInteger,
+    VariableByteInteger,
 };
 use std::io::{Read, Write};
 
@@ -26,9 +26,11 @@ impl Encode for ControlPacket {
             }
         }
 
+        n_bytes += self.properties.encode(writer)?;
+
         n_bytes += VariableByteInteger(remaining_buffer.len() as u32).encode(writer)?;
         n_bytes += remaining_buffer.len();
-        writer.write_all(&mut remaining_buffer)?;
+        writer.write_all(&remaining_buffer)?;
 
         Ok(n_bytes)
     }
@@ -46,23 +48,13 @@ impl Decode for ControlPacket {
             None
         };
 
-        let mut properties = Vec::new();
-
-        if packet_type.can_have_properties() {
-            let n_properties: u32 = VariableByteInteger::decode(reader)?.into();
-            properties.reserve(n_properties as usize);
-            for _ in 0..n_properties {
-                let propertyId: Option<PropertyId> = VariableByteInteger::decode(reader)?.into();
-                if let Some(propertyId) = propertyId {
-                    if propertyId.allowed(&packet_type) {
-                    } else {
-                        return Err(Error::MalformedPacket);
-                    }
-                } else {
-                    return Err(Error::MalformedPacket);
-                }
+        let properties = {
+            if packet_type.can_have_properties() {
+                Decode::decode(reader)?
+            } else {
+                Default::default()
             }
-        }
+        };
 
         Ok(ControlPacket {
             packet_identifier,

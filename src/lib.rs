@@ -17,6 +17,7 @@ mod encode;
 mod error;
 mod property;
 mod property_id;
+mod reason_code;
 mod types;
 
 pub use control_packet::ControlPacket;
@@ -24,8 +25,10 @@ pub use control_packet_type::ControlPacketType;
 pub use decode::Decode;
 pub use encode::Encode;
 pub use error::{Error, Result};
-use property::Property;
-use property_id::PropertyId;
+pub use property::Property;
+pub use reason_code::ReasonCode;
 pub use types::{
-    BinaryData, Bits, FourByteInteger, TwoByteInteger, UTF8String, VariableByteInteger,
+    BinaryData, Bits, Byte, FourByteInteger, TwoByteInteger, UTF8String, VariableByteInteger,
 };
+
+use property_id::PropertyId;

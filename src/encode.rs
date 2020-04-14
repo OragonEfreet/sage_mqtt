@@ -1,6 +1,6 @@
 use crate::{
-    BinaryData, Bits, Error, FourByteInteger, Result as SageResult, TwoByteInteger, UTF8String,
-    VariableByteInteger,
+    BinaryData, Bits, Byte, Error, FourByteInteger, Result as SageResult, TwoByteInteger,
+    UTF8String, VariableByteInteger,
 };
 use std::io::{Error as IOError, ErrorKind, Write};
 
@@ -9,6 +9,12 @@ pub trait Encode {
     /// Encodes `this` and writes it into `write`, returning how many bytes
     /// were written.
     fn encode<W: Write>(&self, writer: &mut W) -> SageResult<usize>;
+}
+
+impl Encode for Byte {
+    fn encode<W: Write>(&self, writer: &mut W) -> SageResult<usize> {
+        Ok(writer.write(&[self.0])?)
+    }
 }
 
 impl Encode for Bits {
@@ -87,6 +93,16 @@ impl Encode for BinaryData {
 mod unit_encode {
 
     use super::*;
+
+    #[test]
+    fn encode_byte() {
+        let input = Byte(0b00101010);
+        let mut result = Vec::new();
+        let expected = vec![0x2A];
+        let bytes = input.encode(&mut result).unwrap();
+        assert_eq!(bytes, 1);
+        assert_eq!(result, expected, "Encoding {:?} failed", input);
+    }
 
     #[test]
     fn encode_bits() {

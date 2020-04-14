@@ -24,7 +24,7 @@ pub enum PropertyId {
     MaximumQoS = 0x24,
     RetainAvailable = 0x25,
     UserProperty = 0x26,
-    MaximumPackerSize = 0x27,
+    MaximumPacketSize = 0x27,
     WildcardSubscriptionAvailable = 0x28,
     SubscriptionIdentifierAvailable = 0x29,
     SharedSubscriptionAvailable = 0x2A,
@@ -56,7 +56,7 @@ impl From<VariableByteInteger> for Option<PropertyId> {
             VariableByteInteger(0x24) => Some(PropertyId::MaximumQoS),
             VariableByteInteger(0x25) => Some(PropertyId::RetainAvailable),
             VariableByteInteger(0x26) => Some(PropertyId::UserProperty),
-            VariableByteInteger(0x27) => Some(PropertyId::MaximumPackerSize),
+            VariableByteInteger(0x27) => Some(PropertyId::MaximumPacketSize),
             VariableByteInteger(0x28) => Some(PropertyId::WildcardSubscriptionAvailable),
             VariableByteInteger(0x29) => Some(PropertyId::SubscriptionIdentifierAvailable),
             VariableByteInteger(0x2A) => Some(PropertyId::SharedSubscriptionAvailable),
@@ -120,8 +120,8 @@ impl PropertyId {
             | (PropertyId::UserProperty, ControlPacketType::UNSUBACK)
             | (PropertyId::UserProperty, ControlPacketType::DISCONNECT)
             | (PropertyId::UserProperty, ControlPacketType::AUTH)
-            | (PropertyId::MaximumPackerSize, ControlPacketType::CONNECT)
-            | (PropertyId::MaximumPackerSize, ControlPacketType::CONNACK)
+            | (PropertyId::MaximumPacketSize, ControlPacketType::CONNECT)
+            | (PropertyId::MaximumPacketSize, ControlPacketType::CONNACK)
             | (PropertyId::WildcardSubscriptionAvailable, ControlPacketType::CONNACK)
             | (PropertyId::SubscriptionIdentifierAvailable, ControlPacketType::CONNACK)
             | (PropertyId::SharedSubscriptionAvailable, ControlPacketType::CONNACK) => true,
