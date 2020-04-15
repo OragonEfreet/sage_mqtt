@@ -144,3 +144,44 @@ impl Decode for ControlPacketType {
         Ok(packet_type)
     }
 }
+
+#[cfg(test)]
+mod unit_control_packet_type {
+
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn mqtt_2_1_3_1() {
+        let reserved_flags_per_type = [
+            (0b0001, 0b0000),
+            (0b0010, 0b0000),
+            (0b0100, 0b0000),
+            (0b0101, 0b0000),
+            (0b0110, 0b0010),
+            (0b0111, 0b0000),
+            (0b1000, 0b0010),
+            (0b1001, 0b0000),
+            (0b1010, 0b0010),
+            (0b1011, 0b0000),
+            (0b1100, 0b0000),
+            (0b1101, 0b0000),
+            (0b1110, 0b0000),
+            (0b1111, 0b0000),
+        ];
+
+        for (packet_type, flags) in &reserved_flags_per_type {
+            for i in 0b0000..=0b1111 {
+                if i == *flags {
+                    continue;
+                }
+                let buffer = [*packet_type, *flags, 0x00];
+                let mut test_stream = Cursor::new(buffer);
+                assert_matches!(
+                    ControlPacketType::decode(&mut test_stream),
+                    Err(Error::MalformedPacket)
+                );
+            }
+        }
+    }
+}
