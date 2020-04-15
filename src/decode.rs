@@ -232,8 +232,12 @@ mod unit_decode {
         );
     }
 
+    // The character data in a UTF-8 Encoded String MUST be well-formed UTF-8 as
+    // defined by the Unicode specification [Unicode] and restated in RFC 3629
+    // [RFC3629]. In particular, the character data MUST NOT include encodings
+    // of code points between U+D800 and U+DFFF
     #[test]
-    fn decode_conformance_mqtt_1_5_4_1() {
+    fn mqtt_1_5_4_1() {
         let mut test_stream = Cursor::new([0x00, 0x02, 0xD8, 0x00]);
         assert_matches!(
             UTF8String::decode(&mut test_stream),
@@ -241,12 +245,27 @@ mod unit_decode {
         );
     }
 
+    // A UTF-8 Encoded String MUST NOT include an encoding of the null character
+    // U+0000.
     #[test]
-    fn decode_conformance_mqtt_1_5_4_2() {
+    fn mqtt_1_5_4_2() {
         let mut test_stream = Cursor::new([0x00, 0x02, 0x00, 0x00]);
         assert_matches!(
             UTF8String::decode(&mut test_stream),
             Err(Error::MalformedPacket)
+        );
+    }
+
+    // A UTF-8 encoded sequence 0xEF 0xBB 0xBF is always interpreted as U+FEFF
+    // ("ZERO WIDTH NO-BREAK SPACE") wherever it appears in a string and MUST
+    // NOT be skipped over or stripped off by a packet receiver
+    #[test]
+    fn mqtt_1_5_4_3() {
+        let mut test_stream =
+            Cursor::new([0x00, 0x08, 0xEF, 0xBB, 0xBF, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
+        assert_eq!(
+            UTF8String::decode(&mut test_stream).unwrap(),
+            UTF8String::from("\u{feff}A𪛔")
         );
     }
 

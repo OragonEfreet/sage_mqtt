@@ -153,6 +153,41 @@ mod unit_encode {
         assert_eq!(bytes, 2);
         assert_eq!(result, expected, "Encoding {:?} failed", input);
     }
+
+    // The encoded value MUST use the minimum number of bytes necessary to
+    // represent the value
+    // Note: This test considers the fact that if VALUE_L and VALUE_R are
+    // both encoded into N bytes, then all values between VALUE_L and VALUE_R
+    // are encoded into N bytes as well. Meaning: we only check bounds.
+    #[test]
+    fn mqtt_1_5_5_1() {
+        let bounds = [
+            [0, 12],
+            [128, 16_383],
+            [16_384, 2_097_151],
+            [2_097_152, 268_435_455],
+        ];
+
+        let mut result = Vec::new();
+
+        let mut expected_buffer_size = 1;
+
+        for bound in &bounds {
+            for i in bound {
+                let input = VariableByteInteger::from(*i);
+                let n_bytes = input.encode(&mut result).unwrap();
+                assert_eq!(
+                    n_bytes, expected_buffer_size,
+                    "Variable Byte Integer '{}' should be encoded to '{}' bytes. Used '{}' instead",
+                    i, expected_buffer_size, n_bytes
+                );
+                result.clear();
+            }
+
+            expected_buffer_size += 1;
+        }
+    }
+
     #[test]
     fn encode_variable_byte_integer_one_lower_bound() {
         let input = VariableByteInteger(0);
