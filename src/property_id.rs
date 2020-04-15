@@ -10,7 +10,7 @@ pub enum PropertyId {
     SessionExpiryInterval = 0x11,
     AssignedClientIdentifier = 0x12,
     ServerKeepAlive = 0x13,
-    Authenticationmethod = 0x15,
+    AuthenticationMethod = 0x15,
     AuthenticationData = 0x16,
     RequestProblemInformation = 0x17,
     WillDelayInterval = 0x18,
@@ -42,7 +42,7 @@ impl From<VariableByteInteger> for Option<PropertyId> {
             VariableByteInteger(0x11) => Some(PropertyId::SessionExpiryInterval),
             VariableByteInteger(0x12) => Some(PropertyId::AssignedClientIdentifier),
             VariableByteInteger(0x13) => Some(PropertyId::ServerKeepAlive),
-            VariableByteInteger(0x15) => Some(PropertyId::Authenticationmethod),
+            VariableByteInteger(0x15) => Some(PropertyId::AuthenticationMethod),
             VariableByteInteger(0x16) => Some(PropertyId::AuthenticationData),
             VariableByteInteger(0x17) => Some(PropertyId::RequestProblemInformation),
             VariableByteInteger(0x18) => Some(PropertyId::WillDelayInterval),
@@ -80,9 +80,9 @@ impl PropertyId {
             | (PropertyId::SessionExpiryInterval, ControlPacketType::DISCONNECT)
             | (PropertyId::AssignedClientIdentifier, ControlPacketType::CONNACK)
             | (PropertyId::ServerKeepAlive, ControlPacketType::CONNACK)
-            | (PropertyId::Authenticationmethod, ControlPacketType::CONNECT)
-            | (PropertyId::Authenticationmethod, ControlPacketType::CONNACK)
-            | (PropertyId::Authenticationmethod, ControlPacketType::AUTH)
+            | (PropertyId::AuthenticationMethod, ControlPacketType::CONNECT)
+            | (PropertyId::AuthenticationMethod, ControlPacketType::CONNACK)
+            | (PropertyId::AuthenticationMethod, ControlPacketType::AUTH)
             | (PropertyId::AuthenticationData, ControlPacketType::CONNECT)
             | (PropertyId::AuthenticationData, ControlPacketType::CONNACK)
             | (PropertyId::AuthenticationData, ControlPacketType::AUTH)

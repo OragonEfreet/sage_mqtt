@@ -1,5 +1,5 @@
 use crate::{
-    Bits, Byte, ControlPacketType, Decode, Encode, Error, FixedHeader, Property, QoS,
+    Bits, Byte, ControlPacketType, Decode, Encode, Error, FixedHeader, Properties, Property, QoS,
     Result as SageResult, TwoByteInteger, UTF8String,
 };
 use std::convert::TryInto;
@@ -56,7 +56,7 @@ impl Decode for ConnectFlags {
 }
 
 /// The `Connect` control packet is used to open a connection
-#[derive(Default, PartialEq, Debug)]
+#[derive(PartialEq, Debug, Default)]
 pub struct Connect {
     /// The control packet parameters
     pub flags: ConnectFlags,
@@ -65,7 +65,33 @@ pub struct Connect {
     /// allowed to elapse between two client MQTT packets.
     pub keep_alive: u16,
 
-    pub properties: Vec<Property>,
+    /// Represents the session expiry in seconds.
+    pub session_expiry_interval: Option<u32>,
+
+    /// Limits the number of QoS1 and QoS2 publications that than be processed
+    /// concurrently.
+    pub receive_maximum: Option<u16>,
+
+    /// The maximum packet size the client is willing to accept
+    pub maximum_packet_size: Option<u32>,
+
+    /// Highest value a client will accept a a Topic Alias sent by the server.
+    pub topic_alias_maximum: Option<u16>,
+
+    /// Can the server send response information in the CONNACK?
+    pub request_response_information: Option<bool>,
+
+    /// Wether a reason string or user properties are sent in case of failure
+    pub request_problem_information: Option<bool>,
+
+    /// User properties can be any key-value pair. Duplicates are allowed
+    pub user_properties: Vec<(String, String)>,
+
+    /// Set if an authentication is done
+    pub authentication_method: Option<String>,
+
+    /// Sets authentication data
+    pub authentication_data: Vec<u8>,
 }
 
 impl Encode for Connect {
@@ -78,7 +104,48 @@ impl Encode for Connect {
         n_bytes += self.flags.encode(&mut content)?;
         n_bytes += TwoByteInteger(self.keep_alive).encode(&mut content)?;
 
-        n_bytes += self.properties.encode(&mut content)?;
+        // Properties
+        let mut properties = Vec::new();
+        if let Some(session_expiry_interval) = self.session_expiry_interval {
+            properties.push(Property::SessionExpiryInterval(session_expiry_interval));
+        }
+        if let Some(receive_maximum) = self.receive_maximum {
+            properties.push(Property::ReceiveMaximum(receive_maximum));
+        }
+        if let Some(maximum_packet_size) = self.maximum_packet_size {
+            properties.push(Property::MaximumPacketSize(maximum_packet_size));
+        }
+        if let Some(topic_alias_maximum) = self.topic_alias_maximum {
+            properties.push(Property::TopicAliasMaximum(topic_alias_maximum));
+        }
+        if let Some(request_response_information) = self.request_response_information {
+            properties.push(Property::RequestResponseInformation(
+                request_response_information,
+            ));
+        }
+        if let Some(request_problem_information) = self.request_problem_information {
+            properties.push(Property::RequestResponseInformation(
+                request_problem_information,
+            ));
+        }
+        for property in &self.user_properties {
+            properties.push(Property::UserProperty(
+                property.0.clone(),
+                property.1.clone(),
+            ));
+        }
+        if let Some(authentication_method) = &self.authentication_method {
+            properties.push(Property::AuthenticationMethod(
+                authentication_method.clone(),
+            ));
+        }
+        if !self.authentication_data.is_empty() {
+            properties.push(Property::AuthenticationData(
+                self.authentication_data.clone(),
+            ));
+        }
+
+        n_bytes += properties.encode(&mut content)?;
 
         let packet_type = ControlPacketType::CONNECT;
         let remaining_size = 16_383; // TODO: change to content.len() as u32;
@@ -116,13 +183,94 @@ impl Decode for Connect {
         let flags = ConnectFlags::decode(reader)?;
         let keep_alive = TwoByteInteger::decode(reader)?.into();
 
-        let properties = Decode::decode(reader)?;
+        // Properties
+        let properties = Properties::decode(reader)?;
+        let mut session_expiry_interval = None;
+        let mut receive_maximum = None;
+        let mut maximum_packet_size = None;
+        let mut topic_alias_maximum = None;
+        let mut request_response_information = None;
+        let mut request_problem_information = None;
+        let mut user_properties = Vec::new();
+        let mut authentication_method = None;
+        let mut authentication_data = None;
+        for property in properties.iter() {
+            match property {
+                Property::SessionExpiryInterval(v) => {
+                    if session_expiry_interval.is_some() {
+                        return Err(Error::ProtocolError);
+                    }
+                    session_expiry_interval = Some(*v);
+                }
+                Property::ReceiveMaximum(v) => {
+                    if receive_maximum.is_some() || v == &0 {
+                        return Err(Error::ProtocolError);
+                    }
+                    receive_maximum = Some(*v);
+                }
+                Property::MaximumPacketSize(v) => {
+                    if maximum_packet_size.is_some() || v == &0 {
+                        return Err(Error::ProtocolError);
+                    }
+                    maximum_packet_size = Some(*v);
+                }
+                Property::TopicAliasMaximum(v) => {
+                    if topic_alias_maximum.is_some() {
+                        return Err(Error::ProtocolError);
+                    }
+                    topic_alias_maximum = Some(*v);
+                }
+                Property::RequestResponseInformation(v) => {
+                    if request_response_information.is_some() {
+                        return Err(Error::ProtocolError);
+                    }
+                    request_response_information = Some(*v);
+                }
+                Property::RequestProblemInformation(v) => {
+                    if request_problem_information.is_some() {
+                        return Err(Error::ProtocolError);
+                    }
+                    request_problem_information = Some(*v);
+                }
+                Property::UserProperty(k, v) => {
+                    user_properties.push((k.clone(), v.clone()));
+                }
+                Property::AuthenticationMethod(v) => {
+                    if authentication_method.is_some() {
+                        return Err(Error::ProtocolError);
+                    }
+                    authentication_method = Some(v.clone());
+                }
+                Property::AuthenticationData(v) => {
+                    if authentication_data.is_some() {
+                        return Err(Error::ProtocolError);
+                    }
+                    authentication_data = Some(v.clone());
+                }
+
+                _ => return Err(Error::ProtocolError),
+            }
+        }
+
+        if authentication_data.is_some() != authentication_method.is_some() {
+            return Err(Error::ProtocolError);
+        }
+        let authentication_data = authentication_data.unwrap_or_default();
+
         // let properties = Default::default();
 
         Ok(Connect {
             flags,
             keep_alive,
-            properties,
+            session_expiry_interval,
+            receive_maximum,
+            maximum_packet_size,
+            topic_alias_maximum,
+            request_response_information,
+            request_problem_information,
+            user_properties,
+            authentication_method,
+            authentication_data,
         })
     }
 }
@@ -156,12 +304,13 @@ mod unit_connect {
         };
         let keep_alive = 10;
 
-        let properties = vec![Property::SessionExpiryInterval(10)];
+        let session_expiry_interval = Some(10);
 
         Connect {
             flags,
             keep_alive,
-            properties,
+            session_expiry_interval,
+            ..Default::default()
         }
     }
 

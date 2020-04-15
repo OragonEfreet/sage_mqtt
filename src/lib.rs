@@ -24,7 +24,6 @@ pub use control_packets::Connect;
 pub use decode::Decode;
 pub use encode::Encode;
 pub use error::{Error, Result};
-pub use property::Property;
 pub use quality_of_service::QoS;
 pub use reason_code::ReasonCode;
 pub use types::{
@@ -32,4 +31,5 @@ pub use types::{
 };
 
 use control_packets::{ControlPacketType, FixedHeader};
+use property::{Properties, Property};
 use property_id::PropertyId;

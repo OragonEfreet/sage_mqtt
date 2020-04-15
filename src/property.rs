@@ -15,11 +15,11 @@ pub enum Property {
     SessionExpiryInterval(u32),
     AssignedClientIdentifier(String),
     ServerKeepAlive(u16),
-    Authenticationmethod(String),
+    AuthenticationMethod(String),
     AuthenticationData(Vec<u8>),
-    RequestProblemInformation(u8),
+    RequestProblemInformation(bool),
     WillDelayInterval(u32),
-    RequestResponseInformation(u8),
+    RequestResponseInformation(bool),
     ResponseInformation(String),
     ServerReference(String),
     ReasonString(String),
@@ -28,12 +28,14 @@ pub enum Property {
     TopicAlias(u16),
     MaximumQoS(u8),
     RetainAvailable(u8),
-    UserProperty((String, String)),
+    UserProperty(String, String),
     MaximumPacketSize(u32),
     WildcardSubscriptionAvailable(u8),
     SubscriptionIdentifierAvailable(u8),
     SharedSubscriptionAvailable(u8),
 }
+
+pub type Properties = Vec<Property>;
 
 impl Encode for Property {
     fn encode<W: Write>(&self, writer: &mut W) -> SageResult<usize> {
@@ -82,9 +84,9 @@ impl Encode for Property {
                     VariableByteInteger(PropertyId::ServerKeepAlive as u32).encode(writer)?;
                 Ok(n_bytes + TwoByteInteger(*v).encode(writer)?)
             }
-            Property::Authenticationmethod(v) => {
+            Property::AuthenticationMethod(v) => {
                 let n_bytes =
-                    VariableByteInteger(PropertyId::Authenticationmethod as u32).encode(writer)?;
+                    VariableByteInteger(PropertyId::AuthenticationMethod as u32).encode(writer)?;
                 Ok(n_bytes + UTF8String(v.clone()).encode(writer)?)
             }
             Property::AuthenticationData(v) => {
@@ -95,7 +97,7 @@ impl Encode for Property {
             Property::RequestProblemInformation(v) => {
                 let n_bytes = VariableByteInteger(PropertyId::RequestProblemInformation as u32)
                     .encode(writer)?;
-                Ok(n_bytes + Byte(*v).encode(writer)?)
+                Ok(n_bytes + Byte(*v as u8).encode(writer)?)
             }
             Property::WillDelayInterval(v) => {
                 let n_bytes =
@@ -105,7 +107,7 @@ impl Encode for Property {
             Property::RequestResponseInformation(v) => {
                 let n_bytes = VariableByteInteger(PropertyId::RequestResponseInformation as u32)
                     .encode(writer)?;
-                Ok(n_bytes + Byte(*v).encode(writer)?)
+                Ok(n_bytes + Byte(*v as u8).encode(writer)?)
             }
             Property::ResponseInformation(v) => {
                 let n_bytes =
@@ -145,11 +147,11 @@ impl Encode for Property {
                     VariableByteInteger(PropertyId::RetainAvailable as u32).encode(writer)?;
                 Ok(n_bytes + Byte(*v).encode(writer)?)
             }
-            Property::UserProperty(v) => {
+            Property::UserProperty(k, v) => {
                 let mut n_bytes =
                     VariableByteInteger(PropertyId::UserProperty as u32).encode(writer)?;
-                n_bytes += UTF8String(v.0.clone()).encode(writer)?;
-                Ok(n_bytes + (UTF8String(v.1.clone()).encode(writer)?))
+                n_bytes += UTF8String(k.clone()).encode(writer)?;
+                Ok(n_bytes + (UTF8String(v.clone()).encode(writer)?))
             }
             Property::MaximumPacketSize(v) => {
                 let n_bytes =
@@ -208,20 +210,30 @@ impl Decode for Property {
                 PropertyId::ServerKeepAlive => {
                     Property::ServerKeepAlive(TwoByteInteger::decode(reader)?.into())
                 }
-                PropertyId::Authenticationmethod => {
-                    Property::Authenticationmethod(UTF8String::decode(reader)?.into())
+                PropertyId::AuthenticationMethod => {
+                    Property::AuthenticationMethod(UTF8String::decode(reader)?.into())
                 }
                 PropertyId::AuthenticationData => {
                     Property::AuthenticationData(BinaryData::decode(reader)?.into())
                 }
                 PropertyId::RequestProblemInformation => {
-                    Property::RequestProblemInformation(Byte::decode(reader)?.into())
+                    let byte: u8 = Byte::decode(reader)?.into();
+                    match byte {
+                        0x00 => Property::RequestProblemInformation(false),
+                        0x01 => Property::RequestProblemInformation(true),
+                        _ => return Err(Error::ProtocolError),
+                    }
                 }
                 PropertyId::WillDelayInterval => {
                     Property::WillDelayInterval(FourByteInteger::decode(reader)?.into())
                 }
                 PropertyId::RequestResponseInformation => {
-                    Property::RequestResponseInformation(Byte::decode(reader)?.into())
+                    let byte: u8 = Byte::decode(reader)?.into();
+                    match byte {
+                        0x00 => Property::RequestResponseInformation(false),
+                        0x01 => Property::RequestResponseInformation(true),
+                        _ => return Err(Error::ProtocolError),
+                    }
                 }
                 PropertyId::ResponseInformation => {
                     Property::ResponseInformation(UTF8String::decode(reader)?.into())
@@ -245,10 +257,10 @@ impl Decode for Property {
                 PropertyId::RetainAvailable => {
                     Property::RetainAvailable(Byte::decode(reader)?.into())
                 }
-                PropertyId::UserProperty => Property::UserProperty((
+                PropertyId::UserProperty => Property::UserProperty(
                     UTF8String::decode(reader)?.into(),
                     UTF8String::decode(reader)?.into(),
-                )),
+                ),
                 PropertyId::MaximumPacketSize => {
                     Property::MaximumPacketSize(FourByteInteger::decode(reader)?.into())
                 }
@@ -269,7 +281,7 @@ impl Decode for Property {
     }
 }
 
-impl Encode for Vec<Property> {
+impl Encode for Properties {
     fn encode<W: Write>(&self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = 0;
         let mut buffer = Vec::new();
@@ -282,7 +294,7 @@ impl Encode for Vec<Property> {
     }
 }
 
-impl Decode for Vec<Property> {
+impl Decode for Properties {
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
         let mut properties = Vec::new();
 
