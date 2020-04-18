@@ -1,14 +1,13 @@
 use std::io::prelude::*;
 use std::net::TcpStream;
 
-use sage_mqtt::{Connect, Encode};
+use sage_mqtt::{ControlPacket, Connect, Encode};
 
 fn main() -> std::io::Result<()> {
     let mut stream = TcpStream::connect("127.0.0.1:7878")?;
 
-    let connect = Connect::default();
     let mut encoded = Vec::new();
-    connect.encode(&mut encoded).unwrap();
+    ControlPacket::Connect(Default::default()).encode(&mut encoded).unwrap();
 
     stream.write(&encoded)?;
     Ok(())

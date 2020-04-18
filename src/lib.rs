@@ -10,7 +10,9 @@ macro_rules! assert_matches {
     }
 }
 
+mod broker;
 mod connect;
+mod control_packet;
 mod control_packet_type;
 mod decode;
 mod encode;
@@ -22,19 +24,18 @@ mod quality_of_service;
 mod reason_code;
 mod types;
 
+pub use broker::Broker;
+pub use connect::Connect;
+pub use control_packet::ControlPacket;
+use control_packet_type::ControlPacketType;
 pub use decode::Decode;
 pub use encode::Encode;
-
-pub use types::{
-    BinaryData, Bits, Byte, FourByteInteger, TwoByteInteger, UTF8String, VariableByteInteger,
-};
-
-pub use connect::Connect;
 pub use error::{Error, Result};
-pub use quality_of_service::QoS;
-pub use reason_code::ReasonCode;
-
-use control_packet_type::ControlPacketType;
 use fixed_header::FixedHeader;
 use property::{Properties, Property};
 use property_id::PropertyId;
+pub use quality_of_service::QoS;
+pub use reason_code::ReasonCode;
+pub use types::{
+    BinaryData, Bits, Byte, FourByteInteger, TwoByteInteger, UTF8String, VariableByteInteger,
+};

@@ -1,6 +1,6 @@
 use crate::{
-    Bits, Byte, ControlPacketType, Decode, Encode, Error, FixedHeader, Properties, Property, QoS,
-    Result as SageResult, TwoByteInteger, UTF8String,
+    Bits, Byte, Decode, Encode, Error, Properties, Property, QoS, Result as SageResult,
+    TwoByteInteger, UTF8String,
 };
 use std::convert::TryInto;
 use std::io::{Read, Write};
@@ -96,13 +96,11 @@ pub struct Connect {
 
 impl Encode for Connect {
     fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut content = Vec::new();
-
         // Variable Header (into content)
-        let mut n_bytes = UTF8String::from("MQTT").encode(&mut content)?;
-        n_bytes += Byte(0x05).encode(&mut content)?;
-        n_bytes += self.flags.encode(&mut content)?;
-        n_bytes += TwoByteInteger(self.keep_alive).encode(&mut content)?;
+        let mut n_bytes = UTF8String::from("MQTT").encode(writer)?;
+        n_bytes += Byte(0x05).encode(writer)?;
+        n_bytes += self.flags.encode(writer)?;
+        n_bytes += TwoByteInteger(self.keep_alive).encode(writer)?;
 
         // Properties
         let mut properties = Vec::new();
@@ -145,31 +143,13 @@ impl Encode for Connect {
             ));
         }
 
-        n_bytes += properties.encode(&mut content)?;
-
-        let packet_type = ControlPacketType::CONNECT;
-        let remaining_size = 16_383; // TODO: change to content.len() as u32;
-
-        // Fixed header
-        n_bytes += FixedHeader {
-            packet_type,
-            remaining_size,
-        }
-        .encode(writer)?;
-
-        writer.write_all(&content)?;
+        n_bytes += properties.encode(writer)?;
         Ok(n_bytes)
     }
 }
 
 impl Decode for Connect {
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let fixed_header = FixedHeader::decode(reader)?;
-
-        if !matches!(fixed_header.packet_type, ControlPacketType::CONNECT) {
-            return Err(Error::MalformedPacket);
-        }
-
         let protocol_name = UTF8String::decode(reader)?;
         if protocol_name.0 != "MQTT" {
             return Err(Error::MalformedPacket);
@@ -287,8 +267,8 @@ mod unit_connect {
     // Properties:
     // Session Expiry Interface Identifier (17)
     // Session Expiry Interval (10)
-    const CONNECT_ENCODED: [u8; 19] = [
-        0x10, 0xFF, 0x7F, // Change the size
+    const CONNECT_ENCODED: [u8; 16] = [
+        //0x10, 0xFF, 0x7F, // Change the size
         0x00, 0x04, 0x4D, 0x51, 0x54, 0x54, 0x05, 0xCE, 0x00, 0x0A, 0x05, 0x11, 0x00, 0x00, 0x00,
         0x0A,
     ];
@@ -321,7 +301,7 @@ mod unit_connect {
 
         let n_bytes = connect.encode(&mut encoded).unwrap();
         assert_eq!(encoded, CONNECT_ENCODED);
-        assert_eq!(n_bytes, 19);
+        assert_eq!(n_bytes, 16);
     }
 
     #[test]
