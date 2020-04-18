@@ -7,7 +7,7 @@ use std::io::{Read, Write};
 
 /// `ConnectFlags` is a set of parameters describing the behaviour of the
 /// `Connect` control packet.
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone)]
 pub struct ConnectFlags {
     /// Specifies wether the connection starts a new Session or is a
     /// continuation of an existing Session.
@@ -56,7 +56,7 @@ impl Decode for ConnectFlags {
 }
 
 /// The `Connect` control packet is used to open a connection
-#[derive(PartialEq, Debug, Default)]
+#[derive(PartialEq, Debug, Default, Clone)]
 pub struct Connect {
     /// The control packet parameters
     pub flags: ConnectFlags,
