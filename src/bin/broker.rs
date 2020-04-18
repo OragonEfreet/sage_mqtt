@@ -1,5 +1,5 @@
+use sage_mqtt::{Connect, Decode};
 use std::net::{TcpListener, TcpStream};
-use sage_mqtt::{Decode, Connect};
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();

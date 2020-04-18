@@ -206,28 +206,44 @@ mod unit_encode {
     #[test]
     fn encode_variable_byte_integer_three_upper_bound() {
         let mut result = Vec::new();
-        assert_eq!(VariableByteInteger(2_097_151).encode(&mut result).unwrap(), 3);
+        assert_eq!(
+            VariableByteInteger(2_097_151).encode(&mut result).unwrap(),
+            3
+        );
         assert_eq!(result, vec![0xFF, 0xFF, 0x7F]);
     }
 
     #[test]
     fn encode_variable_byte_integer_four_lower_bound() {
         let mut result = Vec::new();
-        assert_eq!(VariableByteInteger(2_097_152).encode(&mut result).unwrap(), 4);
+        assert_eq!(
+            VariableByteInteger(2_097_152).encode(&mut result).unwrap(),
+            4
+        );
         assert_eq!(result, vec![0x80, 0x80, 0x80, 0x01]);
     }
 
     #[test]
     fn encode_variable_byte_integer_four_upper_bound() {
         let mut result = Vec::new();
-        assert_eq!(VariableByteInteger(268_435_455).encode(&mut result).unwrap(), 4);
+        assert_eq!(
+            VariableByteInteger(268_435_455)
+                .encode(&mut result)
+                .unwrap(),
+            4
+        );
         assert_eq!(result, vec![0xFF, 0xFF, 0xFF, 0x7F]);
     }
 
     #[test]
     fn encode_binarydata() {
         let mut result = Vec::new();
-        assert_eq!(BinaryData(Vec::from("A𪛔".as_bytes())).encode(&mut result).unwrap(), 7);
+        assert_eq!(
+            BinaryData(Vec::from("A𪛔".as_bytes()))
+                .encode(&mut result)
+                .unwrap(),
+            7
+        );
         assert_eq!(result, vec![0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
     }
 

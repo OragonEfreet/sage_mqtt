@@ -10,26 +10,31 @@ macro_rules! assert_matches {
     }
 }
 
-mod control_packets;
+mod connect;
+mod control_packet_type;
 mod decode;
 mod encode;
 mod error;
+mod fixed_header;
 mod property;
 mod property_id;
 mod quality_of_service;
 mod reason_code;
 mod types;
 
-pub use control_packets::Connect;
 pub use decode::Decode;
 pub use encode::Encode;
-pub use error::{Error, Result};
-pub use quality_of_service::QoS;
-pub use reason_code::ReasonCode;
+
 pub use types::{
     BinaryData, Bits, Byte, FourByteInteger, TwoByteInteger, UTF8String, VariableByteInteger,
 };
 
-use control_packets::{ControlPacketType, FixedHeader};
+pub use connect::Connect;
+pub use error::{Error, Result};
+pub use quality_of_service::QoS;
+pub use reason_code::ReasonCode;
+
+use control_packet_type::ControlPacketType;
+use fixed_header::FixedHeader;
 use property::{Properties, Property};
 use property_id::PropertyId;
