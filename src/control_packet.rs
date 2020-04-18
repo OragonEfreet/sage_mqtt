@@ -1,4 +1,4 @@
-use crate::{Connect, ControlPacketType, Decode, Encode, FixedHeader, Result as SageResult, Error};
+use crate::{Connect, ControlPacketType, Decode, Encode, Error, FixedHeader, Result as SageResult};
 use std::io::{Read, Write};
 
 #[derive(Debug, Clone)]

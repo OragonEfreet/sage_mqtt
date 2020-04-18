@@ -1,5 +1,5 @@
+use crate::{ControlPacket, Decode};
 use std::io::Read;
-use crate::{Decode, ControlPacket};
 
 #[derive(Default)]
 pub struct Broker;
