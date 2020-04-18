@@ -25,7 +25,7 @@ pub struct ConnectFlags {
 }
 
 impl Encode for ConnectFlags {
-    fn encode<W: Write>(&self, writer: &mut W) -> SageResult<usize> {
+    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let bits = ((self.user_name as u8) << 7)
             | ((self.password as u8) << 6)
             | ((self.will_retain as u8) << 5)
@@ -95,7 +95,7 @@ pub struct Connect {
 }
 
 impl Encode for Connect {
-    fn encode<W: Write>(&self, writer: &mut W) -> SageResult<usize> {
+    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut content = Vec::new();
 
         // Variable Header (into content)

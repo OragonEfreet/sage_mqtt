@@ -88,8 +88,8 @@ impl ControlPacketType {
 }
 
 impl Encode for ControlPacketType {
-    fn encode<W: Write>(&self, writer: &mut W) -> SageResult<usize> {
-        let packet_type = Bits::from(match &self {
+    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+        let packet_type = Bits::from(match self {
             ControlPacketType::RESERVED => 0b0000_0000,
             ControlPacketType::CONNECT => 0b0001_0000,
             ControlPacketType::CONNACK => 0b0010_0000,
@@ -97,7 +97,7 @@ impl Encode for ControlPacketType {
                 duplicate,
                 quality_of_service,
                 retain,
-            } => 0b0011_0000 | (*duplicate as u8) << 3 | *quality_of_service << 2 | *retain as u8,
+            } => 0b0011_0000 | (duplicate as u8) << 3 | quality_of_service << 2 | retain as u8,
             ControlPacketType::PUBACK => 0b0100_0000,
             ControlPacketType::PUBREC => 0b0101_0000,
             ControlPacketType::PUBREL => 0b0110_0010,

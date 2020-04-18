@@ -8,7 +8,7 @@ pub struct FixedHeader {
 }
 
 impl Encode for FixedHeader {
-    fn encode<W: Write>(&self, writer: &mut W) -> SageResult<usize> {
+    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut n = self.packet_type.encode(writer)?;
         n += VariableByteInteger(self.remaining_size).encode(writer)?;
         Ok(n)
