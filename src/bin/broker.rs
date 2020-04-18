@@ -1,23 +1,16 @@
-use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
+use sage_mqtt::{Decode, Connect};
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
 
     for stream in listener.incoming() {
         let stream = stream.unwrap();
-
-        handle_connection(stream);
+        handle(stream);
     }
 }
 
-fn handle_connection(mut stream: TcpStream) {
-    let mut buffer = [0; 512];
-
-    stream.read(&mut buffer).unwrap();
-
-    let response = "HTTP/1.1 200 OK\r\n\r\n<html><head></head><body><p>Ok!</p></body></html>";
-    stream.write(response.as_bytes()).unwrap();
-    stream.flush().unwrap();
-
+fn handle(mut stream: TcpStream) {
+    let connect = Connect::decode(&mut stream);
+    println!("{:?}", connect);
 }
