@@ -35,6 +35,24 @@ pub enum Property {
     SharedSubscriptionAvailable(u8),
 }
 
+pub struct PropertiesDecoder<'a, R: Read> {
+    reader: &'a mut R,
+}
+
+impl<'a, R: Read> PropertiesDecoder<'a, R> {
+    fn new(reader: &'a mut R) -> Self {
+        PropertiesDecoder {reader}
+    }
+}
+
+// impl Iterator for PropertiesDecoder {
+//     type Item = Property;
+
+//     fn next(&mut self) -> Option<Self::Item> {
+//         None
+//     }
+// }
+
 pub type Properties = Vec<Property>;
 
 impl Encode for Property {
