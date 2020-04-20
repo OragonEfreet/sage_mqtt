@@ -1,5 +1,7 @@
-use crate::{ControlPacketType, VariableByteInteger};
+use crate::{Decode, Error, Result as SageResult, VariableByteInteger};
+use std::io::Read;
 
+#[derive(PartialEq, Eq, Hash, Copy, Clone)]
 pub enum PropertyId {
     PayloadFormatIndicator = 0x01,
     MessageExpiryInterval = 0x02,
@@ -30,113 +32,38 @@ pub enum PropertyId {
     SharedSubscriptionAvailable = 0x2A,
 }
 
-impl From<VariableByteInteger> for Option<PropertyId> {
-    fn from(value: VariableByteInteger) -> Self {
-        match value {
-            VariableByteInteger(0x01) => Some(PropertyId::PayloadFormatIndicator),
-            VariableByteInteger(0x02) => Some(PropertyId::MessageExpiryInterval),
-            VariableByteInteger(0x03) => Some(PropertyId::ContentType),
-            VariableByteInteger(0x08) => Some(PropertyId::ResponseTopic),
-            VariableByteInteger(0x09) => Some(PropertyId::CorrelationData),
-            VariableByteInteger(0x0B) => Some(PropertyId::SubscriptionIdentifier),
-            VariableByteInteger(0x11) => Some(PropertyId::SessionExpiryInterval),
-            VariableByteInteger(0x12) => Some(PropertyId::AssignedClientIdentifier),
-            VariableByteInteger(0x13) => Some(PropertyId::ServerKeepAlive),
-            VariableByteInteger(0x15) => Some(PropertyId::AuthenticationMethod),
-            VariableByteInteger(0x16) => Some(PropertyId::AuthenticationData),
-            VariableByteInteger(0x17) => Some(PropertyId::RequestProblemInformation),
-            VariableByteInteger(0x18) => Some(PropertyId::WillDelayInterval),
-            VariableByteInteger(0x19) => Some(PropertyId::RequestResponseInformation),
-            VariableByteInteger(0x1A) => Some(PropertyId::ResponseInformation),
-            VariableByteInteger(0x1C) => Some(PropertyId::ServerReference),
-            VariableByteInteger(0x1F) => Some(PropertyId::ReasonString),
-            VariableByteInteger(0x21) => Some(PropertyId::ReceiveMaximum),
-            VariableByteInteger(0x22) => Some(PropertyId::TopicAliasMaximum),
-            VariableByteInteger(0x23) => Some(PropertyId::TopicAlias),
-            VariableByteInteger(0x24) => Some(PropertyId::MaximumQoS),
-            VariableByteInteger(0x25) => Some(PropertyId::RetainAvailable),
-            VariableByteInteger(0x26) => Some(PropertyId::UserProperty),
-            VariableByteInteger(0x27) => Some(PropertyId::MaximumPacketSize),
-            VariableByteInteger(0x28) => Some(PropertyId::WildcardSubscriptionAvailable),
-            VariableByteInteger(0x29) => Some(PropertyId::SubscriptionIdentifierAvailable),
-            VariableByteInteger(0x2A) => Some(PropertyId::SharedSubscriptionAvailable),
-            _ => None,
-        }
-    }
-}
-
-impl PropertyId {
-    pub fn allowed(&self, packet_type: &ControlPacketType) -> bool {
-        match (self, packet_type) {
-            (PropertyId::PayloadFormatIndicator, ControlPacketType::PUBLISH { .. })
-            | (PropertyId::MessageExpiryInterval, ControlPacketType::PUBLISH { .. })
-            | (PropertyId::ContentType, ControlPacketType::PUBLISH { .. })
-            | (PropertyId::ResponseTopic, ControlPacketType::PUBLISH { .. })
-            | (PropertyId::CorrelationData, ControlPacketType::PUBLISH { .. })
-            | (PropertyId::SubscriptionIdentifier, ControlPacketType::PUBLISH { .. })
-            | (PropertyId::SubscriptionIdentifier, ControlPacketType::SUBSCRIBE)
-            | (PropertyId::SessionExpiryInterval, ControlPacketType::CONNECT)
-            | (PropertyId::SessionExpiryInterval, ControlPacketType::CONNACK)
-            | (PropertyId::SessionExpiryInterval, ControlPacketType::DISCONNECT)
-            | (PropertyId::AssignedClientIdentifier, ControlPacketType::CONNACK)
-            | (PropertyId::ServerKeepAlive, ControlPacketType::CONNACK)
-            | (PropertyId::AuthenticationMethod, ControlPacketType::CONNECT)
-            | (PropertyId::AuthenticationMethod, ControlPacketType::CONNACK)
-            | (PropertyId::AuthenticationMethod, ControlPacketType::AUTH)
-            | (PropertyId::AuthenticationData, ControlPacketType::CONNECT)
-            | (PropertyId::AuthenticationData, ControlPacketType::CONNACK)
-            | (PropertyId::AuthenticationData, ControlPacketType::AUTH)
-            | (PropertyId::RequestProblemInformation, ControlPacketType::CONNECT)
-            | (PropertyId::RequestResponseInformation, ControlPacketType::CONNECT)
-            | (PropertyId::ResponseInformation, ControlPacketType::CONNACK)
-            | (PropertyId::ServerReference, ControlPacketType::CONNACK)
-            | (PropertyId::ServerReference, ControlPacketType::DISCONNECT)
-            | (PropertyId::ReasonString, ControlPacketType::CONNACK)
-            | (PropertyId::ReasonString, ControlPacketType::PUBACK)
-            | (PropertyId::ReasonString, ControlPacketType::PUBREC)
-            | (PropertyId::ReasonString, ControlPacketType::PUBREL)
-            | (PropertyId::ReasonString, ControlPacketType::PUBCOMP)
-            | (PropertyId::ReasonString, ControlPacketType::SUBACK)
-            | (PropertyId::ReasonString, ControlPacketType::UNSUBACK)
-            | (PropertyId::ReasonString, ControlPacketType::DISCONNECT)
-            | (PropertyId::ReasonString, ControlPacketType::AUTH)
-            | (PropertyId::ReceiveMaximum, ControlPacketType::CONNECT)
-            | (PropertyId::ReceiveMaximum, ControlPacketType::CONNACK)
-            | (PropertyId::TopicAliasMaximum, ControlPacketType::CONNECT)
-            | (PropertyId::TopicAliasMaximum, ControlPacketType::CONNACK)
-            | (PropertyId::TopicAlias, ControlPacketType::PUBLISH { .. })
-            | (PropertyId::MaximumQoS, ControlPacketType::CONNACK)
-            | (PropertyId::RetainAvailable, ControlPacketType::CONNACK)
-            | (PropertyId::UserProperty, ControlPacketType::CONNECT)
-            | (PropertyId::UserProperty, ControlPacketType::CONNACK)
-            | (PropertyId::UserProperty, ControlPacketType::PUBLISH { .. })
-            | (PropertyId::UserProperty, ControlPacketType::PUBACK)
-            | (PropertyId::UserProperty, ControlPacketType::PUBREC)
-            | (PropertyId::UserProperty, ControlPacketType::PUBREL)
-            | (PropertyId::UserProperty, ControlPacketType::PUBCOMP)
-            | (PropertyId::UserProperty, ControlPacketType::SUBSCRIBE)
-            | (PropertyId::UserProperty, ControlPacketType::SUBACK)
-            | (PropertyId::UserProperty, ControlPacketType::UNSUBSCRIBE)
-            | (PropertyId::UserProperty, ControlPacketType::UNSUBACK)
-            | (PropertyId::UserProperty, ControlPacketType::DISCONNECT)
-            | (PropertyId::UserProperty, ControlPacketType::AUTH)
-            | (PropertyId::MaximumPacketSize, ControlPacketType::CONNECT)
-            | (PropertyId::MaximumPacketSize, ControlPacketType::CONNACK)
-            | (PropertyId::WildcardSubscriptionAvailable, ControlPacketType::CONNACK)
-            | (PropertyId::SubscriptionIdentifierAvailable, ControlPacketType::CONNACK)
-            | (PropertyId::SharedSubscriptionAvailable, ControlPacketType::CONNACK) => true,
-            _ => false,
-        }
-    }
-
-    pub fn allowed_as_will(&self) -> bool {
-        match self {
-            _ => true, // 01
-                       // 02
-                       // 03
-                       // 08
-                       // 09
-                       // 0B
+impl Decode for PropertyId {
+    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
+        let id: u32 = VariableByteInteger::decode(reader)?.into();
+        match id {
+            0x01 => Ok(PropertyId::PayloadFormatIndicator),
+            0x02 => Ok(PropertyId::MessageExpiryInterval),
+            0x03 => Ok(PropertyId::ContentType),
+            0x08 => Ok(PropertyId::ResponseTopic),
+            0x09 => Ok(PropertyId::CorrelationData),
+            0x0B => Ok(PropertyId::SubscriptionIdentifier),
+            0x11 => Ok(PropertyId::SessionExpiryInterval),
+            0x12 => Ok(PropertyId::AssignedClientIdentifier),
+            0x13 => Ok(PropertyId::ServerKeepAlive),
+            0x15 => Ok(PropertyId::AuthenticationMethod),
+            0x16 => Ok(PropertyId::AuthenticationData),
+            0x17 => Ok(PropertyId::RequestProblemInformation),
+            0x18 => Ok(PropertyId::WillDelayInterval),
+            0x19 => Ok(PropertyId::RequestResponseInformation),
+            0x1A => Ok(PropertyId::ResponseInformation),
+            0x1C => Ok(PropertyId::ServerReference),
+            0x1F => Ok(PropertyId::ReasonString),
+            0x21 => Ok(PropertyId::ReceiveMaximum),
+            0x22 => Ok(PropertyId::TopicAliasMaximum),
+            0x23 => Ok(PropertyId::TopicAlias),
+            0x24 => Ok(PropertyId::MaximumQoS),
+            0x25 => Ok(PropertyId::RetainAvailable),
+            0x26 => Ok(PropertyId::UserProperty),
+            0x27 => Ok(PropertyId::MaximumPacketSize),
+            0x28 => Ok(PropertyId::WildcardSubscriptionAvailable),
+            0x29 => Ok(PropertyId::SubscriptionIdentifierAvailable),
+            0x2A => Ok(PropertyId::SharedSubscriptionAvailable),
+            _ => Err(Error::ProtocolError),
         }
     }
 }

@@ -11,6 +11,6 @@ fn main() -> std::io::Result<()> {
         .encode(&mut encoded)
         .unwrap();
 
-    stream.write(&encoded)?;
+    stream.write_all(&encoded)?;
     Ok(())
 } // the stream is closed here

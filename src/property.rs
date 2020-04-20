@@ -2,7 +2,10 @@ use crate::{
     BinaryData, Bits, Byte, Decode, Encode, Error, FourByteInteger, PropertyId,
     Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger,
 };
-use std::io::{Read, Write};
+use std::{
+    collections::HashSet,
+    io::{Read, Take, Write},
+};
 
 #[derive(Debug, PartialEq)]
 pub enum Property {
@@ -35,25 +38,125 @@ pub enum Property {
     SharedSubscriptionAvailable(u8),
 }
 
-pub struct PropertiesDecoder<'a, R: Read> {
-    reader: &'a mut R,
+pub struct PropertiesDecoder<R: Read> {
+    reader: Take<R>,
+    marked: HashSet<PropertyId>,
 }
 
-impl<'a, R: Read> PropertiesDecoder<'a, R> {
-    fn new(reader: &'a mut R) -> Self {
-        PropertiesDecoder {reader}
+impl<R: Read> PropertiesDecoder<R> {
+    pub fn take(mut reader: R) -> SageResult<Self> {
+        let len = u64::from(VariableByteInteger::decode(&mut reader)?);
+        Ok(PropertiesDecoder {
+            reader: reader.take(len),
+            marked: HashSet::new(),
+        })
+    }
+
+    pub fn has_properties(&self) -> bool {
+        self.reader.limit() > 0
+    }
+
+    pub fn read(&mut self) -> SageResult<Property> {
+        let reader = &mut self.reader;
+        let property_id = PropertyId::decode(reader)?;
+
+        // Filter by authorized properties and unicity requirements
+        if property_id != PropertyId::UserProperty && !self.marked.insert(property_id) {
+            return Err(Error::ProtocolError);
+        }
+        self.read_property_value(property_id)
+    }
+
+    fn read_property_value(&mut self, id: PropertyId) -> SageResult<Property> {
+        let reader = &mut self.reader;
+        match id {
+            PropertyId::PayloadFormatIndicator => Ok(Property::PayloadFormatIndicator(
+                Bits::decode(reader)?.into(),
+            )),
+            PropertyId::MessageExpiryInterval => Ok(Property::MessageExpiryInterval(
+                FourByteInteger::decode(reader)?.into(),
+            )),
+            PropertyId::ContentType => {
+                Ok(Property::ContentType(UTF8String::decode(reader)?.into()))
+            }
+            PropertyId::ResponseTopic => {
+                Ok(Property::ResponseTopic(UTF8String::decode(reader)?.into()))
+            }
+            PropertyId::CorrelationData => Ok(Property::CorrelationData(
+                BinaryData::decode(reader)?.into(),
+            )),
+            PropertyId::SubscriptionIdentifier => Ok(Property::SubscriptionIdentifier(
+                VariableByteInteger::decode(reader)?.into(),
+            )),
+            PropertyId::SessionExpiryInterval => Ok(Property::SessionExpiryInterval(
+                FourByteInteger::decode(reader)?.into(),
+            )),
+            PropertyId::AssignedClientIdentifier => Ok(Property::AssignedClientIdentifier(
+                UTF8String::decode(reader)?.into(),
+            )),
+            PropertyId::ServerKeepAlive => Ok(Property::ServerKeepAlive(
+                TwoByteInteger::decode(reader)?.into(),
+            )),
+            PropertyId::AuthenticationMethod => Ok(Property::AuthenticationMethod(
+                UTF8String::decode(reader)?.into(),
+            )),
+            PropertyId::AuthenticationData => Ok(Property::AuthenticationData(
+                BinaryData::decode(reader)?.into(),
+            )),
+            PropertyId::RequestProblemInformation => match u8::from(Byte::decode(reader)?) {
+                0x00 => Ok(Property::RequestProblemInformation(false)),
+                0x01 => Ok(Property::RequestProblemInformation(true)),
+                _ => Err(Error::ProtocolError),
+            },
+            PropertyId::WillDelayInterval => Ok(Property::WillDelayInterval(
+                FourByteInteger::decode(reader)?.into(),
+            )),
+            PropertyId::RequestResponseInformation => match u8::from(Byte::decode(reader)?) {
+                0x00 => Ok(Property::RequestResponseInformation(false)),
+                0x01 => Ok(Property::RequestResponseInformation(true)),
+                _ => Err(Error::ProtocolError),
+            },
+            PropertyId::ResponseInformation => Ok(Property::ResponseInformation(
+                UTF8String::decode(reader)?.into(),
+            )),
+            PropertyId::ServerReference => Ok(Property::ServerReference(
+                UTF8String::decode(reader)?.into(),
+            )),
+            PropertyId::ReasonString => {
+                Ok(Property::ReasonString(UTF8String::decode(reader)?.into()))
+            }
+            PropertyId::ReceiveMaximum => Ok(Property::ReceiveMaximum(
+                TwoByteInteger::decode(reader)?.into(),
+            )),
+            PropertyId::TopicAliasMaximum => Ok(Property::TopicAliasMaximum(
+                TwoByteInteger::decode(reader)?.into(),
+            )),
+            PropertyId::TopicAlias => {
+                Ok(Property::TopicAlias(TwoByteInteger::decode(reader)?.into()))
+            }
+            PropertyId::MaximumQoS => Ok(Property::MaximumQoS(Byte::decode(reader)?.into())),
+            PropertyId::RetainAvailable => {
+                Ok(Property::RetainAvailable(Byte::decode(reader)?.into()))
+            }
+            PropertyId::UserProperty => Ok(Property::UserProperty(
+                UTF8String::decode(reader)?.into(),
+                UTF8String::decode(reader)?.into(),
+            )),
+            PropertyId::MaximumPacketSize => Ok(Property::MaximumPacketSize(
+                FourByteInteger::decode(reader)?.into(),
+            )),
+            PropertyId::WildcardSubscriptionAvailable => Ok(
+                Property::WildcardSubscriptionAvailable(Byte::decode(reader)?.into()),
+            ),
+            PropertyId::SubscriptionIdentifierAvailable => Ok(
+                Property::SubscriptionIdentifierAvailable(Byte::decode(reader)?.into()),
+            ),
+            PropertyId::SharedSubscriptionAvailable => Ok(Property::SharedSubscriptionAvailable(
+                Byte::decode(reader)?.into(),
+            )),
+        }
     }
 }
-
-// impl Iterator for PropertiesDecoder {
-//     type Item = Property;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         None
-//     }
-// }
-
-pub type Properties = Vec<Property>;
 
 impl Encode for Property {
     fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
@@ -193,136 +296,5 @@ impl Encode for Property {
                 Ok(n_bytes + Byte(v).encode(writer)?)
             }
         }
-    }
-}
-
-impl Decode for Property {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let property_id: Option<PropertyId> = VariableByteInteger::decode(reader)?.into();
-        if let Some(property_id) = property_id {
-            let property = match property_id {
-                PropertyId::PayloadFormatIndicator => {
-                    Property::PayloadFormatIndicator(Bits::decode(reader)?.into())
-                }
-                PropertyId::MessageExpiryInterval => {
-                    Property::MessageExpiryInterval(FourByteInteger::decode(reader)?.into())
-                }
-                PropertyId::ContentType => {
-                    Property::ContentType(UTF8String::decode(reader)?.into())
-                }
-                PropertyId::ResponseTopic => {
-                    Property::ResponseTopic(UTF8String::decode(reader)?.into())
-                }
-                PropertyId::CorrelationData => {
-                    Property::CorrelationData(BinaryData::decode(reader)?.into())
-                }
-                PropertyId::SubscriptionIdentifier => {
-                    Property::SubscriptionIdentifier(VariableByteInteger::decode(reader)?.into())
-                }
-                PropertyId::SessionExpiryInterval => {
-                    Property::SessionExpiryInterval(FourByteInteger::decode(reader)?.into())
-                }
-                PropertyId::AssignedClientIdentifier => {
-                    Property::AssignedClientIdentifier(UTF8String::decode(reader)?.into())
-                }
-                PropertyId::ServerKeepAlive => {
-                    Property::ServerKeepAlive(TwoByteInteger::decode(reader)?.into())
-                }
-                PropertyId::AuthenticationMethod => {
-                    Property::AuthenticationMethod(UTF8String::decode(reader)?.into())
-                }
-                PropertyId::AuthenticationData => {
-                    Property::AuthenticationData(BinaryData::decode(reader)?.into())
-                }
-                PropertyId::RequestProblemInformation => {
-                    let byte: u8 = Byte::decode(reader)?.into();
-                    match byte {
-                        0x00 => Property::RequestProblemInformation(false),
-                        0x01 => Property::RequestProblemInformation(true),
-                        _ => return Err(Error::ProtocolError),
-                    }
-                }
-                PropertyId::WillDelayInterval => {
-                    Property::WillDelayInterval(FourByteInteger::decode(reader)?.into())
-                }
-                PropertyId::RequestResponseInformation => {
-                    let byte: u8 = Byte::decode(reader)?.into();
-                    match byte {
-                        0x00 => Property::RequestResponseInformation(false),
-                        0x01 => Property::RequestResponseInformation(true),
-                        _ => return Err(Error::ProtocolError),
-                    }
-                }
-                PropertyId::ResponseInformation => {
-                    Property::ResponseInformation(UTF8String::decode(reader)?.into())
-                }
-                PropertyId::ServerReference => {
-                    Property::ServerReference(UTF8String::decode(reader)?.into())
-                }
-                PropertyId::ReasonString => {
-                    Property::ReasonString(UTF8String::decode(reader)?.into())
-                }
-                PropertyId::ReceiveMaximum => {
-                    Property::ReceiveMaximum(TwoByteInteger::decode(reader)?.into())
-                }
-                PropertyId::TopicAliasMaximum => {
-                    Property::TopicAliasMaximum(TwoByteInteger::decode(reader)?.into())
-                }
-                PropertyId::TopicAlias => {
-                    Property::TopicAlias(TwoByteInteger::decode(reader)?.into())
-                }
-                PropertyId::MaximumQoS => Property::MaximumQoS(Byte::decode(reader)?.into()),
-                PropertyId::RetainAvailable => {
-                    Property::RetainAvailable(Byte::decode(reader)?.into())
-                }
-                PropertyId::UserProperty => Property::UserProperty(
-                    UTF8String::decode(reader)?.into(),
-                    UTF8String::decode(reader)?.into(),
-                ),
-                PropertyId::MaximumPacketSize => {
-                    Property::MaximumPacketSize(FourByteInteger::decode(reader)?.into())
-                }
-                PropertyId::WildcardSubscriptionAvailable => {
-                    Property::WildcardSubscriptionAvailable(Byte::decode(reader)?.into())
-                }
-                PropertyId::SubscriptionIdentifierAvailable => {
-                    Property::SubscriptionIdentifierAvailable(Byte::decode(reader)?.into())
-                }
-                PropertyId::SharedSubscriptionAvailable => {
-                    Property::SharedSubscriptionAvailable(Byte::decode(reader)?.into())
-                }
-            };
-            Ok(property)
-        } else {
-            Err(Error::MalformedPacket)
-        }
-    }
-}
-
-impl Encode for Properties {
-    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = 0;
-        let mut buffer = Vec::new();
-        for property in self {
-            n_bytes += property.encode(&mut buffer)?;
-        }
-        n_bytes += VariableByteInteger(n_bytes as u32).encode(writer)?;
-        writer.write_all(&buffer)?;
-        Ok(n_bytes)
-    }
-}
-
-impl Decode for Properties {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let mut properties = Vec::new();
-
-        let len: u64 = VariableByteInteger::decode(reader)?.into();
-        let mut buffer = reader.take(len);
-
-        while buffer.limit() > 0 {
-            properties.push(Property::decode(&mut buffer)?);
-        }
-
-        Ok(properties)
     }
 }

@@ -25,14 +25,14 @@ mod reason_code;
 mod types;
 
 pub use broker::Broker;
-pub use connect::Connect;
+pub use connect::{Connect, ConnectFlags};
 pub use control_packet::ControlPacket;
 use control_packet_type::ControlPacketType;
 pub use decode::Decode;
 pub use encode::Encode;
 pub use error::{Error, Result};
 use fixed_header::FixedHeader;
-use property::{Properties, Property};
+use property::{PropertiesDecoder, Property};
 use property_id::PropertyId;
 pub use quality_of_service::QoS;
 pub use reason_code::ReasonCode;

@@ -1,6 +1,6 @@
 use crate::{
-    Bits, Byte, Decode, Encode, Error, Properties, Property, QoS, Result as SageResult,
-    TwoByteInteger, UTF8String,
+    Bits, Byte, Decode, Encode, Error, PropertiesDecoder, Property, QoS, Result as SageResult,
+    TwoByteInteger, UTF8String, VariableByteInteger,
 };
 use std::convert::TryInto;
 use std::io::{Read, Write};
@@ -143,7 +143,18 @@ impl Encode for Connect {
             ));
         }
 
-        n_bytes += properties.encode(writer)?;
+        n_bytes += {
+            let mut n_bytes = 0;
+
+            let mut properties_buffer = Vec::new();
+            for property in properties {
+                n_bytes += property.encode(&mut properties_buffer)?;
+            }
+            n_bytes += VariableByteInteger(n_bytes as u32).encode(writer)?;
+            writer.write_all(&properties_buffer)?;
+            n_bytes
+        };
+
         Ok(n_bytes)
     }
 }
@@ -163,107 +174,34 @@ impl Decode for Connect {
         let flags = ConnectFlags::decode(reader)?;
         let keep_alive = TwoByteInteger::decode(reader)?.into();
 
-        println!("===================");
-        println!("DECODING PROPERTIES");
-        println!("===================");
-
-        // Properties
-        // let properties = Properties::decode(reader)?;
-        // let mut session_expiry_interval = None;
-        // let mut receive_maximum = None;
-        // let mut maximum_packet_size = None;
-        // let mut topic_alias_maximum = None;
-        // let mut request_response_information = None;
-        // let mut request_problem_information = None;
-        // let mut user_properties = Vec::new();
-        // let mut authentication_method = None;
-        // let mut authentication_data = None;
-        // for property in properties.iter() {
-        //     match property {
-        //         Property::SessionExpiryInterval(v) => {
-        //             if session_expiry_interval.is_some() {
-        //                 return Err(Error::ProtocolError);
-        //             }
-        //             session_expiry_interval = Some(*v);
-        //         }
-        //         Property::ReceiveMaximum(v) => {
-        //             if receive_maximum.is_some() || v == &0 {
-        //                 return Err(Error::ProtocolError);
-        //             }
-        //             receive_maximum = Some(*v);
-        //         }
-        //         Property::MaximumPacketSize(v) => {
-        //             if maximum_packet_size.is_some() || v == &0 {
-        //                 return Err(Error::ProtocolError);
-        //             }
-        //             maximum_packet_size = Some(*v);
-        //         }
-        //         Property::TopicAliasMaximum(v) => {
-        //             if topic_alias_maximum.is_some() {
-        //                 return Err(Error::ProtocolError);
-        //             }
-        //             topic_alias_maximum = Some(*v);
-        //         }
-        //         Property::RequestResponseInformation(v) => {
-        //             if request_response_information.is_some() {
-        //                 return Err(Error::ProtocolError);
-        //             }
-        //             request_response_information = Some(*v);
-        //         }
-        //         Property::RequestProblemInformation(v) => {
-        //             if request_problem_information.is_some() {
-        //                 return Err(Error::ProtocolError);
-        //             }
-        //             request_problem_information = Some(*v);
-        //         }
-        //         Property::UserProperty(k, v) => {
-        //             user_properties.push((k.clone(), v.clone()));
-        //         }
-        //         Property::AuthenticationMethod(v) => {
-        //             if authentication_method.is_some() {
-        //                 return Err(Error::ProtocolError);
-        //             }
-        //             authentication_method = Some(v.clone());
-        //         }
-        //         Property::AuthenticationData(v) => {
-        //             if authentication_data.is_some() {
-        //                 return Err(Error::ProtocolError);
-        //             }
-        //             authentication_data = Some(v.clone());
-        //         }
-
-        //         _ => return Err(Error::ProtocolError),
-        //     }
-        // }
+        let mut c = Connect {
+            flags,
+            keep_alive,
+            ..Default::default()
+        };
+        let mut decoder = PropertiesDecoder::take(reader)?;
+        while decoder.has_properties() {
+            let p = decoder.read()?;
+            match p {
+                Property::SessionExpiryInterval(v) => c.session_expiry_interval = Some(v),
+                Property::AuthenticationMethod(v) => c.authentication_method = Some(v),
+                Property::AuthenticationData(v) => c.authentication_data = v,
+                Property::RequestProblemInformation(v) => c.request_problem_information = Some(v),
+                Property::RequestResponseInformation(v) => c.request_response_information = Some(v),
+                Property::ReceiveMaximum(v) => c.receive_maximum = Some(v),
+                Property::TopicAliasMaximum(v) => c.topic_alias_maximum = Some(v),
+                Property::UserProperty(k, v) => c.user_properties.push((k, v)),
+                Property::MaximumPacketSize(v) => c.maximum_packet_size = Some(v),
+                _ => return Err(Error::ProtocolError),
+            };
+        }
 
         // if authentication_data.is_some() != authentication_method.is_some() {
         //     return Err(Error::ProtocolError);
         // }
         // let authentication_data = authentication_data.unwrap_or_default();
 
-        let session_expiry_interval = Default::default();
-        let receive_maximum = Default::default();
-        let maximum_packet_size = Default::default();
-        let topic_alias_maximum = Default::default();
-        let request_response_information = Default::default();
-        let request_problem_information = Default::default();
-        let user_properties = Default::default();
-        let authentication_method = Default::default();
-        let authentication_data = Default::default();
-        
-        Ok(Connect {
-            flags,
-            keep_alive,
-            session_expiry_interval,
-            receive_maximum,
-            maximum_packet_size,
-            topic_alias_maximum,
-            request_response_information,
-            request_problem_information,
-            user_properties,
-            authentication_method,
-            authentication_data,
-        })
+        Ok(c)
     }
 }
 

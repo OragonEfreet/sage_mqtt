@@ -23,7 +23,7 @@ impl Encode for ControlPacket {
         }
         .encode(writer)?;
 
-        writer.write_all(&mut variable_and_payload)?;
+        writer.write_all(&variable_and_payload)?;
         Ok(fixed_size)
     }
 }
