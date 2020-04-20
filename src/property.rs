@@ -9,7 +9,7 @@ use std::{
 
 #[derive(Debug, PartialEq)]
 pub enum Property {
-    PayloadFormatIndicator(u8),
+    PayloadFormatIndicator(bool),
     MessageExpiryInterval(u32),
     ContentType(String),
     ResponseTopic(String),
@@ -38,14 +38,14 @@ pub enum Property {
     SharedSubscriptionAvailable(u8),
 }
 
-pub struct PropertiesDecoder<R: Read> {
-    reader: Take<R>,
+pub struct PropertiesDecoder<'a, R: Read> {
+    reader: Take<&'a mut R>,
     marked: HashSet<PropertyId>,
 }
 
-impl<R: Read> PropertiesDecoder<R> {
-    pub fn take(mut reader: R) -> SageResult<Self> {
-        let len = u64::from(VariableByteInteger::decode(&mut reader)?);
+impl<'a, R: Read> PropertiesDecoder<'a, R> {
+    pub fn take(reader: &'a mut R) -> SageResult<Self> {
+        let len = u64::from(VariableByteInteger::decode(reader)?);
         Ok(PropertiesDecoder {
             reader: reader.take(len),
             marked: HashSet::new(),
@@ -70,9 +70,11 @@ impl<R: Read> PropertiesDecoder<R> {
     fn read_property_value(&mut self, id: PropertyId) -> SageResult<Property> {
         let reader = &mut self.reader;
         match id {
-            PropertyId::PayloadFormatIndicator => Ok(Property::PayloadFormatIndicator(
-                Bits::decode(reader)?.into(),
-            )),
+            PropertyId::PayloadFormatIndicator => match u8::from(Byte::decode(reader)?) {
+                0x00 => Ok(Property::PayloadFormatIndicator(false)),
+                0x01 => Ok(Property::PayloadFormatIndicator(true)),
+                _ => Err(Error::ProtocolError),
+            },
             PropertyId::MessageExpiryInterval => Ok(Property::MessageExpiryInterval(
                 FourByteInteger::decode(reader)?.into(),
             )),
@@ -164,7 +166,7 @@ impl Encode for Property {
             Property::PayloadFormatIndicator(v) => {
                 let n_bytes = VariableByteInteger(PropertyId::PayloadFormatIndicator as u32)
                     .encode(writer)?;
-                Ok(n_bytes + Bits(v).encode(writer)?)
+                Ok(n_bytes + Bits(v as u8).encode(writer)?)
             }
             Property::MessageExpiryInterval(v) => {
                 let n_bytes =

@@ -1,13 +1,13 @@
 use crate::{
-    Bits, Byte, Decode, Encode, Error, PropertiesDecoder, Property, QoS, Result as SageResult,
-    TwoByteInteger, UTF8String, VariableByteInteger,
+    BinaryData, Bits, Byte, Decode, Encode, Error, PropertiesDecoder, Property, QoS,
+    Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger,
 };
 use std::convert::TryInto;
 use std::io::{Read, Write};
 
 /// `ConnectFlags` is a set of parameters describing the behaviour of the
 /// `Connect` control packet.
-#[derive(Default, Debug, PartialEq, Clone)]
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub struct ConnectFlags {
     /// Specifies wether the connection starts a new Session or is a
     /// continuation of an existing Session.
@@ -55,43 +55,37 @@ impl Decode for ConnectFlags {
     }
 }
 
+#[derive(Default, Debug, PartialEq, Clone)]
+pub struct Will {
+    pub delay_interval: u32,
+    pub format_indicator: bool,
+    pub message_expiry_interval: Option<u32>,
+    pub content_type: String,
+    pub response_topic: String,
+    pub correlation_data: Option<Vec<u8>>,
+    pub user_properties: Vec<(String, String)>,
+    pub topic: String,
+    pub payload: Vec<u8>,
+}
+
 /// The `Connect` control packet is used to open a connection
 #[derive(PartialEq, Debug, Default, Clone)]
 pub struct Connect {
-    /// The control packet parameters
     pub flags: ConnectFlags,
-
-    /// Time interval in seconds representing the maximum interval that is
-    /// allowed to elapse between two client MQTT packets.
     pub keep_alive: u16,
-
-    /// Represents the session expiry in seconds.
     pub session_expiry_interval: Option<u32>,
-
-    /// Limits the number of QoS1 and QoS2 publications that than be processed
-    /// concurrently.
     pub receive_maximum: Option<u16>,
-
-    /// The maximum packet size the client is willing to accept
     pub maximum_packet_size: Option<u32>,
-
-    /// Highest value a client will accept a a Topic Alias sent by the server.
     pub topic_alias_maximum: Option<u16>,
-
-    /// Can the server send response information in the CONNACK?
     pub request_response_information: Option<bool>,
-
-    /// Wether a reason string or user properties are sent in case of failure
     pub request_problem_information: Option<bool>,
-
-    /// User properties can be any key-value pair. Duplicates are allowed
     pub user_properties: Vec<(String, String)>,
-
-    /// Set if an authentication is done
     pub authentication_method: Option<String>,
-
-    /// Sets authentication data
     pub authentication_data: Vec<u8>,
+    pub client_id: String,
+    pub will: Option<Will>,
+    pub user_name: Option<String>,
+    pub password: Option<Vec<u8>>,
 }
 
 impl Encode for Connect {
@@ -126,25 +120,45 @@ impl Encode for Connect {
                 request_problem_information,
             ));
         }
-        for property in &self.user_properties {
-            properties.push(Property::UserProperty(
-                property.0.clone(),
-                property.1.clone(),
-            ));
+        for property in self.user_properties {
+            properties.push(Property::UserProperty(property.0, property.1));
         }
-        if let Some(authentication_method) = &self.authentication_method {
-            properties.push(Property::AuthenticationMethod(
-                authentication_method.clone(),
-            ));
+        if let Some(authentication_method) = self.authentication_method {
+            properties.push(Property::AuthenticationMethod(authentication_method));
         }
         if !self.authentication_data.is_empty() {
-            properties.push(Property::AuthenticationData(
-                self.authentication_data.clone(),
-            ));
+            properties.push(Property::AuthenticationData(self.authentication_data));
         }
 
-        n_bytes += {
-            let mut n_bytes = 0;
+        let mut properties_buffer = Vec::new();
+        for property in properties {
+            n_bytes += property.encode(&mut properties_buffer)?;
+        }
+        n_bytes += VariableByteInteger(n_bytes as u32).encode(writer)?;
+        writer.write_all(&properties_buffer)?;
+
+        // Payload
+        n_bytes += UTF8String(self.client_id).encode(writer)?;
+
+        if let Some(w) = self.will {
+            let mut properties = vec![
+                Property::WillDelayInterval(w.delay_interval),
+                Property::PayloadFormatIndicator(w.format_indicator),
+                Property::ContentType(w.content_type),
+                Property::ResponseTopic(w.response_topic),
+            ];
+
+            if let Some(v) = w.message_expiry_interval {
+                properties.push(Property::MessageExpiryInterval(v));
+            }
+
+            if let Some(v) = w.correlation_data {
+                properties.push(Property::CorrelationData(v));
+            }
+
+            for (k, v) in w.user_properties {
+                properties.push(Property::UserProperty(k, v));
+            }
 
             let mut properties_buffer = Vec::new();
             for property in properties {
@@ -152,8 +166,18 @@ impl Encode for Connect {
             }
             n_bytes += VariableByteInteger(n_bytes as u32).encode(writer)?;
             writer.write_all(&properties_buffer)?;
-            n_bytes
-        };
+
+            n_bytes += UTF8String(w.topic).encode(writer)?;
+            n_bytes += BinaryData(w.payload).encode(writer)?;
+        }
+
+        if let Some(v) = self.user_name {
+            n_bytes += UTF8String(v).encode(writer)?;
+        }
+
+        if let Some(v) = self.password {
+            n_bytes += BinaryData(v).encode(writer)?;
+        }
 
         Ok(n_bytes)
     }
@@ -181,8 +205,7 @@ impl Decode for Connect {
         };
         let mut decoder = PropertiesDecoder::take(reader)?;
         while decoder.has_properties() {
-            let p = decoder.read()?;
-            match p {
+            match decoder.read()? {
                 Property::SessionExpiryInterval(v) => c.session_expiry_interval = Some(v),
                 Property::AuthenticationMethod(v) => c.authentication_method = Some(v),
                 Property::AuthenticationData(v) => c.authentication_data = v,
@@ -196,10 +219,38 @@ impl Decode for Connect {
             };
         }
 
-        // if authentication_data.is_some() != authentication_method.is_some() {
-        //     return Err(Error::ProtocolError);
-        // }
-        // let authentication_data = authentication_data.unwrap_or_default();
+        // Payload
+        c.client_id = UTF8String::decode(reader)?.into();
+
+        c.will = if flags.will {
+            let mut decoder = PropertiesDecoder::take(reader)?;
+            let mut w = Will::default();
+            while decoder.has_properties() {
+                match decoder.read()? {
+                    Property::WillDelayInterval(v) => w.delay_interval = v,
+                    Property::PayloadFormatIndicator(v) => w.format_indicator = v,
+                    Property::MessageExpiryInterval(v) => w.message_expiry_interval = Some(v),
+                    Property::ContentType(v) => w.content_type = v,
+                    Property::ResponseTopic(v) => w.response_topic = v,
+                    Property::CorrelationData(v) => w.correlation_data = Some(v),
+                    Property::UserProperty(k, v) => w.user_properties.push((k, v)),
+                    _ => return Err(Error::ProtocolError),
+                }
+            }
+            w.topic = UTF8String::decode(reader)?.into();
+            w.payload = BinaryData::decode(reader)?.into();
+            Some(w)
+        } else {
+            None
+        };
+
+        if flags.user_name {
+            c.user_name = Some(UTF8String::decode(reader)?.into());
+        }
+
+        if flags.password {
+            c.password = Some(BinaryData::decode(reader)?.into());
+        }
 
         Ok(c)
     }
