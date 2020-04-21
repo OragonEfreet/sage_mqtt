@@ -1,6 +1,6 @@
 use crate::{
-    ConnAck, Connect, ControlPacketType, Decode, Encode, Error, FixedHeader, PubAck, Publish,
-    Result as SageResult,
+    ConnAck, Connect, ControlPacketType, Decode, Encode, Error, FixedHeader, PubAck, PubComp,
+    PubRec, PubRel, Publish, Result as SageResult,
 };
 use std::io::{Read, Write};
 
@@ -10,6 +10,9 @@ pub enum ControlPacket {
     ConnAck(ConnAck),
     Publish(Publish),
     PubAck(PubAck),
+    PubRec(PubRec),
+    PubRel(PubRel),
+    PubComp(PubComp),
 }
 
 impl Encode for ControlPacket {
@@ -26,6 +29,18 @@ impl Encode for ControlPacket {
             ),
             ControlPacket::PubAck(packet) => (
                 ControlPacketType::PUBACK,
+                packet.write(&mut variable_and_payload)?,
+            ),
+            ControlPacket::PubRec(packet) => (
+                ControlPacketType::PUBREC,
+                packet.write(&mut variable_and_payload)?,
+            ),
+            ControlPacket::PubRel(packet) => (
+                ControlPacketType::PUBREL,
+                packet.write(&mut variable_and_payload)?,
+            ),
+            ControlPacket::PubComp(packet) => (
+                ControlPacketType::PUBCOMP,
                 packet.write(&mut variable_and_payload)?,
             ),
             ControlPacket::Publish(packet) => (
@@ -58,6 +73,15 @@ impl Decode for ControlPacket {
             ControlPacketType::CONNACK => ControlPacket::ConnAck(ConnAck::read(reader)?),
             ControlPacketType::PUBACK => {
                 ControlPacket::PubAck(PubAck::read(reader, fixed_header.remaining_size == 2)?)
+            }
+            ControlPacketType::PUBREC => {
+                ControlPacket::PubRec(PubRec::read(reader, fixed_header.remaining_size == 2)?)
+            }
+            ControlPacketType::PUBREL => {
+                ControlPacket::PubRel(PubRel::read(reader, fixed_header.remaining_size == 2)?)
+            }
+            ControlPacketType::PUBCOMP => {
+                ControlPacket::PubComp(PubComp::read(reader, fixed_header.remaining_size == 2)?)
             }
             ControlPacketType::PUBLISH {
                 duplicate,

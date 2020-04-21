@@ -8,7 +8,10 @@ mod fixed_header;
 mod property;
 mod property_id;
 mod puback;
+mod pubcomp;
 mod publish;
+mod pubrec;
+mod pubrel;
 
 pub use authentication::Authentication;
 pub use connack::ConnAck;
@@ -26,4 +29,7 @@ pub use fixed_header::FixedHeader;
 pub use property::{PropertiesDecoder, Property};
 pub use property_id::PropertyId;
 pub use puback::PubAck;
+pub use pubcomp::PubComp;
 pub use publish::Publish;
+pub use pubrec::PubRec;
+pub use pubrel::PubRel;
