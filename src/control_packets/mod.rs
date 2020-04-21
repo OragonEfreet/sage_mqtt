@@ -7,8 +7,11 @@ mod defaults;
 mod fixed_header;
 mod property;
 mod property_id;
+mod publish;
+
 
 pub use authentication::Authentication;
+pub use publish::Publish;
 pub use connack::Connack;
 pub use connect::Connect;
 pub use control_packet::ControlPacket;

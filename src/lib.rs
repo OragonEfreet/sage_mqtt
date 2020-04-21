@@ -29,6 +29,6 @@ use control_packets::{
     DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
     DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_WILL_DELAY_INTERVAL,
 };
-pub use control_packets::{Connect, ControlPacket};
+pub use control_packets::{Connect, ControlPacket, Publish};
 pub use error::{Error, Result};
 pub use reason_code::ReasonCode;
