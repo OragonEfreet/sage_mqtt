@@ -1,6 +1,6 @@
 use crate::{
     ConnAck, Connect, ControlPacketType, Decode, Encode, Error, FixedHeader, PubAck, PubComp,
-    PubRec, PubRel, Publish, Result as SageResult,
+    PubRec, PubRel, Publish, Result as SageResult, Subscribe,
 };
 use std::io::{Read, Write};
 
@@ -13,6 +13,7 @@ pub enum ControlPacket {
     PubRec(PubRec),
     PubRel(PubRel),
     PubComp(PubComp),
+    Subscribe(Subscribe),
 }
 
 impl Encode for ControlPacket {
@@ -41,6 +42,10 @@ impl Encode for ControlPacket {
             ),
             ControlPacket::PubComp(packet) => (
                 ControlPacketType::PUBCOMP,
+                packet.write(&mut variable_and_payload)?,
+            ),
+            ControlPacket::Subscribe(packet) => (
+                ControlPacketType::SUBSCRIBE,
                 packet.write(&mut variable_and_payload)?,
             ),
             ControlPacket::Publish(packet) => (
@@ -74,15 +79,20 @@ impl Decode for ControlPacket {
             ControlPacketType::PUBACK => {
                 ControlPacket::PubAck(PubAck::read(reader, fixed_header.remaining_size == 2)?)
             }
+
             ControlPacketType::PUBREC => {
                 ControlPacket::PubRec(PubRec::read(reader, fixed_header.remaining_size == 2)?)
             }
             ControlPacketType::PUBREL => {
                 ControlPacket::PubRel(PubRel::read(reader, fixed_header.remaining_size == 2)?)
             }
+
             ControlPacketType::PUBCOMP => {
                 ControlPacket::PubComp(PubComp::read(reader, fixed_header.remaining_size == 2)?)
             }
+
+            ControlPacketType::SUBSCRIBE => ControlPacket::Subscribe(Subscribe::read(reader)?),
+
             ControlPacketType::PUBLISH {
                 duplicate,
                 qos,

@@ -23,7 +23,7 @@ pub use codec::{
 };
 use control_packets::{
     Authentication, ConnAck, ControlPacketType, FixedHeader, PropertiesDecoder, Property,
-    PropertyId, PubAck, PubComp, PubRec, PubRel, DEFAULT_MAXIMUM_QOS,
+    PropertyId, PubAck, PubComp, PubRec, PubRel, Subscribe, DEFAULT_MAXIMUM_QOS,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_RETAIN_AVAILABLE,
     DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
