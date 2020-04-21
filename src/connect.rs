@@ -254,7 +254,6 @@ impl Decode for Connect {
                 Property::TopicAliasMaximum(v) => topic_alias_maximum = v,
                 Property::RequestResponseInformation(v) => request_response_information = v,
                 Property::RequestProblemInformation(v) => request_problem_information = v,
-
                 Property::AuthenticationMethod(v) => authentication_method = Some(v),
                 Property::AuthenticationData(v) => authentication_data = v,
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
@@ -334,52 +333,6 @@ impl Decode for Connect {
     }
 }
 
-#[cfg(test)]
-mod unit_connect {
-
-    use std::io::Cursor;
-
-    use super::*;
-
-    // Keep Alive MSB (0)
-    // Keep Alive MSB (10)
-    // Properties:
-    // Session Expiry Interface Identifier (17)
-    // Session Expiry Interval (10)
-    const CONNECT_ENCODED: [u8; 16] = [
-        0x00, 0x04, 0x4D, 0x51, 0x54, 0x54, 0x05, 0xCE, 0x00, 0x0A, 0x05, 0x11, 0x00, 0x00, 0x00,
-        0x0A,
-    ];
-
-    fn connect_decoded() -> Connect {
-        let keep_alive = 10;
-        let session_expiry_interval = 10;
-
-        Connect {
-            keep_alive,
-            session_expiry_interval,
-            ..Default::default()
-        }
-    }
-
-    #[test]
-    fn encode_control_connect() {
-        let connect = connect_decoded();
-        let mut encoded = Vec::new();
-
-        let n_bytes = connect.encode(&mut encoded).unwrap();
-        assert_eq!(encoded, CONNECT_ENCODED);
-        assert_eq!(n_bytes, 16);
-    }
-
-    #[test]
-    fn decode_control_connect() {
-        let mut test_stream = Cursor::new(CONNECT_ENCODED);
-        let connect = Connect::decode(&mut test_stream).unwrap();
-        assert_eq!(connect, connect_decoded());
-    }
-}
-
 impl Encode for ConnectFlags {
     fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let bits = ((self.user_name as u8) << 7)
@@ -408,5 +361,61 @@ impl Decode for ConnectFlags {
                 clean_start: (bits & 0b0000_00010) >> 1 > 0,
             })
         }
+    }
+}
+
+#[cfg(test)]
+mod unit_connect {
+
+    use std::io::Cursor;
+
+    use super::*;
+
+    // Keep Alive MSB (0)
+    // Keep Alive MSB (10)
+    // Properties:
+    // Session Expiry Interface Identifier (17)
+    // Session Expiry Interval (10)
+
+    fn connect_encoded() -> Vec<u8> {
+        vec![
+            0, 4, 77, 81, 84, 84, 5, 206, 0, 10, 5, 17, 0, 0, 0, 10, 0, 0, 6, 3, 0, 0, 8, 0, 0, 0,
+            0, 0, 0, 0, 6, 87, 105, 108, 108, 111, 119, 0, 5, 74, 97, 100, 101, 110,
+        ]
+    }
+
+    fn connect_decoded() -> Connect {
+        let keep_alive = 10;
+        let session_expiry_interval = 10;
+
+        Connect {
+            keep_alive,
+            clean_start: true,
+            session_expiry_interval,
+            user_name: Some("Willow".into()),
+            password: Some("Jaden".into()),
+            will: Some(Will {
+                qos: QoS::AtLeastOnce,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn encode_control_connect() {
+        let connect = connect_decoded();
+        let mut encoded = Vec::new();
+
+        let n_bytes = connect.encode(&mut encoded).unwrap();
+        assert_eq!(encoded, connect_encoded());
+        assert_eq!(n_bytes, 44);
+    }
+
+    #[test]
+    fn decode_control_connect() {
+        let mut test_stream = Cursor::new(connect_encoded());
+        let connect = Connect::decode(&mut test_stream).unwrap();
+        assert_eq!(connect, connect_decoded());
     }
 }
