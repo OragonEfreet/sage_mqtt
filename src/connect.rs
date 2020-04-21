@@ -1,17 +1,12 @@
 use crate::{
     BinaryData, Bits, Byte, Decode, Encode, Error, PropertiesDecoder, Property, QoS,
     Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger,
+    DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
+    DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
+    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
 };
 use std::convert::TryInto;
 use std::io::{Read, Write};
-
-const DEFAULT_SESSION_EXPIRY_INTERVAL: u32 = 0;
-const DEFAULT_RECEIVE_MAXIMUM: u16 = 65_535;
-const DEFAULT_TOPIC_ALIAS_MAXIMUM: u16 = 0;
-const DEFAULT_REQUEST_RESPONSE_INFORMATION: bool = false;
-const DEFAULT_REQUEST_PROBLEM_INFORMATION: bool = true;
-const DEFAULT_WILL_DELAY_INTERVAL: u32 = 0;
-const DEFAULT_PAYLOAD_FORMAT_INDICATOR: bool = false;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Will {
