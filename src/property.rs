@@ -127,9 +127,10 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             PropertyId::ReasonString => {
                 Ok(Property::ReasonString(UTF8String::decode(reader)?.into()))
             }
-            PropertyId::ReceiveMaximum => Ok(Property::ReceiveMaximum(
-                TwoByteInteger::decode(reader)?.into(),
-            )),
+            PropertyId::ReceiveMaximum => match u16::from(TwoByteInteger::decode(reader)?) {
+                0 => Err(Error::MalformedPacket),
+                v => Ok(Property::ReceiveMaximum(v)),
+            },
             PropertyId::TopicAliasMaximum => Ok(Property::TopicAliasMaximum(
                 TwoByteInteger::decode(reader)?.into(),
             )),
@@ -248,6 +249,9 @@ impl Encode for Property {
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::ReceiveMaximum(v) => {
+                if v == 0 {
+                    return Err(Error::MalformedPacket);
+                }
                 let n_bytes =
                     VariableByteInteger(PropertyId::ReceiveMaximum as u32).encode(writer)?;
                 Ok(n_bytes + TwoByteInteger(v).encode(writer)?)

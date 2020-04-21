@@ -25,7 +25,7 @@ mod reason_code;
 mod types;
 
 pub use broker::Broker;
-pub use connect::{Connect, ConnectFlags};
+pub use connect::Connect;
 pub use control_packet::ControlPacket;
 use control_packet_type::ControlPacketType;
 pub use decode::Decode;
