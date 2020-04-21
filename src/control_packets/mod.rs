@@ -11,7 +11,7 @@ mod puback;
 mod publish;
 
 pub use authentication::Authentication;
-pub use connack::Connack;
+pub use connack::ConnAck;
 pub use connect::Connect;
 pub use control_packet::ControlPacket;
 pub use control_packet_type::ControlPacketType;
@@ -25,5 +25,5 @@ pub use defaults::{
 pub use fixed_header::FixedHeader;
 pub use property::{PropertiesDecoder, Property};
 pub use property_id::PropertyId;
-pub use puback::Puback;
+pub use puback::PubAck;
 pub use publish::Publish;

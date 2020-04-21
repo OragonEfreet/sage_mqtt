@@ -5,16 +5,16 @@ use crate::{
 use std::io::{Read, Write};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Puback {
+pub struct PubAck {
     pub packet_identifier: u16,
     pub reason_code: ReasonCode,
     pub reason_string: Option<String>,
     pub user_properties: Vec<(String, String)>,
 }
 
-impl Default for Puback {
+impl Default for PubAck {
     fn default() -> Self {
-        Puback {
+        PubAck {
             packet_identifier: 0,
             reason_code: ReasonCode::Success,
             reason_string: None,
@@ -23,7 +23,7 @@ impl Default for Puback {
     }
 }
 
-impl Puback {
+impl PubAck {
     pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = TwoByteInteger(self.packet_identifier).encode(writer)?;
 
@@ -49,7 +49,7 @@ impl Puback {
     pub fn read<R: Read>(reader: &mut R, shortened: bool) -> SageResult<Self> {
         let packet_identifier = TwoByteInteger::decode(reader)?.into();
 
-        let mut puback = Puback {
+        let mut puback = PubAck {
             packet_identifier,
             ..Default::default()
         };

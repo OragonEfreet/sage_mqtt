@@ -1,5 +1,5 @@
 use crate::{
-    Connack, Connect, ControlPacketType, Decode, Encode, Error, FixedHeader, Puback, Publish,
+    ConnAck, Connect, ControlPacketType, Decode, Encode, Error, FixedHeader, PubAck, Publish,
     Result as SageResult,
 };
 use std::io::{Read, Write};
@@ -7,9 +7,9 @@ use std::io::{Read, Write};
 #[derive(Debug, Clone)]
 pub enum ControlPacket {
     Connect(Connect),
-    Connack(Connack),
+    ConnAck(ConnAck),
     Publish(Publish),
-    Puback(Puback),
+    PubAck(PubAck),
 }
 
 impl Encode for ControlPacket {
@@ -20,11 +20,11 @@ impl Encode for ControlPacket {
                 ControlPacketType::CONNECT,
                 packet.write(&mut variable_and_payload)?,
             ),
-            ControlPacket::Connack(packet) => (
+            ControlPacket::ConnAck(packet) => (
                 ControlPacketType::CONNACK,
                 packet.write(&mut variable_and_payload)?,
             ),
-            ControlPacket::Puback(packet) => (
+            ControlPacket::PubAck(packet) => (
                 ControlPacketType::PUBACK,
                 packet.write(&mut variable_and_payload)?,
             ),
@@ -55,9 +55,9 @@ impl Decode for ControlPacket {
 
         let packet = match fixed_header.packet_type {
             ControlPacketType::CONNECT => ControlPacket::Connect(Connect::read(reader)?),
-            ControlPacketType::CONNACK => ControlPacket::Connack(Connack::read(reader)?),
+            ControlPacketType::CONNACK => ControlPacket::ConnAck(ConnAck::read(reader)?),
             ControlPacketType::PUBACK => {
-                ControlPacket::Puback(Puback::read(reader, fixed_header.remaining_size == 2)?)
+                ControlPacket::PubAck(PubAck::read(reader, fixed_header.remaining_size == 2)?)
             }
             ControlPacketType::PUBLISH {
                 duplicate,

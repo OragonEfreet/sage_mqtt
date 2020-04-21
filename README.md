@@ -19,9 +19,9 @@ It defines a set of "pivot types" used to parse to and from streams:
 As well as standard Control Packet types as described in the OASIS standard:
 
 - `Connect`
-- `Connack` (_Not Implemented_)
+- `ConnAck` (_Not Implemented_)
 - `Publish` (_Not Implemented_)
-- `Puback` (_Not Implemented_)
+- `PubAck` (_Not Implemented_)
 - `Pubrec` (_Not Implemented_)
 - `Pubrel` (_Not Implemented_)
 - `Pubcomp` (_Not Implemented_)

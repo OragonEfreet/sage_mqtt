@@ -7,7 +7,7 @@ use crate::{
 use std::io::{Read, Write};
 
 #[derive(PartialEq, Debug, Clone)]
-pub struct Connack {
+pub struct ConnAck {
     pub session_present: bool,
     pub reason_code: ReasonCode,
     pub session_expiry_interval: Option<u32>,
@@ -27,9 +27,9 @@ pub struct Connack {
     pub authentication: Option<Authentication>,
 }
 
-impl Default for Connack {
+impl Default for ConnAck {
     fn default() -> Self {
-        Connack {
+        ConnAck {
             session_present: false,
             reason_code: ReasonCode::Success,
             session_expiry_interval: None,
@@ -51,7 +51,7 @@ impl Default for Connack {
     }
 }
 
-impl Connack {
+impl ConnAck {
     pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = Byte(self.session_present as u8).encode(writer)?;
         n_bytes += Byte(self.reason_code.into()).encode(writer)?;
@@ -165,7 +165,7 @@ impl Connack {
             None
         };
 
-        Ok(Connack {
+        Ok(ConnAck {
             session_present,
             reason_code,
             session_expiry_interval,
