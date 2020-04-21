@@ -21,12 +21,14 @@ pub use codec::{
     BinaryData, Bits, Byte, Decode, Encode, FourByteInteger, QoS, TwoByteInteger, UTF8String,
     VariableByteInteger,
 };
-pub use control_packets::{Connect, ControlPacket};
 use control_packets::{
-    ControlPacketType, FixedHeader, PropertiesDecoder, Property, PropertyId,
-    DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
-    DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
-    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
+    Authentication, Connack, ControlPacketType, FixedHeader, PropertiesDecoder, Property,
+    PropertyId, DEFAULT_MAXIMUM_QOS, DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
+    DEFAULT_REQUEST_PROBLEM_INFORMATION, DEFAULT_REQUEST_RESPONSE_INFORMATION,
+    DEFAULT_RETAIN_AVAILABLE, DEFAULT_SESSION_EXPIRY_INTERVAL,
+    DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
+    DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_WILL_DELAY_INTERVAL,
 };
+pub use control_packets::{Connect, ControlPacket};
 pub use error::{Error, Result};
 pub use reason_code::ReasonCode;

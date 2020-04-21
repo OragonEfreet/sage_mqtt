@@ -1,11 +1,10 @@
 use crate::{
-    BinaryData, Bits, Byte, Decode, Encode, Error, PropertiesDecoder, Property, QoS,
-    Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger,
+    Authentication, BinaryData, Bits, Byte, Decode, Encode, Error, PropertiesDecoder, Property,
+    QoS, Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
 };
-use std::convert::TryInto;
 use std::io::{Read, Write};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -40,12 +39,6 @@ impl Default for Will {
             payload: Default::default(),
         }
     }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Authentication {
-    pub method: String,
-    pub data: Vec<u8>,
 }
 
 /// The `Connect` control packet is used to open a connection
@@ -148,8 +141,8 @@ impl Encode for Connect {
             n_bytes += Property::RequestResponseInformation(self.request_problem_information)
                 .encode(&mut properties)?;
         }
-        for property in self.user_properties {
-            n_bytes += Property::UserProperty(property.0, property.1).encode(&mut properties)?;
+        for (k, v) in self.user_properties {
+            n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
         }
         if let Some(authentication) = self.authentication {
             n_bytes +=
@@ -235,7 +228,6 @@ impl Decode for Connect {
         let mut request_response_information = DEFAULT_REQUEST_RESPONSE_INFORMATION;
         let mut request_problem_information = DEFAULT_REQUEST_PROBLEM_INFORMATION;
         let mut user_properties = Vec::new();
-
         let mut authentication_method = None;
         let mut authentication_data = Default::default();
 
@@ -351,7 +343,12 @@ impl Decode for ConnectFlags {
                 user_name: (bits & 0b1000_0000) >> 7 > 0,
                 password: (bits & 0b0100_0000) >> 6 > 0,
                 will_retain: (bits & 0b0010_0000) >> 5 > 0,
-                will_qos: ((bits & 0b0001_1000) >> 3).try_into()?,
+                will_qos: match (bits & 0b0001_1000) >> 3 {
+                    0x00 => QoS::AtMostOnce,
+                    0x01 => QoS::AtLeastOnce,
+                    0x02 => QoS::ExactlyOnce,
+                    _ => return Err(Error::ProtocolError),
+                },
                 will: (bits & 0b0000_00100) >> 2 > 0,
                 clean_start: (bits & 0b0000_00010) >> 1 > 0,
             })

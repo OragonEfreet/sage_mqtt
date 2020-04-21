@@ -1,5 +1,5 @@
-use crate::{Decode, Error, Result as SageResult, VariableByteInteger};
-use std::io::Read;
+use crate::{Decode, Encode, Error, Result as SageResult, VariableByteInteger};
+use std::io::{Read, Write};
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]
 pub enum PropertyId {
@@ -30,6 +30,12 @@ pub enum PropertyId {
     WildcardSubscriptionAvailable = 0x28,
     SubscriptionIdentifierAvailable = 0x29,
     SharedSubscriptionAvailable = 0x2A,
+}
+
+impl Encode for PropertyId {
+    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+        VariableByteInteger(self as u32).encode(writer)
+    }
 }
 
 impl Decode for PropertyId {

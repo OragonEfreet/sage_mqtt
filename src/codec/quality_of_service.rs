@@ -1,5 +1,5 @@
-use crate::Error as SageError;
-use std::convert::TryFrom;
+use crate::{Byte, Decode, Encode, Error, Result as SageResult};
+use std::io::{Read, Write};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum QoS {
@@ -8,20 +8,19 @@ pub enum QoS {
     ExactlyOnce = 0x02,
 }
 
-impl Default for QoS {
-    fn default() -> Self {
-        QoS::AtMostOnce
-    }
-}
-
-impl TryFrom<u8> for QoS {
-    type Error = SageError;
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
+impl Decode for QoS {
+    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
+        match Byte::decode(reader)?.into() {
             0x00 => Ok(QoS::AtMostOnce),
             0x01 => Ok(QoS::AtLeastOnce),
             0x02 => Ok(QoS::ExactlyOnce),
-            _ => Err(Self::Error::MalformedPacket),
+            _ => Err(Error::ProtocolError),
         }
+    }
+}
+
+impl Encode for QoS {
+    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+        Byte(self as u8).encode(writer)
     }
 }

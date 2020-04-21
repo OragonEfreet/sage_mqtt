@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 /// in an MQTT paquet. It is encoded in a 8bit flag set where the 4 most
 /// significant bits represent the type of the paquet and the 4 least are flags
 /// where values depend on the type.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum ControlPacketType {
     RESERVED,
     CONNECT,
@@ -49,43 +49,43 @@ impl From<ControlPacketType> for PayloadRequirements {
     }
 }
 
-impl ControlPacketType {
-    pub fn needs_packet_identifier(&self) -> bool {
-        match *self {
-            ControlPacketType::PUBACK
-            | ControlPacketType::PUBREC
-            | ControlPacketType::PUBREL
-            | ControlPacketType::PUBCOMP
-            | ControlPacketType::SUBSCRIBE
-            | ControlPacketType::SUBACK
-            | ControlPacketType::UNSUBSCRIBE
-            | ControlPacketType::UNSUBACK => true,
-            ControlPacketType::PUBLISH {
-                quality_of_service, ..
-            } if quality_of_service > 0 => true,
-            _ => false,
-        }
-    }
+// impl ControlPacketType {
+//     pub fn needs_packet_identifier(&self) -> bool {
+//         match *self {
+//             ControlPacketType::PUBACK
+//             | ControlPacketType::PUBREC
+//             | ControlPacketType::PUBREL
+//             | ControlPacketType::PUBCOMP
+//             | ControlPacketType::SUBSCRIBE
+//             | ControlPacketType::SUBACK
+//             | ControlPacketType::UNSUBSCRIBE
+//             | ControlPacketType::UNSUBACK => true,
+//             ControlPacketType::PUBLISH {
+//                 quality_of_service, ..
+//             } if quality_of_service > 0 => true,
+//             _ => false,
+//         }
+//     }
 
-    pub fn can_have_properties(&self) -> bool {
-        match *self {
-            ControlPacketType::CONNECT
-            | ControlPacketType::CONNACK
-            | ControlPacketType::PUBLISH { .. }
-            | ControlPacketType::PUBACK
-            | ControlPacketType::PUBREC
-            | ControlPacketType::PUBREL
-            | ControlPacketType::PUBCOMP
-            | ControlPacketType::SUBSCRIBE
-            | ControlPacketType::SUBACK
-            | ControlPacketType::UNSUBSCRIBE
-            | ControlPacketType::UNSUBACK
-            | ControlPacketType::DISCONNECT
-            | ControlPacketType::AUTH => true,
-            _ => false,
-        }
-    }
-}
+// pub fn can_have_properties(self) -> bool {
+//     match self {
+//         ControlPacketType::CONNECT
+//         | ControlPacketType::CONNACK
+//         | ControlPacketType::PUBLISH { .. }
+//         | ControlPacketType::PUBACK
+//         | ControlPacketType::PUBREC
+//         | ControlPacketType::PUBREL
+//         | ControlPacketType::PUBCOMP
+//         | ControlPacketType::SUBSCRIBE
+//         | ControlPacketType::SUBACK
+//         | ControlPacketType::UNSUBSCRIBE
+//         | ControlPacketType::UNSUBACK
+//         | ControlPacketType::DISCONNECT
+//         | ControlPacketType::AUTH => true,
+//         _ => false,
+//     }
+// }
+// }
 
 impl Encode for ControlPacketType {
     fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {

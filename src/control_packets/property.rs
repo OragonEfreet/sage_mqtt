@@ -1,5 +1,5 @@
 use crate::{
-    BinaryData, Bits, Byte, Decode, Encode, Error, FourByteInteger, PropertyId,
+    BinaryData, Bits, Byte, Decode, Encode, Error, FourByteInteger, PropertyId, QoS,
     Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger,
 };
 use std::{
@@ -29,13 +29,13 @@ pub enum Property {
     ReceiveMaximum(u16),
     TopicAliasMaximum(u16),
     TopicAlias(u16),
-    MaximumQoS(u8),
-    RetainAvailable(u8),
+    MaximumQoS(QoS),
+    RetainAvailable(bool),
     UserProperty(String, String),
     MaximumPacketSize(u32),
-    WildcardSubscriptionAvailable(u8),
-    SubscriptionIdentifierAvailable(u8),
-    SharedSubscriptionAvailable(u8),
+    WildcardSubscriptionAvailable(bool),
+    SubscriptionIdentifierAvailable(bool),
+    SharedSubscriptionAvailable(bool),
 }
 
 pub struct PropertiesDecoder<'a, R: Read> {
@@ -137,10 +137,12 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             PropertyId::TopicAlias => {
                 Ok(Property::TopicAlias(TwoByteInteger::decode(reader)?.into()))
             }
-            PropertyId::MaximumQoS => Ok(Property::MaximumQoS(Byte::decode(reader)?.into())),
-            PropertyId::RetainAvailable => {
-                Ok(Property::RetainAvailable(Byte::decode(reader)?.into()))
-            }
+            PropertyId::MaximumQoS => Ok(Property::MaximumQoS(QoS::decode(reader)?)),
+            PropertyId::RetainAvailable => match Byte::decode(reader)? {
+                Byte(0x00) => Ok(Property::RetainAvailable(false)),
+                Byte(0x01) => Ok(Property::RetainAvailable(true)),
+                _ => Err(Error::ProtocolError),
+            },
             PropertyId::UserProperty => Ok(Property::UserProperty(
                 UTF8String::decode(reader)?.into(),
                 UTF8String::decode(reader)?.into(),
@@ -148,15 +150,21 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             PropertyId::MaximumPacketSize => Ok(Property::MaximumPacketSize(
                 FourByteInteger::decode(reader)?.into(),
             )),
-            PropertyId::WildcardSubscriptionAvailable => Ok(
-                Property::WildcardSubscriptionAvailable(Byte::decode(reader)?.into()),
-            ),
-            PropertyId::SubscriptionIdentifierAvailable => Ok(
-                Property::SubscriptionIdentifierAvailable(Byte::decode(reader)?.into()),
-            ),
-            PropertyId::SharedSubscriptionAvailable => Ok(Property::SharedSubscriptionAvailable(
-                Byte::decode(reader)?.into(),
-            )),
+            PropertyId::WildcardSubscriptionAvailable => match Byte::decode(reader)? {
+                Byte(0x00) => Ok(Property::WildcardSubscriptionAvailable(false)),
+                Byte(0x01) => Ok(Property::WildcardSubscriptionAvailable(true)),
+                _ => Err(Error::ProtocolError),
+            },
+            PropertyId::SubscriptionIdentifierAvailable => match Byte::decode(reader)? {
+                Byte(0x00) => Ok(Property::SubscriptionIdentifierAvailable(false)),
+                Byte(0x01) => Ok(Property::SubscriptionIdentifierAvailable(true)),
+                _ => Err(Error::ProtocolError),
+            },
+            PropertyId::SharedSubscriptionAvailable => match Byte::decode(reader)? {
+                Byte(0x00) => Ok(Property::SharedSubscriptionAvailable(false)),
+                Byte(0x01) => Ok(Property::SharedSubscriptionAvailable(true)),
+                _ => Err(Error::ProtocolError),
+            },
         }
     }
 }
@@ -165,141 +173,116 @@ impl Encode for Property {
     fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         match self {
             Property::PayloadFormatIndicator(v) => {
-                let n_bytes = VariableByteInteger(PropertyId::PayloadFormatIndicator as u32)
-                    .encode(writer)?;
+                let n_bytes = PropertyId::PayloadFormatIndicator.encode(writer)?;
                 Ok(n_bytes + Bits(v as u8).encode(writer)?)
             }
             Property::MessageExpiryInterval(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::MessageExpiryInterval as u32).encode(writer)?;
+                let n_bytes = PropertyId::MessageExpiryInterval.encode(writer)?;
                 Ok(n_bytes + FourByteInteger(v).encode(writer)?)
             }
             Property::ContentType(v) => {
-                let n_bytes = VariableByteInteger(PropertyId::ContentType as u32).encode(writer)?;
+                let n_bytes = PropertyId::ContentType.encode(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::ResponseTopic(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::ResponseTopic as u32).encode(writer)?;
+                let n_bytes = PropertyId::ResponseTopic.encode(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::CorrelationData(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::CorrelationData as u32).encode(writer)?;
+                let n_bytes = PropertyId::CorrelationData.encode(writer)?;
                 Ok(n_bytes + BinaryData(v).encode(writer)?)
             }
             Property::SubscriptionIdentifier(v) => {
-                let n_bytes = VariableByteInteger(PropertyId::SubscriptionIdentifier as u32)
-                    .encode(writer)?;
+                let n_bytes = PropertyId::SubscriptionIdentifier.encode(writer)?;
                 Ok(n_bytes + VariableByteInteger(v).encode(writer)?)
             }
             Property::SessionExpiryInterval(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::SessionExpiryInterval as u32).encode(writer)?;
+                let n_bytes = PropertyId::SessionExpiryInterval.encode(writer)?;
                 Ok(n_bytes + FourByteInteger(v).encode(writer)?)
             }
             Property::AssignedClientIdentifier(v) => {
-                let n_bytes = VariableByteInteger(PropertyId::AssignedClientIdentifier as u32)
-                    .encode(writer)?;
+                let n_bytes = PropertyId::AssignedClientIdentifier.encode(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::ServerKeepAlive(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::ServerKeepAlive as u32).encode(writer)?;
+                let n_bytes = PropertyId::ServerKeepAlive.encode(writer)?;
                 Ok(n_bytes + TwoByteInteger(v).encode(writer)?)
             }
             Property::AuthenticationMethod(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::AuthenticationMethod as u32).encode(writer)?;
+                let n_bytes = PropertyId::AuthenticationMethod.encode(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::AuthenticationData(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::AuthenticationData as u32).encode(writer)?;
+                let n_bytes = PropertyId::AuthenticationData.encode(writer)?;
                 Ok(n_bytes + BinaryData(v).encode(writer)?)
             }
             Property::RequestProblemInformation(v) => {
-                let n_bytes = VariableByteInteger(PropertyId::RequestProblemInformation as u32)
-                    .encode(writer)?;
+                let n_bytes = PropertyId::RequestProblemInformation.encode(writer)?;
                 Ok(n_bytes + Byte(v as u8).encode(writer)?)
             }
             Property::WillDelayInterval(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::WillDelayInterval as u32).encode(writer)?;
+                let n_bytes = PropertyId::WillDelayInterval.encode(writer)?;
                 Ok(n_bytes + FourByteInteger(v).encode(writer)?)
             }
             Property::RequestResponseInformation(v) => {
-                let n_bytes = VariableByteInteger(PropertyId::RequestResponseInformation as u32)
-                    .encode(writer)?;
+                let n_bytes = PropertyId::RequestResponseInformation.encode(writer)?;
                 Ok(n_bytes + Byte(v as u8).encode(writer)?)
             }
             Property::ResponseInformation(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::ResponseInformation as u32).encode(writer)?;
+                let n_bytes = PropertyId::ResponseInformation.encode(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::ServerReference(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::ServerReference as u32).encode(writer)?;
+                let n_bytes = PropertyId::ServerReference.encode(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::ReasonString(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::ReasonString as u32).encode(writer)?;
+                let n_bytes = PropertyId::ReasonString.encode(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::ReceiveMaximum(v) => {
                 if v == 0 {
                     return Err(Error::MalformedPacket);
                 }
-                let n_bytes =
-                    VariableByteInteger(PropertyId::ReceiveMaximum as u32).encode(writer)?;
+                let n_bytes = PropertyId::ReceiveMaximum.encode(writer)?;
                 Ok(n_bytes + TwoByteInteger(v).encode(writer)?)
             }
             Property::TopicAliasMaximum(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::TopicAliasMaximum as u32).encode(writer)?;
+                let n_bytes = PropertyId::TopicAliasMaximum.encode(writer)?;
                 Ok(n_bytes + TwoByteInteger(v).encode(writer)?)
             }
             Property::TopicAlias(v) => {
-                let n_bytes = VariableByteInteger(PropertyId::TopicAlias as u32).encode(writer)?;
+                let n_bytes = PropertyId::TopicAlias.encode(writer)?;
                 Ok(n_bytes + TwoByteInteger(v).encode(writer)?)
             }
             Property::MaximumQoS(v) => {
-                let n_bytes = VariableByteInteger(PropertyId::MaximumQoS as u32).encode(writer)?;
-                Ok(n_bytes + Byte(v).encode(writer)?)
+                let n_bytes = PropertyId::MaximumQoS.encode(writer)?;
+                Ok(n_bytes + v.encode(writer)?)
             }
             Property::RetainAvailable(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::RetainAvailable as u32).encode(writer)?;
-                Ok(n_bytes + Byte(v).encode(writer)?)
+                let n_bytes = PropertyId::RetainAvailable.encode(writer)?;
+                Ok(n_bytes + Byte(v as u8).encode(writer)?)
             }
             Property::UserProperty(k, v) => {
-                let mut n_bytes =
-                    VariableByteInteger(PropertyId::UserProperty as u32).encode(writer)?;
+                let mut n_bytes = PropertyId::UserProperty.encode(writer)?;
                 n_bytes += UTF8String(k).encode(writer)?;
                 Ok(n_bytes + (UTF8String(v).encode(writer)?))
             }
             Property::MaximumPacketSize(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::MaximumPacketSize as u32).encode(writer)?;
+                let n_bytes = PropertyId::MaximumPacketSize.encode(writer)?;
                 Ok(n_bytes + FourByteInteger(v).encode(writer)?)
             }
             Property::WildcardSubscriptionAvailable(v) => {
-                let n_bytes = VariableByteInteger(PropertyId::WildcardSubscriptionAvailable as u32)
-                    .encode(writer)?;
-                Ok(n_bytes + Byte(v).encode(writer)?)
+                let n_bytes = PropertyId::WildcardSubscriptionAvailable.encode(writer)?;
+                Ok(n_bytes + Byte(v as u8).encode(writer)?)
             }
             Property::SubscriptionIdentifierAvailable(v) => {
-                let n_bytes =
-                    VariableByteInteger(PropertyId::SubscriptionIdentifierAvailable as u32)
-                        .encode(writer)?;
-                Ok(n_bytes + Byte(v).encode(writer)?)
+                let n_bytes = PropertyId::SubscriptionIdentifierAvailable.encode(writer)?;
+                Ok(n_bytes + Byte(v as u8).encode(writer)?)
             }
             Property::SharedSubscriptionAvailable(v) => {
-                let n_bytes = VariableByteInteger(PropertyId::SharedSubscriptionAvailable as u32)
-                    .encode(writer)?;
-                Ok(n_bytes + Byte(v).encode(writer)?)
+                let n_bytes = PropertyId::SharedSubscriptionAvailable.encode(writer)?;
+                Ok(n_bytes + Byte(v as u8).encode(writer)?)
             }
         }
     }
