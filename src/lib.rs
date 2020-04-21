@@ -11,37 +11,22 @@ macro_rules! assert_matches {
 }
 
 mod broker;
-mod connect;
-mod control_packet;
-mod control_packet_type;
-mod decode;
-mod defaults;
-mod encode;
+mod codec;
+mod control_packets;
 mod error;
-mod fixed_header;
-mod property;
-mod property_id;
-mod quality_of_service;
 mod reason_code;
-mod types;
 
 pub use broker::Broker;
-pub use connect::Connect;
-pub use control_packet::ControlPacket;
-use control_packet_type::ControlPacketType;
-pub use decode::Decode;
-use defaults::{
+pub use codec::{
+    BinaryData, Bits, Byte, Decode, Encode, FourByteInteger, QoS, TwoByteInteger, UTF8String,
+    VariableByteInteger,
+};
+pub use control_packets::{Connect, ControlPacket};
+use control_packets::{
+    ControlPacketType, FixedHeader, PropertiesDecoder, Property, PropertyId,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
 };
-pub use encode::Encode;
 pub use error::{Error, Result};
-use fixed_header::FixedHeader;
-use property::{PropertiesDecoder, Property};
-use property_id::PropertyId;
-pub use quality_of_service::QoS;
 pub use reason_code::ReasonCode;
-pub use types::{
-    BinaryData, Bits, Byte, FourByteInteger, TwoByteInteger, UTF8String, VariableByteInteger,
-};
