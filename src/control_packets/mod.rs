@@ -7,6 +7,7 @@ mod defaults;
 mod fixed_header;
 mod property;
 mod property_id;
+mod puback;
 mod publish;
 
 pub use authentication::Authentication;
@@ -24,4 +25,5 @@ pub use defaults::{
 pub use fixed_header::FixedHeader;
 pub use property::{PropertiesDecoder, Property};
 pub use property_id::PropertyId;
+pub use puback::Puback;
 pub use publish::Publish;

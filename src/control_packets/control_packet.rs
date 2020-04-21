@@ -1,5 +1,5 @@
 use crate::{
-    Connack, Connect, ControlPacketType, Decode, Encode, Error, FixedHeader, Publish,
+    Connack, Connect, ControlPacketType, Decode, Encode, Error, FixedHeader, Puback, Publish,
     Result as SageResult,
 };
 use std::io::{Read, Write};
@@ -9,20 +9,24 @@ pub enum ControlPacket {
     Connect(Connect),
     Connack(Connack),
     Publish(Publish),
+    Puback(Puback),
 }
 
 impl Encode for ControlPacket {
     fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut variable_and_payload = Vec::new();
-
         let (packet_type, remaining_size) = match self {
             ControlPacket::Connect(packet) => (
                 ControlPacketType::CONNECT,
-                packet.write(&mut variable_and_payload)? as u32,
+                packet.write(&mut variable_and_payload)?,
             ),
             ControlPacket::Connack(packet) => (
                 ControlPacketType::CONNACK,
-                packet.write(&mut variable_and_payload)? as u32,
+                packet.write(&mut variable_and_payload)?,
+            ),
+            ControlPacket::Puback(packet) => (
+                ControlPacketType::PUBACK,
+                packet.write(&mut variable_and_payload)?,
             ),
             ControlPacket::Publish(packet) => (
                 ControlPacketType::PUBLISH {
@@ -30,7 +34,7 @@ impl Encode for ControlPacket {
                     qos: packet.qos,
                     retain: packet.retain,
                 },
-                packet.write(&mut variable_and_payload)? as u32,
+                packet.write(&mut variable_and_payload)?,
             ),
         };
 
@@ -52,6 +56,9 @@ impl Decode for ControlPacket {
         let packet = match fixed_header.packet_type {
             ControlPacketType::CONNECT => ControlPacket::Connect(Connect::read(reader)?),
             ControlPacketType::CONNACK => ControlPacket::Connack(Connack::read(reader)?),
+            ControlPacketType::PUBACK => {
+                ControlPacket::Puback(Puback::read(reader, fixed_header.remaining_size == 2)?)
+            }
             ControlPacketType::PUBLISH {
                 duplicate,
                 qos,
@@ -61,7 +68,7 @@ impl Decode for ControlPacket {
                 duplicate,
                 qos,
                 retain,
-                fixed_header.remaining_size,
+                fixed_header.remaining_size as u64,
             )?),
             _ => return Err(Error::ProtocolError),
         };

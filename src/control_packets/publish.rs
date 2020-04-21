@@ -93,9 +93,9 @@ impl Publish {
         duplicate: bool,
         qos: QoS,
         retain: bool,
-        remaining_size: u32,
+        remaining_size: u64,
     ) -> SageResult<Self> {
-        let mut reader = reader.take(remaining_size as u64);
+        let mut reader = reader.take(remaining_size);
 
         let topic_name = UTF8String::decode(&mut reader)?.into();
 
