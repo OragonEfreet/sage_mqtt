@@ -1,5 +1,8 @@
-use crate::{Bits, Decode, Encode, Error, Result as SageResult};
-use std::io::{Read, Write};
+use crate::{Bits, Decode, Encode, Error, QoS, Result as SageResult};
+use std::{
+    convert::TryInto,
+    io::{Read, Write},
+};
 
 /// The control packet type is present as the first element of the fixed header
 /// in an MQTT paquet. It is encoded in a 8bit flag set where the 4 most
@@ -12,7 +15,7 @@ pub enum ControlPacketType {
     CONNACK,
     PUBLISH {
         duplicate: bool,
-        quality_of_service: u8,
+        qos: QoS,
         retain: bool,
     },
     PUBACK,
@@ -49,44 +52,6 @@ impl From<ControlPacketType> for PayloadRequirements {
     }
 }
 
-// impl ControlPacketType {
-//     pub fn needs_packet_identifier(&self) -> bool {
-//         match *self {
-//             ControlPacketType::PUBACK
-//             | ControlPacketType::PUBREC
-//             | ControlPacketType::PUBREL
-//             | ControlPacketType::PUBCOMP
-//             | ControlPacketType::SUBSCRIBE
-//             | ControlPacketType::SUBACK
-//             | ControlPacketType::UNSUBSCRIBE
-//             | ControlPacketType::UNSUBACK => true,
-//             ControlPacketType::PUBLISH {
-//                 quality_of_service, ..
-//             } if quality_of_service > 0 => true,
-//             _ => false,
-//         }
-//     }
-
-// pub fn can_have_properties(self) -> bool {
-//     match self {
-//         ControlPacketType::CONNECT
-//         | ControlPacketType::CONNACK
-//         | ControlPacketType::PUBLISH { .. }
-//         | ControlPacketType::PUBACK
-//         | ControlPacketType::PUBREC
-//         | ControlPacketType::PUBREL
-//         | ControlPacketType::PUBCOMP
-//         | ControlPacketType::SUBSCRIBE
-//         | ControlPacketType::SUBACK
-//         | ControlPacketType::UNSUBSCRIBE
-//         | ControlPacketType::UNSUBACK
-//         | ControlPacketType::DISCONNECT
-//         | ControlPacketType::AUTH => true,
-//         _ => false,
-//     }
-// }
-// }
-
 impl Encode for ControlPacketType {
     fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let packet_type = Bits::from(match self {
@@ -95,9 +60,9 @@ impl Encode for ControlPacketType {
             ControlPacketType::CONNACK => 0b0010_0000,
             ControlPacketType::PUBLISH {
                 duplicate,
-                quality_of_service,
+                qos,
                 retain,
-            } => 0b0011_0000 | (duplicate as u8) << 3 | quality_of_service << 2 | retain as u8,
+            } => 0b0011_0000 | (duplicate as u8) << 3 | (qos as u8) << 2 | retain as u8,
             ControlPacketType::PUBACK => 0b0100_0000,
             ControlPacketType::PUBREC => 0b0101_0000,
             ControlPacketType::PUBREL => 0b0110_0010,
@@ -124,7 +89,7 @@ impl Decode for ControlPacketType {
             (0b0010, 0b0000) => ControlPacketType::CONNACK,
             (0b0010, flags) => ControlPacketType::PUBLISH {
                 duplicate: (flags & 0b0111) > 0,
-                quality_of_service: (flags & 0b0110) >> 1,
+                qos: ((flags & 0b0110) >> 1).try_into()?,
                 retain: (flags & 0b0001) > 0,
             },
             (0b0100, 0b0000) => ControlPacketType::PUBACK,

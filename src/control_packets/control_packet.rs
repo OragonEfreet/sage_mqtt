@@ -1,5 +1,6 @@
 use crate::{
-    Connack, Connect, ControlPacketType, Decode, Encode, Error, FixedHeader, Result as SageResult,
+    Connack, Connect, ControlPacketType, Decode, Encode, Error, FixedHeader, Publish, QoS,
+    Result as SageResult,
 };
 use std::io::{Read, Write};
 
@@ -7,6 +8,7 @@ use std::io::{Read, Write};
 pub enum ControlPacket {
     Connect(Connect),
     Connack(Connack),
+    Publish(Publish),
 }
 
 impl Encode for ControlPacket {
@@ -20,6 +22,15 @@ impl Encode for ControlPacket {
             ),
             ControlPacket::Connack(packet) => (
                 ControlPacketType::CONNACK,
+                packet.write(&mut variable_and_payload)? as u32,
+            ),
+            ControlPacket::Publish(packet) => (
+                // TODO
+                ControlPacketType::PUBLISH {
+                    duplicate: true,
+                    qos: QoS::ExactlyOnce,
+                    retain: true,
+                },
                 packet.write(&mut variable_and_payload)? as u32,
             ),
         };
@@ -42,6 +53,9 @@ impl Decode for ControlPacket {
         let packet = match fixed_header.packet_type {
             ControlPacketType::CONNECT => ControlPacket::Connect(Connect::read(reader)?),
             ControlPacketType::CONNACK => ControlPacket::Connack(Connack::read(reader)?),
+            ControlPacketType::PUBLISH { qos, .. } => {
+                ControlPacket::Publish(Publish::read(reader, qos)?)
+            }
             _ => return Err(Error::ProtocolError),
         };
 

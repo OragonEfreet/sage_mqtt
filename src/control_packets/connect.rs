@@ -5,7 +5,10 @@ use crate::{
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
 };
-use std::io::{Read, Write};
+use std::{
+    convert::TryInto,
+    io::{Read, Write},
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Will {
@@ -324,12 +327,7 @@ impl ConnectFlags {
                 user_name: (bits & 0b1000_0000) >> 7 > 0,
                 password: (bits & 0b0100_0000) >> 6 > 0,
                 will_retain: (bits & 0b0010_0000) >> 5 > 0,
-                will_qos: match (bits & 0b0001_1000) >> 3 {
-                    0x00 => QoS::AtMostOnce,
-                    0x01 => QoS::AtLeastOnce,
-                    0x02 => QoS::ExactlyOnce,
-                    _ => return Err(Error::ProtocolError),
-                },
+                will_qos: ((bits & 0b0001_1000) >> 3).try_into()?,
                 will: (bits & 0b0000_00100) >> 2 > 0,
                 clean_start: (bits & 0b0000_00010) >> 1 > 0,
             })

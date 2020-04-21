@@ -1,4 +1,4 @@
-use crate::{Decode, Encode, Result as SageResult, UTF8String};
+use crate::{Decode, Encode, QoS, Result as SageResult, UTF8String};
 
 use std::io::{Read, Write};
 
@@ -18,7 +18,7 @@ impl Default for Publish {
 }
 
 impl Publish {
-    pub fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+    pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let n_bytes = UTF8String(self.topic_name).encode(writer)?;
 
         // Packet identifier
@@ -26,7 +26,7 @@ impl Publish {
         Ok(n_bytes)
     }
 
-    pub fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
+    pub fn read<R: Read>(reader: &mut R, qos: QoS) -> SageResult<Self> {
         let topic_name = UTF8String::decode(reader)?.into();
 
         let packet_identifier = None;
