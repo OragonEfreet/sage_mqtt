@@ -91,8 +91,8 @@ struct ConnectFlags {
     pub password: bool,
 }
 
-impl Encode for Connect {
-    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+impl Connect {
+    pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         // Variable Header (into content)
         let mut n_bytes = UTF8String::from("MQTT").encode(writer)?;
         n_bytes += Byte(0x05).encode(writer)?;
@@ -113,7 +113,7 @@ impl Encode for Connect {
             user_name: self.user_name.is_some(),
             password: self.password.is_some(),
         }
-        .encode(writer)?;
+        .write(writer)?;
 
         n_bytes += TwoByteInteger(self.keep_alive).encode(writer)?;
 
@@ -186,10 +186,8 @@ impl Encode for Connect {
 
         Ok(n_bytes)
     }
-}
 
-impl Decode for Connect {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
+    pub fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
         let protocol_name = UTF8String::decode(reader)?;
         if protocol_name.0 != "MQTT" {
             return Err(Error::MalformedPacket);
@@ -200,7 +198,7 @@ impl Decode for Connect {
             return Err(Error::MalformedPacket);
         }
 
-        let flags = ConnectFlags::decode(reader)?;
+        let flags = ConnectFlags::read(reader)?;
 
         let clean_start = flags.clean_start;
 
@@ -305,8 +303,8 @@ impl Decode for Connect {
     }
 }
 
-impl Encode for ConnectFlags {
-    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+impl ConnectFlags {
+    pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let bits = ((self.user_name as u8) << 7)
             | ((self.password as u8) << 6)
             | ((self.will_retain as u8) << 5)
@@ -315,10 +313,8 @@ impl Encode for ConnectFlags {
             | ((self.clean_start as u8) << 1);
         Ok(Bits(bits).encode(writer)?)
     }
-}
 
-impl Decode for ConnectFlags {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
+    pub fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
         let bits: u8 = Bits::decode(reader)?.into();
 
         if bits & 0x01 != 0 {
@@ -380,19 +376,19 @@ mod unit_connect {
     }
 
     #[test]
-    fn encode_control_connect() {
+    fn write_control_connect() {
         let connect = connect_decoded();
         let mut encoded = Vec::new();
 
-        let n_bytes = connect.encode(&mut encoded).unwrap();
+        let n_bytes = connect.write(&mut encoded).unwrap();
         assert_eq!(encoded, connect_encoded());
         assert_eq!(n_bytes, 44);
     }
 
     #[test]
-    fn decode_control_connect() {
+    fn read_control_connect() {
         let mut test_stream = Cursor::new(connect_encoded());
-        let connect = Connect::decode(&mut test_stream).unwrap();
+        let connect = Connect::read(&mut test_stream).unwrap();
         assert_eq!(connect, connect_decoded());
     }
 }

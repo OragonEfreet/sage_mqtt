@@ -16,11 +16,11 @@ impl Encode for ControlPacket {
         let (packet_type, remaining_size) = match self {
             ControlPacket::Connect(packet) => (
                 ControlPacketType::CONNECT,
-                packet.encode(&mut variable_and_payload)? as u32,
+                packet.write(&mut variable_and_payload)? as u32,
             ),
             ControlPacket::Connack(packet) => (
                 ControlPacketType::CONNACK,
-                packet.encode(&mut variable_and_payload)? as u32,
+                packet.write(&mut variable_and_payload)? as u32,
             ),
         };
 
@@ -40,8 +40,8 @@ impl Decode for ControlPacket {
         let fixed_header = FixedHeader::decode(reader)?;
 
         let packet = match fixed_header.packet_type {
-            ControlPacketType::CONNECT => ControlPacket::Connect(Connect::decode(reader)?),
-            ControlPacketType::CONNACK => ControlPacket::Connack(Connack::decode(reader)?),
+            ControlPacketType::CONNECT => ControlPacket::Connect(Connect::read(reader)?),
+            ControlPacketType::CONNACK => ControlPacket::Connack(Connack::read(reader)?),
             _ => return Err(Error::ProtocolError),
         };
 

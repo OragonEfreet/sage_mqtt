@@ -51,8 +51,8 @@ impl Default for Connack {
     }
 }
 
-impl Encode for Connack {
-    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+impl Connack {
+    pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = Byte(self.session_present as u8).encode(writer)?;
         n_bytes += Byte(self.reason_code.into()).encode(writer)?;
 
@@ -100,10 +100,8 @@ impl Encode for Connack {
 
         Ok(n_bytes)
     }
-}
 
-impl Decode for Connack {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
+    pub fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
         let session_present = {
             match Byte::decode(reader)?.into() {
                 0_u8 => false,
