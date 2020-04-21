@@ -61,38 +61,24 @@ impl Encode for Connack {
         if let Some(v) = self.session_expiry_interval {
             n_bytes += Property::SessionExpiryInterval(v).encode(&mut properties)?;
         }
-        if self.receive_maximum != DEFAULT_RECEIVE_MAXIMUM {
-            n_bytes += Property::ReceiveMaximum(self.receive_maximum).encode(&mut properties)?;
-        }
-        if self.maximum_qos != DEFAULT_MAXIMUM_QOS {
-            n_bytes += Property::MaximumQoS(self.maximum_qos).encode(&mut properties)?;
-        }
-        if self.retain_available != DEFAULT_RETAIN_AVAILABLE {
-            n_bytes += Property::RetainAvailable(self.retain_available).encode(&mut properties)?;
-        }
+        n_bytes += Property::ReceiveMaximum(self.receive_maximum).encode(&mut properties)?;
+        n_bytes += Property::MaximumQoS(self.maximum_qos).encode(&mut properties)?;
+        n_bytes += Property::RetainAvailable(self.retain_available).encode(&mut properties)?;
         if let Some(v) = self.maximum_packet_size {
             n_bytes += Property::MaximumPacketSize(v).encode(&mut properties)?;
         }
         if let Some(v) = self.assigned_client_id {
             n_bytes += Property::AssignedClientIdentifier(v).encode(&mut properties)?;
         }
-        if self.topic_alias_maximum != DEFAULT_TOPIC_ALIAS_MAXIMUM {
-            n_bytes +=
-                Property::TopicAliasMaximum(self.topic_alias_maximum).encode(&mut properties)?;
-        }
+        n_bytes += Property::TopicAliasMaximum(self.topic_alias_maximum).encode(&mut properties)?;
         n_bytes += Property::ReasonString(self.reason_string).encode(&mut properties)?;
         for (k, v) in self.user_properties {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
         }
-        if self.wildcard_subscription_available != DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE {
-            n_bytes +=
-                Property::WildcardSubscriptionAvailable(self.wildcard_subscription_available)
-                    .encode(&mut properties)?;
-        }
-        if self.shared_subscription_available != DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE {
-            n_bytes += Property::SharedSubscriptionAvailable(self.shared_subscription_available)
-                .encode(&mut properties)?;
-        }
+        n_bytes += Property::WildcardSubscriptionAvailable(self.wildcard_subscription_available)
+            .encode(&mut properties)?;
+        n_bytes += Property::SharedSubscriptionAvailable(self.shared_subscription_available)
+            .encode(&mut properties)?;
         if let Some(v) = self.keep_alive {
             n_bytes += Property::ServerKeepAlive(v).encode(writer)?;
         }

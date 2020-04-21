@@ -9,9 +9,7 @@ mod property;
 mod property_id;
 mod publish;
 
-
 pub use authentication::Authentication;
-pub use publish::Publish;
 pub use connack::Connack;
 pub use connect::Connect;
 pub use control_packet::ControlPacket;
@@ -26,3 +24,4 @@ pub use defaults::{
 pub use fixed_header::FixedHeader;
 pub use property::{PropertiesDecoder, Property};
 pub use property_id::PropertyId;
+pub use publish::Publish;

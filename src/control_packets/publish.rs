@@ -1,14 +1,9 @@
-use crate::{
-    Decode, Encode, Result as SageResult,
-};
+use crate::{Decode, Encode, Result as SageResult};
 
 use std::io::{Read, Write};
 
-
 #[derive(Debug, PartialEq, Clone)]
-pub struct Publish {
-
-}
+pub struct Publish {}
 
 impl Default for Publish {
     fn default() -> Self {

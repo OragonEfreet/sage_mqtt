@@ -119,28 +119,17 @@ impl Encode for Connect {
 
         // Properties
         let mut properties = Vec::new();
-        if self.session_expiry_interval != DEFAULT_SESSION_EXPIRY_INTERVAL {
-            n_bytes += Property::SessionExpiryInterval(self.session_expiry_interval)
-                .encode(&mut properties)?;
-        }
-        if self.receive_maximum != DEFAULT_RECEIVE_MAXIMUM {
-            n_bytes += Property::ReceiveMaximum(self.receive_maximum).encode(&mut properties)?;
-        }
+        n_bytes += Property::SessionExpiryInterval(self.session_expiry_interval)
+            .encode(&mut properties)?;
+        n_bytes += Property::ReceiveMaximum(self.receive_maximum).encode(&mut properties)?;
         if let Some(maximum_packet_size) = self.maximum_packet_size {
             n_bytes += Property::MaximumPacketSize(maximum_packet_size).encode(&mut properties)?;
         }
-        if self.topic_alias_maximum != DEFAULT_TOPIC_ALIAS_MAXIMUM {
-            n_bytes +=
-                Property::TopicAliasMaximum(self.topic_alias_maximum).encode(&mut properties)?;
-        }
-        if self.request_response_information != DEFAULT_REQUEST_RESPONSE_INFORMATION {
-            n_bytes += Property::RequestResponseInformation(self.request_response_information)
-                .encode(&mut properties)?;
-        }
-        if self.request_problem_information != DEFAULT_REQUEST_PROBLEM_INFORMATION {
-            n_bytes += Property::RequestResponseInformation(self.request_problem_information)
-                .encode(&mut properties)?;
-        }
+        n_bytes += Property::TopicAliasMaximum(self.topic_alias_maximum).encode(&mut properties)?;
+        n_bytes += Property::RequestResponseInformation(self.request_response_information)
+            .encode(&mut properties)?;
+        n_bytes += Property::RequestResponseInformation(self.request_problem_information)
+            .encode(&mut properties)?;
         for (k, v) in self.user_properties {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
         }
@@ -165,13 +154,9 @@ impl Encode for Connect {
         if let Some(w) = self.will {
             let mut properties = Vec::new();
 
-            if w.delay_interval != DEFAULT_WILL_DELAY_INTERVAL {
-                n_bytes += Property::WillDelayInterval(w.delay_interval).encode(&mut properties)?;
-            }
-            if w.format_indicator != DEFAULT_PAYLOAD_FORMAT_INDICATOR {
-                n_bytes +=
-                    Property::PayloadFormatIndicator(w.format_indicator).encode(&mut properties)?;
-            }
+            n_bytes += Property::WillDelayInterval(w.delay_interval).encode(&mut properties)?;
+            n_bytes +=
+                Property::PayloadFormatIndicator(w.format_indicator).encode(&mut properties)?;
             if let Some(v) = w.message_expiry_interval {
                 n_bytes += Property::MessageExpiryInterval(v).encode(&mut properties)?;
             }
