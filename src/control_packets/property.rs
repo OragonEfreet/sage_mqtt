@@ -92,9 +92,15 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             PropertyId::CorrelationData => Ok(Property::CorrelationData(
                 BinaryData::decode(reader)?.into(),
             )),
-            PropertyId::SubscriptionIdentifier => Ok(Property::SubscriptionIdentifier(
-                VariableByteInteger::decode(reader)?.into(),
-            )),
+            PropertyId::SubscriptionIdentifier => {
+                let v = VariableByteInteger::decode(reader)?.into();
+                if v == 0 {
+                    Err(Error::ProtocolError)
+                } else {
+                    Ok(Property::SubscriptionIdentifier(v))
+                }
+            }
+
             PropertyId::SessionExpiryInterval => Ok(Property::SessionExpiryInterval(
                 FourByteInteger::decode(reader)?.into(),
             )),
@@ -202,8 +208,12 @@ impl Encode for Property {
                 Ok(n_bytes + BinaryData(v).encode(writer)?)
             }
             Property::SubscriptionIdentifier(v) => {
-                let n_bytes = PropertyId::SubscriptionIdentifier.encode(writer)?;
-                Ok(n_bytes + VariableByteInteger(v).encode(writer)?)
+                if v == 0 {
+                    Err(Error::ProtocolError)
+                } else {
+                    let n_bytes = PropertyId::SubscriptionIdentifier.encode(writer)?;
+                    Ok(n_bytes + VariableByteInteger(v).encode(writer)?)
+                }
             }
             Property::SessionExpiryInterval(v) => {
                 if v != DEFAULT_SESSION_EXPIRY_INTERVAL {

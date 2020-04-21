@@ -16,7 +16,7 @@ pub struct Will {
     pub qos: QoS,
     pub retain: bool,
     pub delay_interval: u32,
-    pub format_indicator: bool,
+    pub payload_format_indicator: bool,
     pub message_expiry_interval: Option<u32>,
     pub content_type: String,
     pub response_topic: String,
@@ -32,7 +32,7 @@ impl Default for Will {
             qos: QoS::AtMostOnce,
             retain: false,
             delay_interval: DEFAULT_WILL_DELAY_INTERVAL,
-            format_indicator: DEFAULT_PAYLOAD_FORMAT_INDICATOR,
+            payload_format_indicator: DEFAULT_PAYLOAD_FORMAT_INDICATOR,
             message_expiry_interval: None,
             content_type: Default::default(),
             response_topic: Default::default(),
@@ -158,8 +158,8 @@ impl Connect {
             let mut properties = Vec::new();
 
             n_bytes += Property::WillDelayInterval(w.delay_interval).encode(&mut properties)?;
-            n_bytes +=
-                Property::PayloadFormatIndicator(w.format_indicator).encode(&mut properties)?;
+            n_bytes += Property::PayloadFormatIndicator(w.payload_format_indicator)
+                .encode(&mut properties)?;
             if let Some(v) = w.message_expiry_interval {
                 n_bytes += Property::MessageExpiryInterval(v).encode(&mut properties)?;
             }
@@ -259,7 +259,7 @@ impl Connect {
             while decoder.has_properties() {
                 match decoder.read()? {
                     Property::WillDelayInterval(v) => w.delay_interval = v,
-                    Property::PayloadFormatIndicator(v) => w.format_indicator = v,
+                    Property::PayloadFormatIndicator(v) => w.payload_format_indicator = v,
                     Property::MessageExpiryInterval(v) => w.message_expiry_interval = Some(v),
                     Property::ContentType(v) => w.content_type = v,
                     Property::ResponseTopic(v) => w.response_topic = v,
