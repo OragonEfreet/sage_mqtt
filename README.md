@@ -16,23 +16,24 @@ It defines a set of "pivot types" used to parse to and from streams:
 - `UTF8String` and `UTF8StringPair`
 - `BinaryData`
 
+They all implement custom `Encode` and `Decode` traits which takes benefit from any standard [Write](https://doc.rust-lang.org/std/io/trait.Write.html) and [Read](https://doc.rust-lang.org/std/io/trait.Read.html) traits respectively. 
+
 As well as standard Control Packet types as described in the OASIS standard:
 
 - `Connect`
-- `ConnAck` (_Not Implemented_)
-- `Publish` (_Not Implemented_)
-- `PubAck` (_Not Implemented_)
-- `Pubrec` (_Not Implemented_)
-- `Pubrel` (_Not Implemented_)
-- `Pubcomp` (_Not Implemented_)
-- `Subscribe` (_Not Implemented_)
-- `Suback` (_Not Implemented_)
-- `Unsubscribe` (_Not Implemented_)
-- `Unsuback` (_Not Implemented_)
-- `Pingreq` (_Not Implemented_)
-- `Pingresp` (_Not Implemented_)
-- `Disconnect` (_Not Implemented_)
-- `Auth` (_Not Implemented_)
+- `ConnAck`
+- `Publish`
+- `PubAck`
+- `Pubrec`
+- `Pubrel`
+- `Pubcomp`
+- `Subscribe`
+- `Suback`
+- `Unsubscribe`
+- `Unsuback`
+- `Pingreq`
+- `Pingresp`
+- `Disconnect`
+- `Auth`
 
-They all implement custom `Encode` and `Decode` traits which takes benefit from any standard [Write](https://doc.rust-lang.org/std/io/trait.Write.html) and [Read](https://doc.rust-lang.org/std/io/trait.Read.html) traits respectively. 
-
+They are wrapped into a `ControlPacket` enum that allows you to manipulate every packet types into a single one.
