@@ -60,14 +60,14 @@ impl Encode for SubscriptionOptions {
 impl Decode for SubscriptionOptions {
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
         let flags = u8::from(Byte::decode(reader)?);
-        if flags & 0b11000000 > 0 {
+        if flags & 0b1100_0000 > 0 {
             Err(Error::ProtocolError)
         } else {
             Ok(SubscriptionOptions {
-                qos: (flags & 0b00000011).try_into()?,
-                no_local: (flags & 0b00000010) > 0,
-                retain_as_published: (flags & 0b00001000) > 0,
-                retain_handling: ((flags & 0b00110000) >> 4).try_into()?,
+                qos: (flags & 0b0000_0011).try_into()?,
+                no_local: (flags & 0b0000_0010) > 0,
+                retain_as_published: (flags & 0b0000_1000) > 0,
+                retain_handling: ((flags & 0b0011_0000) >> 4).try_into()?,
             })
         }
     }
