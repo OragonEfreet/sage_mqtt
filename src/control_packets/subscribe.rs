@@ -107,6 +107,12 @@ impl Subscribe {
 
         n_bytes += VariableByteInteger(properties.len() as u32).encode(writer)?;
         writer.write_all(&properties)?;
+
+        for option in self.subscriptions {
+            n_bytes += UTF8String(option.0).encode(writer)?;
+            n_bytes += option.1.encode(writer)?;
+        }
+
         Ok(n_bytes)
     }
 
