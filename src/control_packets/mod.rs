@@ -12,6 +12,7 @@ mod pubcomp;
 mod publish;
 mod pubrec;
 mod pubrel;
+mod suback;
 mod subscribe;
 
 pub use authentication::Authentication;
@@ -34,4 +35,5 @@ pub use pubcomp::PubComp;
 pub use publish::Publish;
 pub use pubrec::PubRec;
 pub use pubrel::PubRel;
+pub use suback::SubAck;
 pub use subscribe::{RetainHandling, Subscribe, SubscriptionOptions};
