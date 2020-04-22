@@ -18,6 +18,7 @@ pub enum ControlPacket {
     UnSubscribe(UnSubscribe),
     UnSubAck(UnSubAck),
     PingReq,
+    PingResp,
 }
 
 impl Encode for ControlPacket {
@@ -33,6 +34,7 @@ impl Encode for ControlPacket {
                 packet.write(&mut variable_and_payload)?,
             ),
             ControlPacket::PingReq => (ControlPacketType::PINGREQ, 0),
+            ControlPacket::PingResp => (ControlPacketType::PINGRESP, 0),
             ControlPacket::UnSubAck(packet) => (
                 ControlPacketType::UNSUBACK,
                 packet.write(&mut variable_and_payload)?,
@@ -100,6 +102,7 @@ impl Decode for ControlPacket {
                 ControlPacket::PubRec(PubRec::read(reader, fixed_header.remaining_size == 2)?)
             }
             ControlPacketType::PINGREQ => ControlPacket::PingReq,
+            ControlPacketType::PINGRESP => ControlPacket::PingResp,
             ControlPacketType::SUBACK => {
                 ControlPacket::SubAck(SubAck::read(reader, fixed_header.remaining_size)?)
             }
