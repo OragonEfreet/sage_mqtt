@@ -4,6 +4,7 @@ mod connect;
 mod control_packet;
 mod control_packet_type;
 mod defaults;
+mod disconnect;
 mod fixed_header;
 mod property;
 mod property_id;
@@ -29,6 +30,7 @@ pub use defaults::{
     DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
     DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_WILL_DELAY_INTERVAL,
 };
+pub use disconnect::Disconnect;
 pub use fixed_header::FixedHeader;
 pub use property::{PropertiesDecoder, Property};
 pub use property_id::PropertyId;

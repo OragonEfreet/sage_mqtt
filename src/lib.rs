@@ -21,8 +21,8 @@ pub use codec::{
     VariableByteInteger,
 };
 pub use control_packets::{
-    Authentication, ConnAck, Connect, ControlPacket, PubAck, PubComp, PubRec, PubRel, Publish,
-    RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck, UnSubscribe,
+    Authentication, ConnAck, Connect, ControlPacket, Disconnect, PubAck, PubComp, PubRec, PubRel,
+    Publish, RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck, UnSubscribe,
 };
 use control_packets::{
     ControlPacketType, FixedHeader, PropertiesDecoder, Property, PropertyId, DEFAULT_MAXIMUM_QOS,
