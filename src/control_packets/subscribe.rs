@@ -1,8 +1,46 @@
 use crate::{
-    Decode, Encode, Error, PropertiesDecoder, Property, Result as SageResult, TwoByteInteger,
-    VariableByteInteger,
+    Byte, Decode, Encode, Error, PropertiesDecoder, Property, QoS, Result as SageResult,
+    TwoByteInteger, VariableByteInteger, DEFAULT_MAXIMUM_QOS,
 };
 use std::io::{Read, Write};
+
+#[derive(Eq, Debug, PartialEq, Clone, Copy)]
+pub enum RetainHandling {
+    OnSubscribe = 0x00,
+    OnFirstSubscribe = 0x01,
+    DontSend = 0x02,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct SubscriptionOptions {
+    pub qos: QoS,
+    pub no_local: bool,
+    pub retain_as_published: bool,
+    pub retain_handling: RetainHandling,
+}
+
+impl Default for SubscriptionOptions {
+    fn default() -> Self {
+        SubscriptionOptions {
+            qos: DEFAULT_MAXIMUM_QOS,
+            no_local: false,
+            retain_as_published: false,
+            retain_handling: RetainHandling::OnSubscribe,
+        }
+    }
+}
+
+impl Encode for SubscriptionOptions {
+    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+        Byte(
+            self.qos as u8
+                | (self.no_local as u8) << 2
+                | (self.retain_as_published as u8) << 3
+                | (self.retain_handling as u8) << 4,
+        )
+        .encode(writer)
+    }
+}
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Subscribe {

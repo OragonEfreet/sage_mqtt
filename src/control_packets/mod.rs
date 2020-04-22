@@ -34,4 +34,4 @@ pub use pubcomp::PubComp;
 pub use publish::Publish;
 pub use pubrec::PubRec;
 pub use pubrel::PubRel;
-pub use subscribe::Subscribe;
+pub use subscribe::{RetainHandling, Subscribe, SubscriptionOptions};

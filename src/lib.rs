@@ -22,14 +22,16 @@ pub use codec::{
     VariableByteInteger,
 };
 use control_packets::{
-    Authentication, ConnAck, ControlPacketType, FixedHeader, PropertiesDecoder, Property,
-    PropertyId, PubAck, PubComp, PubRec, PubRel, Subscribe, DEFAULT_MAXIMUM_QOS,
-    DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
-    DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_RETAIN_AVAILABLE,
-    DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_WILL_DELAY_INTERVAL,
+    Authentication, ControlPacketType, FixedHeader, PropertiesDecoder, Property, PropertyId,
+    DEFAULT_MAXIMUM_QOS, DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
+    DEFAULT_REQUEST_PROBLEM_INFORMATION, DEFAULT_REQUEST_RESPONSE_INFORMATION,
+    DEFAULT_RETAIN_AVAILABLE, DEFAULT_SESSION_EXPIRY_INTERVAL,
+    DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
+    DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_WILL_DELAY_INTERVAL,
 };
-pub use control_packets::{Connect, ControlPacket, Publish};
+pub use control_packets::{
+    ConnAck, Connect, ControlPacket, PubAck, PubComp, PubRec, PubRel, Publish, RetainHandling,
+    Subscribe, SubscriptionOptions,
+};
 pub use error::{Error, Result};
 pub use reason_code::ReasonCode;
