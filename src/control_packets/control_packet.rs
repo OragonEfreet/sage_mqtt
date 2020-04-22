@@ -91,7 +91,9 @@ impl Decode for ControlPacket {
                 ControlPacket::PubComp(PubComp::read(reader, fixed_header.remaining_size == 2)?)
             }
 
-            ControlPacketType::SUBSCRIBE => ControlPacket::Subscribe(Subscribe::read(reader)?),
+            ControlPacketType::SUBSCRIBE => {
+                ControlPacket::Subscribe(Subscribe::read(reader, fixed_header.remaining_size)?)
+            }
 
             ControlPacketType::PUBLISH {
                 duplicate,
