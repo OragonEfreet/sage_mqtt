@@ -14,6 +14,7 @@ mod pubrec;
 mod pubrel;
 mod suback;
 mod subscribe;
+mod unsubscribe;
 
 pub use authentication::Authentication;
 pub use connack::ConnAck;
@@ -37,3 +38,4 @@ pub use pubrec::PubRec;
 pub use pubrel::PubRel;
 pub use suback::SubAck;
 pub use subscribe::{RetainHandling, Subscribe, SubscriptionOptions};
+pub use unsubscribe::UnSubscribe;

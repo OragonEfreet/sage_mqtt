@@ -22,7 +22,7 @@ pub use codec::{
 };
 pub use control_packets::{
     Authentication, ConnAck, Connect, ControlPacket, PubAck, PubComp, PubRec, PubRel, Publish,
-    RetainHandling, SubAck, Subscribe, SubscriptionOptions,
+    RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubscribe,
 };
 use control_packets::{
     ControlPacketType, FixedHeader, PropertiesDecoder, Property, PropertyId, DEFAULT_MAXIMUM_QOS,

@@ -1,6 +1,6 @@
 use crate::{
     ConnAck, Connect, ControlPacketType, Decode, Encode, Error, FixedHeader, PubAck, PubComp,
-    PubRec, PubRel, Publish, Result as SageResult, SubAck, Subscribe,
+    PubRec, PubRel, Publish, Result as SageResult, SubAck, Subscribe, UnSubscribe,
 };
 use std::io::{Read, Write};
 
@@ -15,6 +15,7 @@ pub enum ControlPacket {
     PubComp(PubComp),
     Subscribe(Subscribe),
     SubAck(SubAck),
+    UnSubscribe(UnSubscribe),
 }
 
 impl Encode for ControlPacket {
@@ -31,6 +32,10 @@ impl Encode for ControlPacket {
             ),
             ControlPacket::PubAck(packet) => (
                 ControlPacketType::PUBACK,
+                packet.write(&mut variable_and_payload)?,
+            ),
+            ControlPacket::UnSubscribe(packet) => (
+                ControlPacketType::UNSUBSCRIBE,
                 packet.write(&mut variable_and_payload)?,
             ),
             ControlPacket::PubRec(packet) => (
@@ -91,6 +96,9 @@ impl Decode for ControlPacket {
 
             ControlPacketType::SUBACK => {
                 ControlPacket::SubAck(SubAck::read(reader, fixed_header.remaining_size)?)
+            }
+            ControlPacketType::UNSUBSCRIBE => {
+                ControlPacket::UnSubscribe(UnSubscribe::read(reader, fixed_header.remaining_size)?)
             }
             ControlPacketType::PUBREL => {
                 ControlPacket::PubRel(PubRel::read(reader, fixed_header.remaining_size == 2)?)
