@@ -1,3 +1,4 @@
+mod auth;
 mod authentication;
 mod connack;
 mod connect;
@@ -18,6 +19,7 @@ mod subscribe;
 mod unsuback;
 mod unsubscribe;
 
+pub use auth::Auth;
 pub use authentication::Authentication;
 pub use connack::ConnAck;
 pub use connect::Connect;

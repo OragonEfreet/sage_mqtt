@@ -136,13 +136,9 @@ impl Connect {
         for (k, v) in self.user_properties {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
         }
+
         if let Some(authentication) = self.authentication {
-            n_bytes +=
-                Property::AuthenticationMethod(authentication.method).encode(&mut properties)?;
-            if !authentication.data.is_empty() {
-                n_bytes +=
-                    Property::AuthenticationData(authentication.data).encode(&mut properties)?;
-            }
+            n_bytes += authentication.encode(writer)?;
         }
 
         n_bytes += VariableByteInteger(properties.len() as u32).encode(writer)?;
