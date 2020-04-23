@@ -1,6 +1,5 @@
 use crate::{
-    BinaryData, Error, FourByteInteger, ReadTwoByteInteger, Result as SageResult, UTF8String,
-    VariableByteInteger,
+    BinaryData, Error, ReadTwoByteInteger, Result as SageResult, UTF8String, VariableByteInteger,
 };
 use std::io::{Cursor, Read};
 use unicode_reader::CodePoints;
@@ -10,22 +9,6 @@ use unicode_reader::CodePoints;
 pub trait Decode: Sized {
     /// Reads the input `Reader` and returns the parsed data.
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self>;
-}
-
-impl Decode for FourByteInteger {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let mut buf = [0_u8; 4];
-        if reader.read_exact(&mut buf).is_ok() {
-            Ok(FourByteInteger(
-                ((buf[0] as u32) << 24)
-                    | ((buf[1] as u32) << 16)
-                    | ((buf[2] as u32) << 8)
-                    | (buf[3] as u32),
-            ))
-        } else {
-            Err(Error::MalformedPacket)
-        }
-    }
 }
 
 impl Decode for UTF8String {
@@ -110,24 +93,6 @@ impl Decode for BinaryData {
 mod unit_decode {
 
     use super::*;
-
-    #[test]
-    fn decode_fourbyte_integer() {
-        let mut test_stream = Cursor::new([0x00, 0x03, 0x5B, 0x60]);
-        assert_eq!(
-            FourByteInteger::decode(&mut test_stream).unwrap(),
-            FourByteInteger(220_000_u32)
-        );
-    }
-
-    #[test]
-    fn decode_fourbyte_integer_eof() {
-        let mut test_stream = Cursor::new([0x07]);
-        assert_matches!(
-            FourByteInteger::decode(&mut test_stream),
-            Err(Error::MalformedPacket)
-        );
-    }
 
     #[test]
     fn decode_utf8string_empty() {

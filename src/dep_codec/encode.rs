@@ -1,6 +1,4 @@
-use crate::{
-    BinaryData, Error, FourByteInteger, Result as SageResult, UTF8String, VariableByteInteger,
-};
+use crate::{BinaryData, Error, Result as SageResult, UTF8String, VariableByteInteger};
 use std::io::{Error as IOError, ErrorKind, Write};
 
 /// The `Encode` trait describes how to write a type into an MQTT stream.
@@ -8,12 +6,6 @@ pub trait Encode {
     /// Encodes `this` and writes it into `write`, returning how many bytes
     /// were written.
     fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize>;
-}
-
-impl Encode for FourByteInteger {
-    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        Ok(writer.write(&self.0.to_be_bytes())?)
-    }
 }
 
 impl Encode for UTF8String {
@@ -72,13 +64,6 @@ impl Encode for BinaryData {
 mod unit_encode {
 
     use super::*;
-
-    #[test]
-    fn encode_four_byte_integer() {
-        let mut result = Vec::new();
-        assert_eq!(FourByteInteger(220_000_u32).encode(&mut result).unwrap(), 4);
-        assert_eq!(result, vec![0x00, 0x03, 0x5B, 0x60]);
-    }
 
     #[test]
     fn encode_utf8string() {

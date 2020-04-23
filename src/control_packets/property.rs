@@ -1,8 +1,8 @@
 use crate::{
-    BinaryData, Decode, Encode, Error, FourByteInteger, PropertyId, QoS, ReadByte,
+    BinaryData, Decode, Encode, Error, PropertyId, QoS, ReadByte, ReadFourByteInteger,
     ReadTwoByteInteger, Result as SageResult, UTF8String, VariableByteInteger, WriteByte,
-    WriteTwoByteInteger, DEFAULT_MAXIMUM_QOS, DEFAULT_PAYLOAD_FORMAT_INDICATOR,
-    DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
+    WriteFourByteInteger, WriteTwoByteInteger, DEFAULT_MAXIMUM_QOS,
+    DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_RETAIN_AVAILABLE,
     DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
@@ -82,7 +82,7 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
                 _ => Err(Error::ProtocolError),
             },
             PropertyId::MessageExpiryInterval => Ok(Property::MessageExpiryInterval(
-                FourByteInteger::decode(reader)?.into(),
+                u32::read_four_byte_integer(reader)?,
             )),
             PropertyId::ContentType => {
                 Ok(Property::ContentType(UTF8String::decode(reader)?.into()))
@@ -103,7 +103,7 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             }
 
             PropertyId::SessionExpiryInterval => Ok(Property::SessionExpiryInterval(
-                FourByteInteger::decode(reader)?.into(),
+                u32::read_four_byte_integer(reader)?,
             )),
             PropertyId::AssignedClientIdentifier => Ok(Property::AssignedClientIdentifier(
                 UTF8String::decode(reader)?.into(),
@@ -123,7 +123,7 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
                 _ => Err(Error::ProtocolError),
             },
             PropertyId::WillDelayInterval => Ok(Property::WillDelayInterval(
-                FourByteInteger::decode(reader)?.into(),
+                u32::read_four_byte_integer(reader)?,
             )),
             PropertyId::RequestResponseInformation => match u8::read_byte(reader)? {
                 0x00 => Ok(Property::RequestResponseInformation(false)),
@@ -154,7 +154,7 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
                 UTF8String::decode(reader)?.into(),
             )),
             PropertyId::MaximumPacketSize => Ok(Property::MaximumPacketSize(
-                FourByteInteger::decode(reader)?.into(),
+                u32::read_four_byte_integer(reader)?,
             )),
             PropertyId::WildcardSubscriptionAvailable => Ok(
                 Property::WildcardSubscriptionAvailable(bool::read_byte(reader)?),
@@ -182,7 +182,7 @@ impl Encode for Property {
             }
             Property::MessageExpiryInterval(v) => {
                 let n_bytes = PropertyId::MessageExpiryInterval.encode(writer)?;
-                Ok(n_bytes + FourByteInteger(v).encode(writer)?)
+                Ok(n_bytes + v.write_four_byte_integer(writer)?)
             }
             Property::ContentType(v) => {
                 let n_bytes = PropertyId::ContentType.encode(writer)?;
@@ -207,7 +207,7 @@ impl Encode for Property {
             Property::SessionExpiryInterval(v) => {
                 if v != DEFAULT_SESSION_EXPIRY_INTERVAL {
                     let n_bytes = PropertyId::SessionExpiryInterval.encode(writer)?;
-                    Ok(n_bytes + FourByteInteger(v).encode(writer)?)
+                    Ok(n_bytes + v.write_four_byte_integer(writer)?)
                 } else {
                     Ok(0)
                 }
@@ -239,7 +239,7 @@ impl Encode for Property {
             Property::WillDelayInterval(v) => {
                 if v != DEFAULT_WILL_DELAY_INTERVAL {
                     let n_bytes = PropertyId::WillDelayInterval.encode(writer)?;
-                    Ok(n_bytes + FourByteInteger(v).encode(writer)?)
+                    Ok(n_bytes + v.write_four_byte_integer(writer)?)
                 } else {
                     Ok(0)
                 }
@@ -307,7 +307,7 @@ impl Encode for Property {
             }
             Property::MaximumPacketSize(v) => {
                 let n_bytes = PropertyId::MaximumPacketSize.encode(writer)?;
-                Ok(n_bytes + FourByteInteger(v).encode(writer)?)
+                Ok(n_bytes + v.write_four_byte_integer(writer)?)
             }
             Property::WildcardSubscriptionAvailable(v) => {
                 if v != DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE {

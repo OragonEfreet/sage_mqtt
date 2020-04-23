@@ -17,7 +17,10 @@ mod error;
 mod reason_code;
 
 pub use broker::Broker;
-use codec::{ReadByte, ReadTwoByteInteger, WriteByte, WriteTwoByteInteger};
+use codec::{
+    ReadByte, ReadFourByteInteger, ReadTwoByteInteger, WriteByte, WriteFourByteInteger,
+    WriteTwoByteInteger,
+};
 pub use control_packets::{
     Auth, Authentication, ConnAck, Connect, ControlPacket, Disconnect, PubAck, PubComp, PubRec,
     PubRel, Publish, RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck, UnSubscribe,
@@ -30,8 +33,6 @@ use control_packets::{
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
     DEFAULT_WILL_DELAY_INTERVAL,
 };
-pub use dep_codec::{
-    BinaryData, Decode, Encode, FourByteInteger, QoS, UTF8String, VariableByteInteger,
-};
+pub use dep_codec::{BinaryData, Decode, Encode, QoS, UTF8String, VariableByteInteger};
 pub use error::{Error, Result};
 pub use reason_code::ReasonCode;
