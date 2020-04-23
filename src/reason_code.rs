@@ -162,9 +162,9 @@ impl ReasonCode {
     }
 }
 
-impl From<ReasonCode> for u8 {
-    fn from(value: ReasonCode) -> Self {
-        match value {
+impl WriteByte for ReasonCode {
+    fn write_byte<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+        match self {
             ReasonCode::Success | ReasonCode::NormalDisconnection | ReasonCode::GrantedQoS0 => 0x00,
             ReasonCode::GrantedQoS1 => 0x01,
             ReasonCode::GrantedQoS2 => 0x02,
@@ -209,11 +209,6 @@ impl From<ReasonCode> for u8 {
             ReasonCode::SubscriptionIdentifiersNotSupported => 0xA1,
             ReasonCode::WildcardSubscriptionsNotSupported => 0xA2,
         }
-    }
-}
-
-impl WriteByte for ReasonCode {
-    fn write_byte<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        (self as u8).write_byte(writer)
+        .write_byte(writer)
     }
 }

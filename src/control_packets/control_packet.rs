@@ -87,12 +87,17 @@ impl ControlPacket {
             ),
         };
 
+        let mut fixed_header_buffer = Vec::new();
+
         let fixed_size = FixedHeader {
             packet_type,
             remaining_size,
         }
-        .encode(writer)?;
+        .encode(&mut fixed_header_buffer)?;
 
+        println!("{:?}", fixed_header_buffer);
+
+        writer.write_all(&fixed_header_buffer)?;
         writer.write_all(&variable_and_payload)?;
         Ok(fixed_size)
     }

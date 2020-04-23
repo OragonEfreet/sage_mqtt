@@ -30,7 +30,7 @@ impl UnSubAck {
         let mut properties = Vec::new();
 
         if let Some(reason_string) = self.reason_string {
-            n_bytes += Property::ReasonString(reason_string).encode(writer)?;
+            n_bytes += Property::ReasonString(reason_string).encode(&mut properties)?;
         }
         for (k, v) in self.user_properties {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
@@ -76,5 +76,47 @@ impl UnSubAck {
             reason_string,
             reason_codes,
         })
+    }
+}
+
+#[cfg(test)]
+mod unit {
+    use super::*;
+    use std::io::Cursor;
+
+    fn encoded() -> Vec<u8> {
+        vec![
+            5, 57, 36, 31, 0, 18, 71, 105, 111, 114, 103, 105, 111, 32, 98, 121, 32, 77, 111, 114,
+            111, 100, 101, 114, 38, 0, 7, 77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116, 145,
+            143,
+        ]
+    }
+
+    fn decoded() -> UnSubAck {
+        UnSubAck {
+            packet_identifier: 1337,
+            reason_string: Some("Giorgio by Moroder".into()),
+            user_properties: vec![("Mogwaï".into(), "Cat".into())],
+            reason_codes: vec![
+                ReasonCode::PacketIdentifierInUse,
+                ReasonCode::TopicFilterInvalid,
+            ],
+        }
+    }
+
+    #[test]
+    fn encode() {
+        let test_data = decoded();
+        let mut tested_result = Vec::new();
+        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        assert_eq!(tested_result, encoded());
+        assert_eq!(n_bytes, 41);
+    }
+
+    #[test]
+    fn decode() {
+        let mut test_data = Cursor::new(encoded());
+        let tested_result = UnSubAck::read(&mut test_data, 41).unwrap();
+        assert_eq!(tested_result, decoded());
     }
 }

@@ -73,3 +73,42 @@ impl PubAck {
         Ok(puback)
     }
 }
+
+#[cfg(test)]
+mod unit {
+
+    use super::*;
+    use std::io::Cursor;
+
+    fn encoded() -> Vec<u8> {
+        vec![
+            5, 57, 151, 29, 31, 0, 11, 66, 108, 97, 99, 107, 32, 66, 101, 116, 116, 121, 38, 0, 7,
+            77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116,
+        ]
+    }
+
+    fn decoded() -> PubAck {
+        PubAck {
+            packet_identifier: 1337,
+            reason_code: ReasonCode::QuotaExceeded,
+            reason_string: Some("Black Betty".into()),
+            user_properties: vec![("Mogwaï".into(), "Cat".into())],
+        }
+    }
+
+    #[test]
+    fn encode() {
+        let test_data = decoded();
+        let mut tested_result = Vec::new();
+        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        assert_eq!(tested_result, encoded());
+        assert_eq!(n_bytes, 33);
+    }
+
+    #[test]
+    fn decode() {
+        let mut test_data = Cursor::new(encoded());
+        let tested_result = PubAck::read(&mut test_data, false).unwrap();
+        assert_eq!(tested_result, decoded());
+    }
+}

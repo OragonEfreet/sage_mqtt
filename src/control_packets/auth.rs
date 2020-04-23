@@ -78,3 +78,45 @@ impl Auth {
         }
     }
 }
+
+#[cfg(test)]
+mod unit {
+
+    use super::*;
+    use std::io::Cursor;
+
+    fn encoded() -> Vec<u8> {
+        vec![
+            24, 38, 21, 0, 6, 87, 105, 108, 108, 111, 119, 22, 0, 4, 13, 21, 234, 94, 31, 0, 4, 66,
+            105, 119, 105, 38, 0, 7, 77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116,
+        ]
+    }
+
+    fn decoded() -> Auth {
+        Auth {
+            reason_code: ReasonCode::ContinueAuthentication,
+            authentication: Authentication {
+                method: "Willow".into(),
+                data: vec![0x0D, 0x15, 0xEA, 0x5E],
+            },
+            reason_string: Some("Biwi".into()),
+            user_properties: vec![("Mogwaï".into(), "Cat".into())],
+        }
+    }
+
+    #[test]
+    fn encode() {
+        let test_data = decoded();
+        let mut tested_result = Vec::new();
+        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        assert_eq!(tested_result, encoded());
+        assert_eq!(n_bytes, 40);
+    }
+
+    #[test]
+    fn decode() {
+        let mut test_data = Cursor::new(encoded());
+        let tested_result = Auth::read(&mut test_data).unwrap();
+        assert_eq!(tested_result, decoded());
+    }
+}

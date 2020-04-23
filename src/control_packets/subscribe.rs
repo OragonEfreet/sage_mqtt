@@ -62,7 +62,7 @@ impl SubscriptionOptions {
         } else {
             Ok(SubscriptionOptions {
                 qos: (flags & 0b0000_0011).try_into()?,
-                no_local: (flags & 0b0000_0010) > 0,
+                no_local: (flags & 0b0000_0100) > 0,
                 retain_as_published: (flags & 0b0000_1000) > 0,
                 retain_handling: ((flags & 0b0011_0000) >> 4).try_into()?,
             })
@@ -96,7 +96,7 @@ impl Subscribe {
         let mut properties = Vec::new();
 
         if let Some(v) = self.subscription_identifier {
-            n_bytes += v.write_variable_byte_integer(writer)?;
+            n_bytes += Property::SubscriptionIdentifier(v).encode(&mut properties)?;
         }
         for (k, v) in self.user_properties {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
@@ -115,7 +115,6 @@ impl Subscribe {
 
     pub fn read<R: Read>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size as u64);
-
         let packet_identifier = u16::read_two_byte_integer(&mut reader)?;
 
         let mut user_properties = Vec::new();
@@ -129,6 +128,8 @@ impl Subscribe {
                 _ => return Err(Error::ProtocolError),
             }
         }
+
+        //        return Err(Error::DebugMarker("TOUT VA BIEN".into()));
 
         let mut subscriptions = Vec::new();
 
@@ -149,5 +150,81 @@ impl Subscribe {
                 subscriptions,
             })
         }
+    }
+}
+
+#[cfg(test)]
+mod unit {
+    use super::*;
+    use std::io::Cursor;
+
+    fn encoded() -> Vec<u8> {
+        vec![
+            5, 57, 18, 11, 195, 3, 38, 0, 7, 77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116, 0,
+            6, 104, 97, 114, 100, 101, 114, 1, 0, 6, 98, 101, 116, 116, 101, 114, 20, 0, 6, 102,
+            97, 115, 116, 101, 114, 14, 0, 8, 115, 116, 114, 111, 110, 103, 101, 114, 41,
+        ]
+    }
+
+    fn decoded() -> Subscribe {
+        Subscribe {
+            packet_identifier: 1337,
+            subscription_identifier: Some(451),
+            user_properties: vec![("Mogwaï".into(), "Cat".into())],
+            subscriptions: vec![
+                (
+                    "harder".into(),
+                    SubscriptionOptions {
+                        qos: QoS::AtLeastOnce,
+                        no_local: false,
+                        retain_as_published: false,
+                        retain_handling: RetainHandling::OnSubscribe,
+                    },
+                ),
+                (
+                    "better".into(),
+                    SubscriptionOptions {
+                        qos: QoS::AtMostOnce,
+                        no_local: true,
+                        retain_as_published: false,
+                        retain_handling: RetainHandling::OnFirstSubscribe,
+                    },
+                ),
+                (
+                    "faster".into(),
+                    SubscriptionOptions {
+                        qos: QoS::ExactlyOnce,
+                        no_local: true,
+                        retain_as_published: true,
+                        retain_handling: RetainHandling::OnSubscribe,
+                    },
+                ),
+                (
+                    "stronger".into(),
+                    SubscriptionOptions {
+                        qos: QoS::AtLeastOnce,
+                        no_local: false,
+                        retain_as_published: true,
+                        retain_handling: RetainHandling::DontSend,
+                    },
+                ),
+            ],
+        }
+    }
+
+    #[test]
+    fn encode() {
+        let test_data = decoded();
+        let mut tested_result = Vec::new();
+        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        assert_eq!(tested_result, encoded());
+        assert_eq!(n_bytes, 59);
+    }
+
+    #[test]
+    fn decode() {
+        let mut test_data = Cursor::new(encoded());
+        let tested_result = Subscribe::read(&mut test_data, 59).unwrap();
+        assert_eq!(tested_result, decoded());
     }
 }

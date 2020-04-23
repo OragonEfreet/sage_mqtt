@@ -80,11 +80,12 @@ impl ConnAck {
         n_bytes += Property::SharedSubscriptionAvailable(self.shared_subscription_available)
             .encode(&mut properties)?;
         if let Some(v) = self.keep_alive {
-            n_bytes += Property::ServerKeepAlive(v).encode(writer)?;
+            n_bytes += Property::ServerKeepAlive(v).encode(&mut properties)?;
         }
-        n_bytes += Property::ResponseInformation(self.response_information).encode(writer)?;
+        n_bytes +=
+            Property::ResponseInformation(self.response_information).encode(&mut properties)?;
         if let Some(v) = self.reference {
-            n_bytes += Property::ServerReference(v).encode(writer)?;
+            n_bytes += Property::ServerReference(v).encode(&mut properties)?;
         }
         if let Some(authentication) = self.authentication {
             n_bytes +=
@@ -105,7 +106,7 @@ impl ConnAck {
         let session_present = bool::read_byte(reader)?;
 
         let reason_code =
-            ReasonCode::try_parse(u8::read_byte(reader)?, ControlPacketType::CONNECT)?;
+            ReasonCode::try_parse(u8::read_byte(reader)?, ControlPacketType::CONNACK)?;
 
         let mut session_expiry_interval = None;
         let mut receive_maximum = DEFAULT_RECEIVE_MAXIMUM;
@@ -178,5 +179,64 @@ impl ConnAck {
             reference,
             authentication,
         })
+    }
+}
+
+#[cfg(test)]
+mod unit {
+
+    use super::*;
+    use std::io::Cursor;
+
+    fn encoded() -> Vec<u8> {
+        vec![
+            1, 138, 109, 17, 0, 0, 5, 57, 33, 0, 30, 36, 1, 37, 0, 39, 0, 0, 1, 0, 18, 0, 11, 87,
+            97, 108, 107, 84, 104, 105, 115, 87, 97, 121, 34, 0, 10, 31, 0, 7, 82, 85, 78, 45, 68,
+            77, 67, 38, 0, 7, 77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116, 40, 0, 19, 0, 17,
+            26, 0, 9, 65, 101, 114, 111, 115, 109, 105, 116, 104, 28, 0, 14, 80, 97, 105, 110, 116,
+            32, 73, 116, 32, 66, 108, 97, 99, 107, 21, 0, 6, 87, 105, 108, 108, 111, 119, 22, 0, 4,
+            13, 21, 234, 94,
+        ]
+    }
+
+    fn decoded() -> ConnAck {
+        ConnAck {
+            session_present: true,
+            reason_code: ReasonCode::Banned,
+            session_expiry_interval: Some(1337),
+            receive_maximum: 30,
+            maximum_qos: QoS::AtLeastOnce,
+            retain_available: false,
+            maximum_packet_size: Some(256),
+            assigned_client_id: Some("WalkThisWay".into()),
+            topic_alias_maximum: 10,
+            reason_string: "RUN-DMC".into(),
+            user_properties: vec![("Mogwaï".into(), "Cat".into())],
+            wildcard_subscription_available: false,
+            shared_subscription_available: true,
+            keep_alive: Some(17),
+            response_information: "Aerosmith".into(),
+            reference: Some("Paint It Black".into()),
+            authentication: Some(Authentication {
+                method: "Willow".into(),
+                data: vec![0x0D, 0x15, 0xEA, 0x5E],
+            }),
+        }
+    }
+
+    #[test]
+    fn encode() {
+        let test_data = decoded();
+        let mut tested_result = Vec::new();
+        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        assert_eq!(tested_result, encoded());
+        assert_eq!(n_bytes, 112);
+    }
+
+    #[test]
+    fn decode() {
+        let mut test_data = Cursor::new(encoded());
+        let tested_result = ConnAck::read(&mut test_data).unwrap();
+        assert_eq!(tested_result, decoded());
     }
 }

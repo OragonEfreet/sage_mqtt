@@ -38,11 +38,13 @@ pub enum Error {
 
     /// 0xA2: Wildcard Subscriptions not supported
     WildcardSubscriptionsNotSupported,
+
+    DebugMarker(String),
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        match *self {
+        match self {
             Error::Io(ref e) => e.fmt(f),
             Error::MalformedPacket => write!(f, "Malformed Packet"),
             Error::ProtocolError => write!(f, "Protocol Error"),
@@ -59,6 +61,7 @@ impl Display for Error {
             Error::WildcardSubscriptionsNotSupported => {
                 write!(f, "Wildcard Subscriptions not supported")
             }
+            Error::DebugMarker(what) => write!(f, "DBG: {}", what),
         }
     }
 }

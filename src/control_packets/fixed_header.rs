@@ -16,6 +16,7 @@ impl FixedHeader {
         n += self.remaining_size.write_variable_byte_integer(writer)?;
         Ok(n)
     }
+
     pub fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
         let packet_type = ControlPacketType::read_byte(reader)?;
         let remaining_size = usize::read_variable_byte_integer(reader)?;

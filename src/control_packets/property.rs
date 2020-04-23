@@ -65,9 +65,13 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
     pub fn read(&mut self) -> SageResult<Property> {
         let reader = &mut self.reader;
         let property_id = PropertyId::read_variable_byte_integer(reader)?;
+        println!("STILL ALIVE!");
 
         // Filter by authorized properties and unicity requirements
-        if property_id != PropertyId::UserProperty && !self.marked.insert(property_id) {
+        if (property_id != PropertyId::UserProperty
+            && property_id != PropertyId::SubscriptionIdentifier)
+            && !self.marked.insert(property_id)
+        {
             return Err(Error::ProtocolError);
         }
         self.read_property_value(property_id)

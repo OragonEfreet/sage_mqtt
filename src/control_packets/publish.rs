@@ -105,7 +105,6 @@ impl Publish {
         } else {
             None
         };
-
         let mut payload_format_indicator = DEFAULT_PAYLOAD_FORMAT_INDICATOR;
         let mut message_expiry_interval = None;
         let mut topic_alias = None;
@@ -123,7 +122,7 @@ impl Publish {
                 Property::TopicAlias(v) => topic_alias = Some(v),
                 Property::ResponseTopic(v) => response_topic = Some(v),
                 Property::CorrelationData(v) => correlation_data = Some(v),
-                Property::UserProperty(v, k) => user_properties.push((k, v)),
+                Property::UserProperty(k, v) => user_properties.push((k, v)),
                 Property::SubscriptionIdentifier(v) => subscription_identifiers.push(v),
                 Property::ContentType(v) => content_type = v,
                 _ => return Err(Error::ProtocolError),
@@ -149,5 +148,60 @@ impl Publish {
             content_type,
             application_message,
         })
+    }
+}
+
+#[cfg(test)]
+mod unit {
+
+    use super::*;
+    use std::io::Cursor;
+
+    fn encoded() -> Vec<u8> {
+        vec![
+            0, 13, 79, 110, 101, 32, 77, 111, 114, 101, 32, 84, 105, 109, 101, 5, 57, 76, 1, 1, 2,
+            0, 0, 0, 17, 35, 1, 195, 8, 0, 23, 83, 109, 101, 108, 108, 115, 32, 76, 105, 107, 101,
+            32, 84, 101, 101, 110, 32, 83, 112, 105, 114, 105, 116, 9, 0, 4, 13, 21, 234, 94, 38,
+            0, 7, 77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116, 11, 34, 11, 32, 11, 10, 11,
+            11, 3, 0, 7, 78, 105, 114, 118, 97, 110, 97, 97, 108, 108, 32, 116, 104, 101, 32, 98,
+            97, 115, 101, 115, 32, 97, 114, 101, 32, 98, 101, 108, 111, 110, 103, 32, 116, 111, 32,
+            117, 115,
+        ]
+    }
+
+    fn decoded() -> Publish {
+        Publish {
+            duplicate: false,
+            qos: QoS::AtLeastOnce,
+            retain: true,
+            topic_name: "One More Time".into(),
+            packet_identifier: Some(1337),
+            payload_format_indicator: true,
+            message_expiry_interval: Some(17),
+            topic_alias: Some(451),
+            response_topic: Some("Smells Like Teen Spirit".into()),
+            correlation_data: Some(vec![0x0D, 0x15, 0xEA, 0x5E]),
+            user_properties: vec![("Mogwaï".into(), "Cat".into())],
+            subscription_identifiers: vec![34, 32, 10, 11],
+            content_type: "Nirvana".into(),
+            application_message: "all the bases are belong to us".into(),
+        }
+    }
+
+    #[test]
+    fn encode() {
+        let test_data = decoded();
+        let mut tested_result = Vec::new();
+        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        assert_eq!(tested_result, encoded());
+        assert_eq!(n_bytes, 124);
+    }
+
+    #[test]
+    fn decode() {
+        let mut test_data = Cursor::new(encoded());
+        let tested_result =
+            Publish::read(&mut test_data, false, QoS::AtLeastOnce, true, 124).unwrap();
+        assert_eq!(tested_result, decoded());
     }
 }

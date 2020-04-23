@@ -339,20 +339,14 @@ mod unit_connect {
 
     use super::*;
 
-    // Keep Alive MSB (0)
-    // Keep Alive MSB (10)
-    // Properties:
-    // Session Expiry Interface Identifier (17)
-    // Session Expiry Interval (10)
-
-    fn connect_encoded() -> Vec<u8> {
+    fn encoded() -> Vec<u8> {
         vec![
             0, 4, 77, 81, 84, 84, 5, 206, 0, 10, 5, 17, 0, 0, 0, 10, 0, 0, 6, 3, 0, 0, 8, 0, 0, 0,
             0, 0, 0, 0, 6, 87, 105, 108, 108, 111, 119, 0, 5, 74, 97, 100, 101, 110,
         ]
     }
 
-    fn connect_decoded() -> Connect {
+    fn decoded() -> Connect {
         let keep_alive = 10;
         let session_expiry_interval = 10;
 
@@ -371,19 +365,19 @@ mod unit_connect {
     }
 
     #[test]
-    fn write_control_connect() {
-        let connect = connect_decoded();
-        let mut encoded = Vec::new();
+    fn encode() {
+        let test_data = decoded();
+        let mut tested_result = Vec::new();
 
-        let n_bytes = connect.write(&mut encoded).unwrap();
-        assert_eq!(encoded, connect_encoded());
+        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        assert_eq!(tested_result, encoded());
         assert_eq!(n_bytes, 44);
     }
 
     #[test]
-    fn read_control_connect() {
-        let mut test_stream = Cursor::new(connect_encoded());
-        let connect = Connect::read(&mut test_stream).unwrap();
-        assert_eq!(connect, connect_decoded());
+    fn decode() {
+        let mut test_data = Cursor::new(encoded());
+        let tested_result = Connect::read(&mut test_data).unwrap();
+        assert_eq!(tested_result, decoded());
     }
 }
