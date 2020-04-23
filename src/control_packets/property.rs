@@ -1,12 +1,13 @@
 use crate::{
-    BinaryData, Decode, Encode, Error, PropertyId, QoS, ReadByte, ReadFourByteInteger,
-    ReadTwoByteInteger, ReadUTF8String, ReadVariableByteInteger, Result as SageResult, WriteByte,
-    WriteFourByteInteger, WriteTwoByteInteger, WriteUTF8String, WriteVariableByteInteger,
-    DEFAULT_MAXIMUM_QOS, DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
-    DEFAULT_REQUEST_PROBLEM_INFORMATION, DEFAULT_REQUEST_RESPONSE_INFORMATION,
-    DEFAULT_RETAIN_AVAILABLE, DEFAULT_SESSION_EXPIRY_INTERVAL,
-    DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
-    DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_WILL_DELAY_INTERVAL,
+    Decode, Encode, Error, PropertyId, QoS, ReadBinaryData, ReadByte, ReadFourByteInteger,
+    ReadTwoByteInteger, ReadUTF8String, ReadVariableByteInteger, Result as SageResult,
+    WriteBinaryData, WriteByte, WriteFourByteInteger, WriteTwoByteInteger, WriteUTF8String,
+    WriteVariableByteInteger, DEFAULT_MAXIMUM_QOS, DEFAULT_PAYLOAD_FORMAT_INDICATOR,
+    DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
+    DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_RETAIN_AVAILABLE,
+    DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
+    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
+    DEFAULT_WILL_DELAY_INTERVAL,
 };
 use std::{
     collections::HashSet,
@@ -88,9 +89,9 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             PropertyId::ResponseTopic => {
                 Ok(Property::ResponseTopic(String::read_utf8_string(reader)?))
             }
-            PropertyId::CorrelationData => Ok(Property::CorrelationData(
-                BinaryData::decode(reader)?.into(),
-            )),
+            PropertyId::CorrelationData => {
+                Ok(Property::CorrelationData(Vec::read_binary_data(reader)?))
+            }
             PropertyId::SubscriptionIdentifier => {
                 let v = u32::read_variable_byte_integer(reader)?;
                 if v == 0 {
@@ -112,9 +113,9 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             PropertyId::AuthenticationMethod => Ok(Property::AuthenticationMethod(
                 String::read_utf8_string(reader)?,
             )),
-            PropertyId::AuthenticationData => Ok(Property::AuthenticationData(
-                BinaryData::decode(reader)?.into(),
-            )),
+            PropertyId::AuthenticationData => {
+                Ok(Property::AuthenticationData(Vec::read_binary_data(reader)?))
+            }
             PropertyId::RequestProblemInformation => match u8::read_byte(reader)? {
                 0x00 => Ok(Property::RequestProblemInformation(false)),
                 0x01 => Ok(Property::RequestProblemInformation(true)),
@@ -194,7 +195,7 @@ impl Encode for Property {
             }
             Property::CorrelationData(v) => {
                 let n_bytes = PropertyId::CorrelationData.write_variable_byte_integer(writer)?;
-                Ok(n_bytes + BinaryData(v).encode(writer)?)
+                Ok(n_bytes + v.write_binary_data(writer)?)
             }
             Property::SubscriptionIdentifier(v) => {
                 if v == 0 {
@@ -230,7 +231,7 @@ impl Encode for Property {
             }
             Property::AuthenticationData(v) => {
                 let n_bytes = PropertyId::AuthenticationData.write_variable_byte_integer(writer)?;
-                Ok(n_bytes + BinaryData(v).encode(writer)?)
+                Ok(n_bytes + v.write_binary_data(writer)?)
             }
             Property::RequestProblemInformation(v) => {
                 if v != DEFAULT_REQUEST_PROBLEM_INFORMATION {

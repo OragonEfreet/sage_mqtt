@@ -18,9 +18,9 @@ mod reason_code;
 
 pub use broker::Broker;
 use codec::{
-    ReadByte, ReadFourByteInteger, ReadTwoByteInteger, ReadUTF8String, ReadVariableByteInteger,
-    WriteByte, WriteFourByteInteger, WriteTwoByteInteger, WriteUTF8String,
-    WriteVariableByteInteger,
+    ReadBinaryData, ReadByte, ReadFourByteInteger, ReadTwoByteInteger, ReadUTF8String,
+    ReadVariableByteInteger, WriteBinaryData, WriteByte, WriteFourByteInteger, WriteTwoByteInteger,
+    WriteUTF8String, WriteVariableByteInteger,
 };
 pub use control_packets::{
     Auth, Authentication, ConnAck, Connect, ControlPacket, Disconnect, PubAck, PubComp, PubRec,
@@ -34,6 +34,6 @@ use control_packets::{
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
     DEFAULT_WILL_DELAY_INTERVAL,
 };
-pub use dep_codec::{BinaryData, Decode, Encode, QoS};
+pub use dep_codec::{Decode, Encode, QoS};
 pub use error::{Error, Result};
 pub use reason_code::ReasonCode;

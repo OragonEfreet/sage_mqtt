@@ -1,8 +1,8 @@
 use crate::{
-    Authentication, BinaryData, Decode, Encode, Error, PropertiesDecoder, Property, QoS, ReadByte,
-    ReadTwoByteInteger, ReadUTF8String, Result as SageResult, WriteByte, WriteTwoByteInteger,
-    WriteUTF8String, WriteVariableByteInteger, DEFAULT_PAYLOAD_FORMAT_INDICATOR,
-    DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
+    Authentication, Encode, Error, PropertiesDecoder, Property, QoS, ReadBinaryData, ReadByte,
+    ReadTwoByteInteger, ReadUTF8String, Result as SageResult, WriteBinaryData, WriteByte,
+    WriteTwoByteInteger, WriteUTF8String, WriteVariableByteInteger,
+    DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
 };
@@ -173,7 +173,7 @@ impl Connect {
             writer.write_all(&properties)?;
 
             n_bytes += w.topic.write_utf8_string(writer)?;
-            n_bytes += BinaryData(w.payload).encode(writer)?;
+            n_bytes += w.payload.write_binary_data(writer)?;
         }
 
         if let Some(v) = self.user_name {
@@ -181,7 +181,7 @@ impl Connect {
         }
 
         if let Some(v) = self.password {
-            n_bytes += BinaryData(v).encode(writer)?;
+            n_bytes += v.write_binary_data(writer)?;
         }
 
         Ok(n_bytes)
@@ -266,7 +266,7 @@ impl Connect {
                 }
             }
             w.topic = String::read_utf8_string(reader)?;
-            w.payload = BinaryData::decode(reader)?.into();
+            w.payload = Vec::read_binary_data(reader)?;
             Some(w)
         } else {
             None
@@ -279,7 +279,7 @@ impl Connect {
         };
 
         let password = if flags.password {
-            Some(BinaryData::decode(reader)?.into())
+            Some(Vec::read_binary_data(reader)?)
         } else {
             None
         };
