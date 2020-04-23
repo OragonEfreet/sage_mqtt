@@ -1,4 +1,4 @@
-use crate::{Bits, Decode, Encode, Error, QoS, Result as SageResult};
+use crate::{Decode, Encode, Error, QoS, ReadByte, Result as SageResult, WriteByte};
 use std::{
     convert::TryInto,
     io::{Read, Write},
@@ -54,7 +54,7 @@ impl From<ControlPacketType> for PayloadRequirements {
 
 impl Encode for ControlPacketType {
     fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let packet_type = Bits::from(match self {
+        match self {
             ControlPacketType::RESERVED => 0b0000_0000,
             ControlPacketType::CONNECT => 0b0001_0000,
             ControlPacketType::CONNACK => 0b0010_0000,
@@ -75,14 +75,14 @@ impl Encode for ControlPacketType {
             ControlPacketType::PINGRESP => 0b1101_0000,
             ControlPacketType::DISCONNECT => 0b1110_0000,
             ControlPacketType::AUTH => 0b1111_0000,
-        });
-        Ok(packet_type.encode(writer)?)
+        }
+        .write_byte(writer)
     }
 }
 
 impl Decode for ControlPacketType {
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let packet_type: u8 = Bits::decode(reader)?.into();
+        let packet_type = u8::read_byte(reader)?;
         let packet_type = match (packet_type >> 4, packet_type & 0b0000_1111) {
             (0b0000, 0b0000) => ControlPacketType::RESERVED,
             (0b0001, 0b0000) => ControlPacketType::CONNECT,

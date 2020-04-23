@@ -1,5 +1,5 @@
 use crate::{
-    BinaryData, Bits, Decode, Encode, Error, FourByteInteger, PropertyId, QoS, ReadByte,
+    BinaryData, Decode, Encode, Error, FourByteInteger, PropertyId, QoS, ReadByte,
     Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger, WriteByte,
     DEFAULT_MAXIMUM_QOS, DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
     DEFAULT_REQUEST_PROBLEM_INFORMATION, DEFAULT_REQUEST_RESPONSE_INFORMATION,
@@ -176,7 +176,7 @@ impl Encode for Property {
             Property::PayloadFormatIndicator(v) => {
                 if v != DEFAULT_PAYLOAD_FORMAT_INDICATOR {
                     let n_bytes = PropertyId::PayloadFormatIndicator.encode(writer)?;
-                    Ok(n_bytes + Bits(v as u8).encode(writer)?)
+                    Ok(n_bytes + v.write_byte(writer)?)
                 } else {
                     Ok(0)
                 }

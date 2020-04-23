@@ -1,21 +1,3 @@
-/// Bits in a byte are labelled 7 to 0. Bit number 7 is the most significant
-/// bit.
-/// This type can be converted from and to `u8`.
-#[derive(Default, Debug, PartialEq, Eq)]
-pub struct Bits(pub u8);
-
-impl From<u8> for Bits {
-    fn from(value: u8) -> Self {
-        Bits(value)
-    }
-}
-
-impl From<Bits> for u8 {
-    fn from(value: Bits) -> Self {
-        value.0
-    }
-}
-
 /// Two bytes data values are 16-bits unsigned integer represented in
 /// big-endian. That means the most significant byte (MSB) is presented first
 /// on the stream.

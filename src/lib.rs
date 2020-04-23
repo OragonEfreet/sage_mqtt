@@ -31,7 +31,7 @@ use control_packets::{
     DEFAULT_WILL_DELAY_INTERVAL,
 };
 pub use dep_codec::{
-    BinaryData, Bits, Decode, Encode, FourByteInteger, QoS, TwoByteInteger, UTF8String,
+    BinaryData, Decode, Encode, FourByteInteger, QoS, TwoByteInteger, UTF8String,
     VariableByteInteger,
 };
 pub use error::{Error, Result};

@@ -1,6 +1,6 @@
 use crate::{
-    Authentication, BinaryData, Bits, Decode, Encode, Error, PropertiesDecoder, Property, QoS,
-    ReadByte, Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger, WriteByte,
+    Authentication, BinaryData, Decode, Encode, Error, PropertiesDecoder, Property, QoS, ReadByte,
+    Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger, WriteByte,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
@@ -310,11 +310,11 @@ impl ConnectFlags {
             | (self.will_qos as u8) << 3
             | ((self.will as u8) << 2)
             | ((self.clean_start as u8) << 1);
-        Ok(Bits(bits).encode(writer)?)
+        bits.write_byte(writer)
     }
 
     pub fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let bits: u8 = Bits::decode(reader)?.into();
+        let bits = u8::read_byte(reader)?;
 
         if bits & 0x01 != 0 {
             Err(Error::MalformedPacket)

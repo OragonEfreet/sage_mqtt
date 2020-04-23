@@ -1,5 +1,5 @@
 use crate::{
-    BinaryData, Bits, Error, FourByteInteger, Result as SageResult, TwoByteInteger, UTF8String,
+    BinaryData, Error, FourByteInteger, Result as SageResult, TwoByteInteger, UTF8String,
     VariableByteInteger,
 };
 use std::io::{Cursor, Read};
@@ -10,16 +10,6 @@ use unicode_reader::CodePoints;
 pub trait Decode: Sized {
     /// Reads the input `Reader` and returns the parsed data.
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self>;
-}
-impl Decode for Bits {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let mut buf = [0u8; 1];
-        if reader.read_exact(&mut buf).is_ok() {
-            Ok(Bits(buf[0]))
-        } else {
-            Err(Error::MalformedPacket)
-        }
-    }
 }
 
 impl Decode for TwoByteInteger {
@@ -132,18 +122,6 @@ impl Decode for BinaryData {
 mod unit_decode {
 
     use super::*;
-
-    #[test]
-    fn decode_bits() {
-        let mut test_stream = Cursor::new([0xAF_u8]);
-        assert_eq!(Bits::decode(&mut test_stream).unwrap(), Bits(0xAF));
-    }
-
-    #[test]
-    fn decode_bits_eof() {
-        let mut test_stream: Cursor<[u8; 0]> = Default::default();
-        assert_matches!(Bits::decode(&mut test_stream), Err(Error::MalformedPacket));
-    }
 
     #[test]
     fn decode_twobyte_integer() {
