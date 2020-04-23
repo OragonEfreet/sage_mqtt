@@ -1,6 +1,4 @@
-use crate::{
-    BinaryData, Error, ReadTwoByteInteger, Result as SageResult, UTF8String, VariableByteInteger,
-};
+use crate::{BinaryData, Error, ReadTwoByteInteger, Result as SageResult, UTF8String};
 use std::io::{Cursor, Read};
 use unicode_reader::CodePoints;
 
@@ -42,32 +40,6 @@ impl Decode for UTF8String {
         } else {
             Ok(Default::default())
         }
-    }
-}
-
-impl Decode for VariableByteInteger {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let mut multiplier = 1_u32;
-        let mut value = 0_u32;
-
-        loop {
-            let mut buffer = vec![0u8; 1];
-            if reader.read_exact(&mut buffer).is_ok() {
-                let encoded_byte = buffer[0];
-                value += ((encoded_byte & 127u8) as u32) * multiplier;
-                if multiplier > 2_097_152 {
-                    return Err(Error::MalformedPacket);
-                }
-                multiplier *= 128;
-                if encoded_byte & 128u8 == 0 {
-                    break;
-                }
-            } else {
-                return Err(Error::MalformedPacket);
-            }
-        }
-
-        Ok(VariableByteInteger(value))
     }
 }
 
@@ -155,87 +127,6 @@ mod unit_decode {
         assert_eq!(
             UTF8String::decode(&mut test_stream).unwrap(),
             UTF8String::from("\u{feff}A𪛔")
-        );
-    }
-
-    #[test]
-    fn decode_variable_byte_integer_one_lower_bound() {
-        let mut test_stream = Cursor::new([0x00]);
-        assert_eq!(
-            VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger(0)
-        );
-    }
-
-    #[test]
-    fn decode_variable_byte_integer_one_upper_bound() {
-        let mut test_stream = Cursor::new([0x7F]);
-        assert_eq!(
-            VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger(127)
-        );
-    }
-
-    #[test]
-    fn decode_variable_byte_integer_two_lower_bound() {
-        let mut test_stream = Cursor::new([0x80, 0x01]);
-        assert_eq!(
-            VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger(128)
-        );
-    }
-
-    #[test]
-    fn decode_variable_byte_integer_two_upper_bound() {
-        let mut test_stream = Cursor::new([0xFF, 0x7F]);
-        assert_eq!(
-            VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger(16_383)
-        );
-    }
-
-    #[test]
-    fn decode_variable_byte_integer_three_lower_bound() {
-        let mut test_stream = Cursor::new([0x80, 0x80, 0x01]);
-        assert_eq!(
-            VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger(16_384)
-        );
-    }
-
-    #[test]
-    fn decode_variable_byte_integer_three_upper_bound() {
-        let mut test_stream = Cursor::new([0xFF, 0xFF, 0x7F]);
-        assert_eq!(
-            VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger(2_097_151)
-        );
-    }
-
-    #[test]
-    fn decode_variable_byte_integer_four_lower_bound() {
-        let mut test_stream = Cursor::new([0x80, 0x80, 0x80, 0x01]);
-        assert_eq!(
-            VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger(2_097_152)
-        );
-    }
-
-    #[test]
-    fn decode_variable_byte_integer_four_upper_bound() {
-        let mut test_stream = Cursor::new([0xFF, 0xFF, 0xFF, 0x7F]);
-        assert_eq!(
-            VariableByteInteger::decode(&mut test_stream).unwrap(),
-            VariableByteInteger(268_435_455)
-        );
-    }
-
-    #[test]
-    fn decode_variable_byte_integer_eof() {
-        let mut test_stream: Cursor<[u8; 0]> = Default::default();
-        assert_matches!(
-            VariableByteInteger::decode(&mut test_stream),
-            Err(Error::MalformedPacket)
         );
     }
 

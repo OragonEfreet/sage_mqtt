@@ -23,37 +23,6 @@ impl From<UTF8String> for String {
     }
 }
 
-/// The Variable Byte Integer is encoded using an encoding scheme which uses
-/// a single byte for values up to 127. Larger values are handled as follows.
-/// The least significant seven bits of each byte encode the data,
-/// and the most significant bit is used to indicate whether there are bytes
-/// following in the representation. Thus, each byte encodes 128 values and a
-/// "continuation bit". The maximum number of bytes in the Variable Byte
-/// Integer field is four.
-///
-/// When an unsigned integer encoded, the smallest
-/// representation is used.
-#[derive(Debug, PartialEq, Eq, Default)]
-pub struct VariableByteInteger(pub u32);
-
-impl From<u32> for VariableByteInteger {
-    fn from(value: u32) -> Self {
-        VariableByteInteger(value)
-    }
-}
-
-impl From<VariableByteInteger> for u32 {
-    fn from(value: VariableByteInteger) -> Self {
-        value.0
-    }
-}
-
-impl From<VariableByteInteger> for u64 {
-    fn from(value: VariableByteInteger) -> Self {
-        value.0 as u64
-    }
-}
-
 /// Binary Data is represented by a Two Byte Integer length which indicates the
 /// number of data bytes, followed by that number of bytes. Thus, the length of
 /// Binary Data is limited to the range of 0 to 65,535 Bytes.

@@ -1,6 +1,6 @@
 use crate::{
     Decode, Encode, Error, PropertiesDecoder, Property, ReadTwoByteInteger, Result as SageResult,
-    UTF8String, VariableByteInteger, WriteTwoByteInteger,
+    UTF8String, WriteTwoByteInteger, WriteVariableByteInteger,
 };
 use std::io::{Read, Write};
 
@@ -29,7 +29,7 @@ impl UnSubscribe {
         for (k, v) in self.user_properties {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
         }
-        n_bytes += VariableByteInteger(properties.len() as u32).encode(writer)?;
+        n_bytes += properties.len().write_variable_byte_integer(writer)?;
         writer.write_all(&properties)?;
 
         for option in self.subscriptions {

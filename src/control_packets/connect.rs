@@ -1,7 +1,7 @@
 use crate::{
     Authentication, BinaryData, Decode, Encode, Error, PropertiesDecoder, Property, QoS, ReadByte,
-    ReadTwoByteInteger, Result as SageResult, UTF8String, VariableByteInteger, WriteByte,
-    WriteTwoByteInteger, DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
+    ReadTwoByteInteger, Result as SageResult, UTF8String, WriteByte, WriteTwoByteInteger,
+    WriteVariableByteInteger, DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
     DEFAULT_REQUEST_PROBLEM_INFORMATION, DEFAULT_REQUEST_RESPONSE_INFORMATION,
     DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
 };
@@ -141,7 +141,7 @@ impl Connect {
             n_bytes += authentication.encode(writer)?;
         }
 
-        n_bytes += VariableByteInteger(properties.len() as u32).encode(writer)?;
+        n_bytes += properties.len().write_variable_byte_integer(writer)?;
         writer.write_all(&properties)?;
 
         // Payload
@@ -168,7 +168,7 @@ impl Connect {
                 n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
             }
 
-            n_bytes += VariableByteInteger(properties.len() as u32).encode(writer)?;
+            n_bytes += properties.len().write_variable_byte_integer(writer)?;
             writer.write_all(&properties)?;
 
             n_bytes += UTF8String(w.topic).encode(writer)?;

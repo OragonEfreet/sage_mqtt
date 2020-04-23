@@ -1,6 +1,6 @@
 use crate::{
     Decode, Encode, Error, PropertiesDecoder, Property, QoS, ReadTwoByteInteger,
-    Result as SageResult, UTF8String, VariableByteInteger, WriteTwoByteInteger,
+    Result as SageResult, UTF8String, WriteTwoByteInteger, WriteVariableByteInteger,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR,
 };
 
@@ -81,7 +81,7 @@ impl Publish {
         }
         n_bytes += Property::ContentType(self.content_type).encode(&mut properties)?;
 
-        n_bytes += VariableByteInteger(properties.len() as u32).encode(writer)?;
+        n_bytes += properties.len().write_variable_byte_integer(writer)?;
         writer.write_all(&properties)?;
 
         n_bytes += writer.write(&self.application_message)?;

@@ -1,4 +1,4 @@
-use crate::{BinaryData, Error, Result as SageResult, UTF8String, VariableByteInteger};
+use crate::{BinaryData, Error, Result as SageResult, UTF8String};
 use std::io::{Error as IOError, ErrorKind, Write};
 
 /// The `Encode` trait describes how to write a type into an MQTT stream.
@@ -20,28 +20,6 @@ impl Encode for UTF8String {
         writer.write_all(&(len as u16).to_be_bytes())?;
         writer.write_all(self.0.as_bytes())?;
         Ok(2 + len)
-    }
-}
-
-impl Encode for VariableByteInteger {
-    fn encode<W>(self, writer: &mut W) -> SageResult<usize>
-    where
-        W: Write,
-    {
-        let mut n_encoded_bytes = 0;
-        let mut x = self.0;
-        loop {
-            let mut encoded_byte = (x % 128) as u8;
-            x /= 128;
-            if x > 0 {
-                encoded_byte |= 128u8;
-            }
-            n_encoded_bytes += writer.write(&[encoded_byte])?;
-            if x == 0 {
-                break;
-            }
-        }
-        Ok(n_encoded_bytes)
     }
 }
 
@@ -77,107 +55,6 @@ mod unit_encode {
         let mut result = Vec::new();
         assert_eq!(UTF8String::default().encode(&mut result).unwrap(), 2);
         assert_eq!(result, vec![0x00, 0x00]);
-    }
-
-    // The encoded value MUST use the minimum number of bytes necessary to
-    // represent the value
-    // Note: This test considers the fact that if VALUE_L and VALUE_R are
-    // both encoded into N bytes, then all values between VALUE_L and VALUE_R
-    // are encoded into N bytes as well. Meaning: we only check bounds.
-    #[test]
-    fn mqtt_1_5_5_1() {
-        let bounds = [
-            [0, 12],
-            [128, 16_383],
-            [16_384, 2_097_151],
-            [2_097_152, 268_435_455],
-        ];
-
-        let mut result = Vec::new();
-
-        let mut expected_buffer_size = 1;
-
-        for bound in &bounds {
-            for i in bound {
-                let input = VariableByteInteger::from(*i);
-                let n_bytes = input.encode(&mut result).unwrap();
-                assert_eq!(
-                    n_bytes, expected_buffer_size,
-                    "Variable Byte Integer '{}' should be encoded to '{}' bytes. Used '{}' instead",
-                    i, expected_buffer_size, n_bytes
-                );
-                result.clear();
-            }
-
-            expected_buffer_size += 1;
-        }
-    }
-
-    #[test]
-    fn encode_variable_byte_integer_one_lower_bound() {
-        let mut result = Vec::new();
-        assert_eq!(VariableByteInteger(0).encode(&mut result).unwrap(), 1);
-        assert_eq!(result, vec![0x00]);
-    }
-
-    #[test]
-    fn encode_variable_byte_integer_one_upper_bound() {
-        let mut result = Vec::new();
-        assert_eq!(VariableByteInteger(127).encode(&mut result).unwrap(), 1);
-        assert_eq!(result, vec![0x7F]);
-    }
-
-    #[test]
-    fn encode_variable_byte_integer_two_lower_bound() {
-        let mut result = Vec::new();
-        assert_eq!(VariableByteInteger(128).encode(&mut result).unwrap(), 2);
-        assert_eq!(result, vec![0x80, 0x01]);
-    }
-
-    #[test]
-    fn encode_variable_byte_integer_two_upper_bound() {
-        let mut result = Vec::new();
-        assert_eq!(VariableByteInteger(16_383).encode(&mut result).unwrap(), 2);
-        assert_eq!(result, vec![0xFF, 0x7F]);
-    }
-
-    #[test]
-    fn encode_variable_byte_integer_three_lower_bound() {
-        let mut result = Vec::new();
-        assert_eq!(VariableByteInteger(16_384).encode(&mut result).unwrap(), 3);
-        assert_eq!(result, vec![0x80, 0x80, 0x01]);
-    }
-
-    #[test]
-    fn encode_variable_byte_integer_three_upper_bound() {
-        let mut result = Vec::new();
-        assert_eq!(
-            VariableByteInteger(2_097_151).encode(&mut result).unwrap(),
-            3
-        );
-        assert_eq!(result, vec![0xFF, 0xFF, 0x7F]);
-    }
-
-    #[test]
-    fn encode_variable_byte_integer_four_lower_bound() {
-        let mut result = Vec::new();
-        assert_eq!(
-            VariableByteInteger(2_097_152).encode(&mut result).unwrap(),
-            4
-        );
-        assert_eq!(result, vec![0x80, 0x80, 0x80, 0x01]);
-    }
-
-    #[test]
-    fn encode_variable_byte_integer_four_upper_bound() {
-        let mut result = Vec::new();
-        assert_eq!(
-            VariableByteInteger(268_435_455)
-                .encode(&mut result)
-                .unwrap(),
-            4
-        );
-        assert_eq!(result, vec![0xFF, 0xFF, 0xFF, 0x7F]);
     }
 
     #[test]

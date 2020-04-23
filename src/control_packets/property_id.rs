@@ -1,4 +1,4 @@
-use crate::{Decode, Encode, Error, Result as SageResult, VariableByteInteger};
+use crate::{Error, ReadVariableByteInteger, Result as SageResult, WriteVariableByteInteger};
 use std::io::{Read, Write};
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]
@@ -32,16 +32,15 @@ pub enum PropertyId {
     SharedSubscriptionAvailable = 0x2A,
 }
 
-impl Encode for PropertyId {
-    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        VariableByteInteger(self as u32).encode(writer)
+impl WriteVariableByteInteger for PropertyId {
+    fn write_variable_byte_integer<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+        (self as u32).write_variable_byte_integer(writer)
     }
 }
 
-impl Decode for PropertyId {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let id: u32 = VariableByteInteger::decode(reader)?.into();
-        match id {
+impl ReadVariableByteInteger for PropertyId {
+    fn read_variable_byte_integer<R: Read>(reader: &mut R) -> SageResult<Self> {
+        match u32::read_variable_byte_integer(reader)? {
             0x01 => Ok(PropertyId::PayloadFormatIndicator),
             0x02 => Ok(PropertyId::MessageExpiryInterval),
             0x03 => Ok(PropertyId::ContentType),

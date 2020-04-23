@@ -1,6 +1,6 @@
 use crate::{
     ControlPacketType, Encode, Error, PropertiesDecoder, Property, ReadByte, ReasonCode,
-    Result as SageResult, VariableByteInteger, WriteByte,
+    Result as SageResult, WriteByte, WriteVariableByteInteger,
 };
 use std::io::{Read, Write};
 
@@ -44,7 +44,7 @@ impl Disconnect {
             n_bytes += Property::ServerReference(v).encode(writer)?;
         }
 
-        n_bytes += VariableByteInteger(properties.len() as u32).encode(writer)?;
+        n_bytes += properties.len().write_variable_byte_integer(writer)?;
         writer.write_all(&properties)?;
 
         Ok(n_bytes)

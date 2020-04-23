@@ -1,6 +1,6 @@
 use crate::{
     Decode, Encode, Error, PropertiesDecoder, Property, QoS, ReadByte, ReadTwoByteInteger,
-    Result as SageResult, UTF8String, VariableByteInteger, WriteByte, WriteTwoByteInteger,
+    Result as SageResult, UTF8String, WriteByte, WriteTwoByteInteger, WriteVariableByteInteger,
     DEFAULT_MAXIMUM_QOS,
 };
 use std::{
@@ -98,13 +98,13 @@ impl Subscribe {
         let mut properties = Vec::new();
 
         if let Some(v) = self.subscription_identifier {
-            n_bytes += VariableByteInteger(v).encode(writer)?;
+            n_bytes += v.write_variable_byte_integer(writer)?;
         }
         for (k, v) in self.user_properties {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
         }
 
-        n_bytes += VariableByteInteger(properties.len() as u32).encode(writer)?;
+        n_bytes += properties.len().write_variable_byte_integer(writer)?;
         writer.write_all(&properties)?;
 
         for option in self.subscriptions {

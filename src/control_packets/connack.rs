@@ -1,6 +1,6 @@
 use crate::{
     Authentication, ControlPacketType, Encode, Error, PropertiesDecoder, Property, QoS, ReadByte,
-    ReasonCode, Result as SageResult, VariableByteInteger, WriteByte, DEFAULT_MAXIMUM_QOS,
+    ReasonCode, Result as SageResult, WriteByte, WriteVariableByteInteger, DEFAULT_MAXIMUM_QOS,
     DEFAULT_RECEIVE_MAXIMUM, DEFAULT_RETAIN_AVAILABLE, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
 };
@@ -95,7 +95,7 @@ impl ConnAck {
             }
         }
 
-        n_bytes += VariableByteInteger(properties.len() as u32).encode(writer)?;
+        n_bytes += properties.len().write_variable_byte_integer(writer)?;
         writer.write_all(&properties)?;
 
         Ok(n_bytes)

@@ -1,6 +1,6 @@
 use crate::{
     ControlPacketType, Encode, Error, PropertiesDecoder, Property, ReadByte, ReadTwoByteInteger,
-    ReasonCode, Result as SageResult, VariableByteInteger, WriteByte, WriteTwoByteInteger,
+    ReasonCode, Result as SageResult, WriteByte, WriteTwoByteInteger, WriteVariableByteInteger,
 };
 use std::io::{Read, Write};
 
@@ -31,7 +31,7 @@ impl SubAck {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
         }
 
-        n_bytes += VariableByteInteger(properties.len() as u32).encode(writer)?;
+        n_bytes += properties.len().write_variable_byte_integer(writer)?;
         writer.write_all(&properties)?;
 
         for reason_code in self.reason_codes {

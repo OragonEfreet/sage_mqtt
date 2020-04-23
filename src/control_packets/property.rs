@@ -1,7 +1,7 @@
 use crate::{
     BinaryData, Decode, Encode, Error, PropertyId, QoS, ReadByte, ReadFourByteInteger,
-    ReadTwoByteInteger, Result as SageResult, UTF8String, VariableByteInteger, WriteByte,
-    WriteFourByteInteger, WriteTwoByteInteger, DEFAULT_MAXIMUM_QOS,
+    ReadTwoByteInteger, ReadVariableByteInteger, Result as SageResult, UTF8String, WriteByte,
+    WriteFourByteInteger, WriteTwoByteInteger, WriteVariableByteInteger, DEFAULT_MAXIMUM_QOS,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_RETAIN_AVAILABLE,
     DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
@@ -51,7 +51,7 @@ pub struct PropertiesDecoder<'a, R: Read> {
 
 impl<'a, R: Read> PropertiesDecoder<'a, R> {
     pub fn take(reader: &'a mut R) -> SageResult<Self> {
-        let len = u64::from(VariableByteInteger::decode(reader)?);
+        let len = u64::read_variable_byte_integer(reader)?;
         Ok(PropertiesDecoder {
             reader: reader.take(len),
             marked: HashSet::new(),
@@ -64,7 +64,7 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
 
     pub fn read(&mut self) -> SageResult<Property> {
         let reader = &mut self.reader;
-        let property_id = PropertyId::decode(reader)?;
+        let property_id = PropertyId::read_variable_byte_integer(reader)?;
 
         // Filter by authorized properties and unicity requirements
         if property_id != PropertyId::UserProperty && !self.marked.insert(property_id) {
@@ -94,7 +94,7 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
                 BinaryData::decode(reader)?.into(),
             )),
             PropertyId::SubscriptionIdentifier => {
-                let v = VariableByteInteger::decode(reader)?.into();
+                let v = u32::read_variable_byte_integer(reader)?;
                 if v == 0 {
                     Err(Error::ProtocolError)
                 } else {
@@ -174,63 +174,70 @@ impl Encode for Property {
         match self {
             Property::PayloadFormatIndicator(v) => {
                 if v != DEFAULT_PAYLOAD_FORMAT_INDICATOR {
-                    let n_bytes = PropertyId::PayloadFormatIndicator.encode(writer)?;
+                    let n_bytes =
+                        PropertyId::PayloadFormatIndicator.write_variable_byte_integer(writer)?;
                     Ok(n_bytes + v.write_byte(writer)?)
                 } else {
                     Ok(0)
                 }
             }
             Property::MessageExpiryInterval(v) => {
-                let n_bytes = PropertyId::MessageExpiryInterval.encode(writer)?;
+                let n_bytes =
+                    PropertyId::MessageExpiryInterval.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + v.write_four_byte_integer(writer)?)
             }
             Property::ContentType(v) => {
-                let n_bytes = PropertyId::ContentType.encode(writer)?;
+                let n_bytes = PropertyId::ContentType.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::ResponseTopic(v) => {
-                let n_bytes = PropertyId::ResponseTopic.encode(writer)?;
+                let n_bytes = PropertyId::ResponseTopic.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::CorrelationData(v) => {
-                let n_bytes = PropertyId::CorrelationData.encode(writer)?;
+                let n_bytes = PropertyId::CorrelationData.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + BinaryData(v).encode(writer)?)
             }
             Property::SubscriptionIdentifier(v) => {
                 if v == 0 {
                     Err(Error::ProtocolError)
                 } else {
-                    let n_bytes = PropertyId::SubscriptionIdentifier.encode(writer)?;
-                    Ok(n_bytes + VariableByteInteger(v).encode(writer)?)
+                    let n_bytes =
+                        PropertyId::SubscriptionIdentifier.write_variable_byte_integer(writer)?;
+                    Ok(n_bytes + v.write_variable_byte_integer(writer)?)
                 }
             }
             Property::SessionExpiryInterval(v) => {
                 if v != DEFAULT_SESSION_EXPIRY_INTERVAL {
-                    let n_bytes = PropertyId::SessionExpiryInterval.encode(writer)?;
+                    let n_bytes =
+                        PropertyId::SessionExpiryInterval.write_variable_byte_integer(writer)?;
                     Ok(n_bytes + v.write_four_byte_integer(writer)?)
                 } else {
                     Ok(0)
                 }
             }
             Property::AssignedClientIdentifier(v) => {
-                let n_bytes = PropertyId::AssignedClientIdentifier.encode(writer)?;
+                let n_bytes =
+                    PropertyId::AssignedClientIdentifier.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::ServerKeepAlive(v) => {
-                let n_bytes = PropertyId::ServerKeepAlive.encode(writer)?;
+                let n_bytes = PropertyId::ServerKeepAlive.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + v.write_two_byte_integer(writer)?)
             }
             Property::AuthenticationMethod(v) => {
-                let n_bytes = PropertyId::AuthenticationMethod.encode(writer)?;
+                let n_bytes =
+                    PropertyId::AuthenticationMethod.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::AuthenticationData(v) => {
-                let n_bytes = PropertyId::AuthenticationData.encode(writer)?;
+                let n_bytes = PropertyId::AuthenticationData.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + BinaryData(v).encode(writer)?)
             }
             Property::RequestProblemInformation(v) => {
                 if v != DEFAULT_REQUEST_PROBLEM_INFORMATION {
-                    let n_bytes = PropertyId::RequestProblemInformation.encode(writer)?;
+                    let n_bytes = PropertyId::RequestProblemInformation
+                        .write_variable_byte_integer(writer)?;
                     Ok(n_bytes + v.write_byte(writer)?)
                 } else {
                     Ok(0)
@@ -238,7 +245,8 @@ impl Encode for Property {
             }
             Property::WillDelayInterval(v) => {
                 if v != DEFAULT_WILL_DELAY_INTERVAL {
-                    let n_bytes = PropertyId::WillDelayInterval.encode(writer)?;
+                    let n_bytes =
+                        PropertyId::WillDelayInterval.write_variable_byte_integer(writer)?;
                     Ok(n_bytes + v.write_four_byte_integer(writer)?)
                 } else {
                     Ok(0)
@@ -246,47 +254,50 @@ impl Encode for Property {
             }
             Property::RequestResponseInformation(v) => {
                 if v != DEFAULT_REQUEST_RESPONSE_INFORMATION {
-                    let n_bytes = PropertyId::RequestResponseInformation.encode(writer)?;
+                    let n_bytes = PropertyId::RequestResponseInformation
+                        .write_variable_byte_integer(writer)?;
                     Ok(n_bytes + v.write_byte(writer)?)
                 } else {
                     Ok(0)
                 }
             }
             Property::ResponseInformation(v) => {
-                let n_bytes = PropertyId::ResponseInformation.encode(writer)?;
+                let n_bytes =
+                    PropertyId::ResponseInformation.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::ServerReference(v) => {
-                let n_bytes = PropertyId::ServerReference.encode(writer)?;
+                let n_bytes = PropertyId::ServerReference.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::ReasonString(v) => {
-                let n_bytes = PropertyId::ReasonString.encode(writer)?;
+                let n_bytes = PropertyId::ReasonString.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + UTF8String(v).encode(writer)?)
             }
             Property::ReceiveMaximum(v) => match v {
                 0 => Err(Error::MalformedPacket),
                 DEFAULT_RECEIVE_MAXIMUM => Ok(0),
                 _ => {
-                    let n_bytes = PropertyId::ReceiveMaximum.encode(writer)?;
+                    let n_bytes = PropertyId::ReceiveMaximum.write_variable_byte_integer(writer)?;
                     Ok(n_bytes + v.write_two_byte_integer(writer)?)
                 }
             },
             Property::TopicAliasMaximum(v) => {
                 if v != DEFAULT_TOPIC_ALIAS_MAXIMUM {
-                    let n_bytes = PropertyId::TopicAliasMaximum.encode(writer)?;
+                    let n_bytes =
+                        PropertyId::TopicAliasMaximum.write_variable_byte_integer(writer)?;
                     Ok(n_bytes + v.write_two_byte_integer(writer)?)
                 } else {
                     Ok(0)
                 }
             }
             Property::TopicAlias(v) => {
-                let n_bytes = PropertyId::TopicAlias.encode(writer)?;
+                let n_bytes = PropertyId::TopicAlias.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + v.write_two_byte_integer(writer)?)
             }
             Property::MaximumQoS(v) => {
                 if v != DEFAULT_MAXIMUM_QOS {
-                    let n_bytes = PropertyId::MaximumQoS.encode(writer)?;
+                    let n_bytes = PropertyId::MaximumQoS.write_variable_byte_integer(writer)?;
                     Ok(n_bytes + v.encode(writer)?)
                 } else {
                     Ok(0)
@@ -294,36 +305,40 @@ impl Encode for Property {
             }
             Property::RetainAvailable(v) => {
                 if v != DEFAULT_RETAIN_AVAILABLE {
-                    let n_bytes = PropertyId::RetainAvailable.encode(writer)?;
+                    let n_bytes =
+                        PropertyId::RetainAvailable.write_variable_byte_integer(writer)?;
                     Ok(n_bytes + v.write_byte(writer)?)
                 } else {
                     Ok(0)
                 }
             }
             Property::UserProperty(k, v) => {
-                let mut n_bytes = PropertyId::UserProperty.encode(writer)?;
+                let mut n_bytes = PropertyId::UserProperty.write_variable_byte_integer(writer)?;
                 n_bytes += UTF8String(k).encode(writer)?;
                 Ok(n_bytes + (UTF8String(v).encode(writer)?))
             }
             Property::MaximumPacketSize(v) => {
-                let n_bytes = PropertyId::MaximumPacketSize.encode(writer)?;
+                let n_bytes = PropertyId::MaximumPacketSize.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + v.write_four_byte_integer(writer)?)
             }
             Property::WildcardSubscriptionAvailable(v) => {
                 if v != DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE {
-                    let n_bytes = PropertyId::WildcardSubscriptionAvailable.encode(writer)?;
+                    let n_bytes = PropertyId::WildcardSubscriptionAvailable
+                        .write_variable_byte_integer(writer)?;
                     Ok(n_bytes + v.write_byte(writer)?)
                 } else {
                     Ok(0)
                 }
             }
             Property::SubscriptionIdentifierAvailable(v) => {
-                let n_bytes = PropertyId::SubscriptionIdentifierAvailable.encode(writer)?;
+                let n_bytes = PropertyId::SubscriptionIdentifierAvailable
+                    .write_variable_byte_integer(writer)?;
                 Ok(n_bytes + v.write_byte(writer)?)
             }
             Property::SharedSubscriptionAvailable(v) => {
                 if v != DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE {
-                    let n_bytes = PropertyId::SharedSubscriptionAvailable.encode(writer)?;
+                    let n_bytes = PropertyId::SharedSubscriptionAvailable
+                        .write_variable_byte_integer(writer)?;
                     Ok(n_bytes + v.write_byte(writer)?)
                 } else {
                     Ok(0)
