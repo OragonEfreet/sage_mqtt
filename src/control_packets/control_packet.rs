@@ -1,7 +1,6 @@
 use crate::{
-    Auth, ConnAck, Connect, ControlPacketType, Decode, Disconnect, Encode, Error, FixedHeader,
-    PubAck, PubComp, PubRec, PubRel, Publish, Result as SageResult, SubAck, Subscribe, UnSubAck,
-    UnSubscribe,
+    Auth, ConnAck, Connect, ControlPacketType, Disconnect, Error, FixedHeader, PubAck, PubComp,
+    PubRec, PubRel, Publish, Result as SageResult, SubAck, Subscribe, UnSubAck, UnSubscribe,
 };
 use std::io::{Read, Write};
 
@@ -24,8 +23,8 @@ pub enum ControlPacket {
     Auth(Auth),
 }
 
-impl Encode for ControlPacket {
-    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+impl ControlPacket {
+    pub fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut variable_and_payload = Vec::new();
         let (packet_type, remaining_size) = match self {
             ControlPacket::Connect(packet) => (
@@ -97,10 +96,8 @@ impl Encode for ControlPacket {
         writer.write_all(&variable_and_payload)?;
         Ok(fixed_size)
     }
-}
 
-impl Decode for ControlPacket {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
+    pub fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
         let fixed_header = FixedHeader::decode(reader)?;
 
         let packet = match fixed_header.packet_type {

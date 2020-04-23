@@ -1,5 +1,5 @@
 use crate::{
-    Authentication, ControlPacketType, Encode, Error, PropertiesDecoder, Property, QoS, ReadByte,
+    Authentication, ControlPacketType, Error, PropertiesDecoder, Property, QoS, ReadByte,
     ReasonCode, Result as SageResult, WriteByte, WriteVariableByteInteger, DEFAULT_MAXIMUM_QOS,
     DEFAULT_RECEIVE_MAXIMUM, DEFAULT_RETAIN_AVAILABLE, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,

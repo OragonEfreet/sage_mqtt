@@ -1,6 +1,6 @@
 use crate::{
-    Authentication, ControlPacketType, Encode, Error, PropertiesDecoder, Property, ReadByte,
-    ReasonCode, Result as SageResult, WriteByte, WriteVariableByteInteger,
+    Authentication, ControlPacketType, Error, PropertiesDecoder, Property, ReadByte, ReasonCode,
+    Result as SageResult, WriteByte, WriteVariableByteInteger,
 };
 use std::io::{Read, Write};
 
@@ -28,7 +28,7 @@ impl Auth {
         let mut n_bytes = self.reason_code.write_byte(writer)?;
         let mut properties = Vec::new();
 
-        n_bytes += self.authentication.encode(&mut properties)?;
+        n_bytes += self.authentication.write(&mut properties)?;
         if let Some(v) = self.reason_string {
             n_bytes += Property::ReasonString(v).encode(&mut properties)?;
         }

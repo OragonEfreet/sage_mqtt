@@ -1,13 +1,12 @@
 use crate::{
-    Decode, Encode, Error, PropertyId, QoS, ReadBinaryData, ReadByte, ReadFourByteInteger,
-    ReadTwoByteInteger, ReadUTF8String, ReadVariableByteInteger, Result as SageResult,
-    WriteBinaryData, WriteByte, WriteFourByteInteger, WriteTwoByteInteger, WriteUTF8String,
-    WriteVariableByteInteger, DEFAULT_MAXIMUM_QOS, DEFAULT_PAYLOAD_FORMAT_INDICATOR,
-    DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
-    DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_RETAIN_AVAILABLE,
-    DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_WILL_DELAY_INTERVAL,
+    Error, PropertyId, QoS, ReadBinaryData, ReadByte, ReadFourByteInteger, ReadTwoByteInteger,
+    ReadUTF8String, ReadVariableByteInteger, Result as SageResult, WriteBinaryData, WriteByte,
+    WriteFourByteInteger, WriteTwoByteInteger, WriteUTF8String, WriteVariableByteInteger,
+    DEFAULT_MAXIMUM_QOS, DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
+    DEFAULT_REQUEST_PROBLEM_INFORMATION, DEFAULT_REQUEST_RESPONSE_INFORMATION,
+    DEFAULT_RETAIN_AVAILABLE, DEFAULT_SESSION_EXPIRY_INTERVAL,
+    DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
+    DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_WILL_DELAY_INTERVAL,
 };
 use std::{
     collections::HashSet,
@@ -146,7 +145,7 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
                 u16::read_two_byte_integer(reader)?,
             )),
             PropertyId::TopicAlias => Ok(Property::TopicAlias(u16::read_two_byte_integer(reader)?)),
-            PropertyId::MaximumQoS => Ok(Property::MaximumQoS(QoS::decode(reader)?)),
+            PropertyId::MaximumQoS => Ok(Property::MaximumQoS(QoS::read_byte(reader)?)),
             PropertyId::RetainAvailable => Ok(Property::RetainAvailable(bool::read_byte(reader)?)),
             PropertyId::UserProperty => Ok(Property::UserProperty(
                 String::read_utf8_string(reader)?,
@@ -168,8 +167,8 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
     }
 }
 
-impl Encode for Property {
-    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+impl Property {
+    pub fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         match self {
             Property::PayloadFormatIndicator(v) => {
                 if v != DEFAULT_PAYLOAD_FORMAT_INDICATOR {
@@ -297,7 +296,7 @@ impl Encode for Property {
             Property::MaximumQoS(v) => {
                 if v != DEFAULT_MAXIMUM_QOS {
                     let n_bytes = PropertyId::MaximumQoS.write_variable_byte_integer(writer)?;
-                    Ok(n_bytes + v.encode(writer)?)
+                    Ok(n_bytes + v.write_byte(writer)?)
                 } else {
                     Ok(0)
                 }

@@ -1,4 +1,4 @@
-use crate::{Decode, Encode, Error, QoS, ReadByte, Result as SageResult, WriteByte};
+use crate::{Error, QoS, ReadByte, Result as SageResult, WriteByte};
 use std::{
     convert::TryInto,
     io::{Read, Write},
@@ -52,8 +52,8 @@ impl From<ControlPacketType> for PayloadRequirements {
     }
 }
 
-impl Encode for ControlPacketType {
-    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+impl WriteByte for ControlPacketType {
+    fn write_byte<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         match self {
             ControlPacketType::RESERVED => 0b0000_0000,
             ControlPacketType::CONNECT => 0b0001_0000,
@@ -80,8 +80,8 @@ impl Encode for ControlPacketType {
     }
 }
 
-impl Decode for ControlPacketType {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
+impl ReadByte for ControlPacketType {
+    fn read_byte<R: Read>(reader: &mut R) -> SageResult<Self> {
         let packet_type = u8::read_byte(reader)?;
         let packet_type = match (packet_type >> 4, packet_type & 0b0000_1111) {
             (0b0000, 0b0000) => ControlPacketType::RESERVED,
@@ -143,7 +143,7 @@ mod unit_control_packet_type {
                 let buffer = [*packet_type, *flags, 0x00];
                 let mut test_stream = Cursor::new(buffer);
                 assert_matches!(
-                    ControlPacketType::decode(&mut test_stream),
+                    ControlPacketType::read_byte(&mut test_stream),
                     Err(Error::MalformedPacket)
                 );
             }

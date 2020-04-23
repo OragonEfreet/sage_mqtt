@@ -1,6 +1,6 @@
 use crate::{
-    Encode, Error, PropertiesDecoder, Property, ReadTwoByteInteger, ReadUTF8String,
-    Result as SageResult, WriteTwoByteInteger, WriteUTF8String, WriteVariableByteInteger,
+    Error, PropertiesDecoder, Property, ReadTwoByteInteger, ReadUTF8String, Result as SageResult,
+    WriteTwoByteInteger, WriteUTF8String, WriteVariableByteInteger,
 };
 use std::io::{Read, Write};
 

@@ -1,5 +1,5 @@
 use crate::{
-    ControlPacketType, Encode, Error, PropertiesDecoder, Property, ReadByte, ReasonCode,
+    ControlPacketType, Error, PropertiesDecoder, Property, ReadByte, ReasonCode,
     Result as SageResult, WriteByte, WriteVariableByteInteger,
 };
 use std::io::{Read, Write};

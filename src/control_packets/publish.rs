@@ -1,5 +1,5 @@
 use crate::{
-    Encode, Error, PropertiesDecoder, Property, QoS, ReadTwoByteInteger, ReadUTF8String,
+    Error, PropertiesDecoder, Property, QoS, ReadTwoByteInteger, ReadUTF8String,
     Result as SageResult, WriteTwoByteInteger, WriteUTF8String, WriteVariableByteInteger,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR,
 };

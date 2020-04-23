@@ -1,4 +1,4 @@
-use crate::{ControlPacket, Decode};
+use crate::ControlPacket;
 use std::io::Read;
 
 #[derive(Default)]

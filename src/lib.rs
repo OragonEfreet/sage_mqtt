@@ -12,7 +12,6 @@ macro_rules! assert_matches {
 mod broker;
 mod codec;
 mod control_packets;
-mod dep_codec;
 mod error;
 mod quality_of_service;
 mod reason_code;
@@ -35,7 +34,6 @@ use control_packets::{
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
     DEFAULT_WILL_DELAY_INTERVAL,
 };
-pub use dep_codec::{Decode, Encode};
 pub use error::{Error, Result};
 pub use quality_of_service::QoS;
 pub use reason_code::ReasonCode;

@@ -1,4 +1,4 @@
-use crate::{Decode, Encode, Error as SageError, ReadByte, Result as SageResult, WriteByte};
+use crate::{Error as SageError, ReadByte, Result as SageResult, WriteByte};
 use std::{
     convert::TryFrom,
     io::{Read, Write},
@@ -11,8 +11,8 @@ pub enum QoS {
     ExactlyOnce = 0x02,
 }
 
-impl Decode for QoS {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
+impl ReadByte for QoS {
+    fn read_byte<R: Read>(reader: &mut R) -> SageResult<Self> {
         match u8::read_byte(reader)? {
             0x00 => Ok(QoS::AtMostOnce),
             0x01 => Ok(QoS::AtLeastOnce),
@@ -22,8 +22,8 @@ impl Decode for QoS {
     }
 }
 
-impl Encode for QoS {
-    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+impl WriteByte for QoS {
+    fn write_byte<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         (self as u8).write_byte(writer)
     }
 }

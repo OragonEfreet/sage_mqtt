@@ -1,5 +1,5 @@
 use crate::{
-    Authentication, Encode, Error, PropertiesDecoder, Property, QoS, ReadBinaryData, ReadByte,
+    Authentication, Error, PropertiesDecoder, Property, QoS, ReadBinaryData, ReadByte,
     ReadTwoByteInteger, ReadUTF8String, Result as SageResult, WriteBinaryData, WriteByte,
     WriteTwoByteInteger, WriteUTF8String, WriteVariableByteInteger,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
@@ -139,7 +139,7 @@ impl Connect {
         }
 
         if let Some(authentication) = self.authentication {
-            n_bytes += authentication.encode(writer)?;
+            n_bytes += authentication.write(writer)?;
         }
 
         n_bytes += properties.len().write_variable_byte_integer(writer)?;
