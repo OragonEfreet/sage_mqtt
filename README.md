@@ -9,31 +9,3 @@
 
 Sage MQTT is a encode/decode library for MQTT protocol.
 
-It defines a set of "pivot types" used to parse to and from streams:
-
-- `Bits`
-- `TwoByteInteger`, `FourByteInteger` and `VariableByteInteger`
-- `UTF8String` and `UTF8StringPair`
-- `BinaryData`
-
-They all implement custom `Encode` and `Decode` traits which takes benefit from any standard [Write](https://doc.rust-lang.org/std/io/trait.Write.html) and [Read](https://doc.rust-lang.org/std/io/trait.Read.html) traits respectively. 
-
-As well as standard Control Packet types as described in the OASIS standard:
-
-- `Connect`
-- `ConnAck`
-- `Publish`
-- `PubAck`
-- `Pubrec`
-- `Pubrel`
-- `Pubcomp`
-- `Subscribe`
-- `Suback`
-- `Unsubscribe`
-- `Unsuback`
-- `Pingreq`
-- `Pingresp`
-- `Disconnect`
-- `Auth`
-
-They are wrapped into a `ControlPacket` enum that allows you to manipulate every packet types into a single one.
