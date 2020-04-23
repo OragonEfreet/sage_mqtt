@@ -10,14 +10,16 @@ macro_rules! assert_matches {
 }
 
 mod broker;
+mod byte;
 mod codec;
 mod control_packets;
 mod error;
 mod reason_code;
 
 pub use broker::Broker;
+use byte::{ReadByte, WriteByte};
 pub use codec::{
-    BinaryData, Bits, Byte, Decode, Encode, FourByteInteger, QoS, TwoByteInteger, UTF8String,
+    BinaryData, Bits, Decode, Encode, FourByteInteger, QoS, TwoByteInteger, UTF8String,
     VariableByteInteger,
 };
 pub use control_packets::{

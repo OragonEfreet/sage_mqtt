@@ -1,11 +1,11 @@
 use crate::{
-    BinaryData, Bits, Byte, Decode, Encode, Error, FourByteInteger, PropertyId, QoS,
-    Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger, DEFAULT_MAXIMUM_QOS,
-    DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
-    DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_RETAIN_AVAILABLE,
-    DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_WILL_DELAY_INTERVAL,
+    BinaryData, Bits, Decode, Encode, Error, FourByteInteger, PropertyId, QoS, ReadByte,
+    Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger, WriteByte,
+    DEFAULT_MAXIMUM_QOS, DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
+    DEFAULT_REQUEST_PROBLEM_INFORMATION, DEFAULT_REQUEST_RESPONSE_INFORMATION,
+    DEFAULT_RETAIN_AVAILABLE, DEFAULT_SESSION_EXPIRY_INTERVAL,
+    DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
+    DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_WILL_DELAY_INTERVAL,
 };
 use std::{
     collections::HashSet,
@@ -75,7 +75,7 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
     fn read_property_value(&mut self, id: PropertyId) -> SageResult<Property> {
         let reader = &mut self.reader;
         match id {
-            PropertyId::PayloadFormatIndicator => match u8::from(Byte::decode(reader)?) {
+            PropertyId::PayloadFormatIndicator => match u8::read_byte(reader)? {
                 0x00 => Ok(Property::PayloadFormatIndicator(false)),
                 0x01 => Ok(Property::PayloadFormatIndicator(true)),
                 _ => Err(Error::ProtocolError),
@@ -116,7 +116,7 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             PropertyId::AuthenticationData => Ok(Property::AuthenticationData(
                 BinaryData::decode(reader)?.into(),
             )),
-            PropertyId::RequestProblemInformation => match u8::from(Byte::decode(reader)?) {
+            PropertyId::RequestProblemInformation => match u8::read_byte(reader)? {
                 0x00 => Ok(Property::RequestProblemInformation(false)),
                 0x01 => Ok(Property::RequestProblemInformation(true)),
                 _ => Err(Error::ProtocolError),
@@ -124,7 +124,7 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             PropertyId::WillDelayInterval => Ok(Property::WillDelayInterval(
                 FourByteInteger::decode(reader)?.into(),
             )),
-            PropertyId::RequestResponseInformation => match u8::from(Byte::decode(reader)?) {
+            PropertyId::RequestResponseInformation => match u8::read_byte(reader)? {
                 0x00 => Ok(Property::RequestResponseInformation(false)),
                 0x01 => Ok(Property::RequestResponseInformation(true)),
                 _ => Err(Error::ProtocolError),
@@ -149,11 +149,7 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
                 Ok(Property::TopicAlias(TwoByteInteger::decode(reader)?.into()))
             }
             PropertyId::MaximumQoS => Ok(Property::MaximumQoS(QoS::decode(reader)?)),
-            PropertyId::RetainAvailable => match Byte::decode(reader)? {
-                Byte(0x00) => Ok(Property::RetainAvailable(false)),
-                Byte(0x01) => Ok(Property::RetainAvailable(true)),
-                _ => Err(Error::ProtocolError),
-            },
+            PropertyId::RetainAvailable => Ok(Property::RetainAvailable(bool::read_byte(reader)?)),
             PropertyId::UserProperty => Ok(Property::UserProperty(
                 UTF8String::decode(reader)?.into(),
                 UTF8String::decode(reader)?.into(),
@@ -161,21 +157,15 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             PropertyId::MaximumPacketSize => Ok(Property::MaximumPacketSize(
                 FourByteInteger::decode(reader)?.into(),
             )),
-            PropertyId::WildcardSubscriptionAvailable => match Byte::decode(reader)? {
-                Byte(0x00) => Ok(Property::WildcardSubscriptionAvailable(false)),
-                Byte(0x01) => Ok(Property::WildcardSubscriptionAvailable(true)),
-                _ => Err(Error::ProtocolError),
-            },
-            PropertyId::SubscriptionIdentifierAvailable => match Byte::decode(reader)? {
-                Byte(0x00) => Ok(Property::SubscriptionIdentifierAvailable(false)),
-                Byte(0x01) => Ok(Property::SubscriptionIdentifierAvailable(true)),
-                _ => Err(Error::ProtocolError),
-            },
-            PropertyId::SharedSubscriptionAvailable => match Byte::decode(reader)? {
-                Byte(0x00) => Ok(Property::SharedSubscriptionAvailable(false)),
-                Byte(0x01) => Ok(Property::SharedSubscriptionAvailable(true)),
-                _ => Err(Error::ProtocolError),
-            },
+            PropertyId::WildcardSubscriptionAvailable => Ok(
+                Property::WildcardSubscriptionAvailable(bool::read_byte(reader)?),
+            ),
+            PropertyId::SubscriptionIdentifierAvailable => Ok(
+                Property::SubscriptionIdentifierAvailable(bool::read_byte(reader)?),
+            ),
+            PropertyId::SharedSubscriptionAvailable => Ok(Property::SharedSubscriptionAvailable(
+                bool::read_byte(reader)?,
+            )),
         }
     }
 }
@@ -242,7 +232,7 @@ impl Encode for Property {
             Property::RequestProblemInformation(v) => {
                 if v != DEFAULT_REQUEST_PROBLEM_INFORMATION {
                     let n_bytes = PropertyId::RequestProblemInformation.encode(writer)?;
-                    Ok(n_bytes + Byte(v as u8).encode(writer)?)
+                    Ok(n_bytes + v.write_byte(writer)?)
                 } else {
                     Ok(0)
                 }
@@ -258,7 +248,7 @@ impl Encode for Property {
             Property::RequestResponseInformation(v) => {
                 if v != DEFAULT_REQUEST_RESPONSE_INFORMATION {
                     let n_bytes = PropertyId::RequestResponseInformation.encode(writer)?;
-                    Ok(n_bytes + Byte(v as u8).encode(writer)?)
+                    Ok(n_bytes + v.write_byte(writer)?)
                 } else {
                     Ok(0)
                 }
@@ -306,7 +296,7 @@ impl Encode for Property {
             Property::RetainAvailable(v) => {
                 if v != DEFAULT_RETAIN_AVAILABLE {
                     let n_bytes = PropertyId::RetainAvailable.encode(writer)?;
-                    Ok(n_bytes + Byte(v as u8).encode(writer)?)
+                    Ok(n_bytes + v.write_byte(writer)?)
                 } else {
                     Ok(0)
                 }
@@ -323,19 +313,19 @@ impl Encode for Property {
             Property::WildcardSubscriptionAvailable(v) => {
                 if v != DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE {
                     let n_bytes = PropertyId::WildcardSubscriptionAvailable.encode(writer)?;
-                    Ok(n_bytes + Byte(v as u8).encode(writer)?)
+                    Ok(n_bytes + v.write_byte(writer)?)
                 } else {
                     Ok(0)
                 }
             }
             Property::SubscriptionIdentifierAvailable(v) => {
                 let n_bytes = PropertyId::SubscriptionIdentifierAvailable.encode(writer)?;
-                Ok(n_bytes + Byte(v as u8).encode(writer)?)
+                Ok(n_bytes + v.write_byte(writer)?)
             }
             Property::SharedSubscriptionAvailable(v) => {
                 if v != DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE {
                     let n_bytes = PropertyId::SharedSubscriptionAvailable.encode(writer)?;
-                    Ok(n_bytes + Byte(v as u8).encode(writer)?)
+                    Ok(n_bytes + v.write_byte(writer)?)
                 } else {
                     Ok(0)
                 }

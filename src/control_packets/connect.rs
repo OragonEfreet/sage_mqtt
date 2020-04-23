@@ -1,6 +1,6 @@
 use crate::{
-    Authentication, BinaryData, Bits, Byte, Decode, Encode, Error, PropertiesDecoder, Property,
-    QoS, Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger,
+    Authentication, BinaryData, Bits, Decode, Encode, Error, PropertiesDecoder, Property, QoS,
+    ReadByte, Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger, WriteByte,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
@@ -98,7 +98,7 @@ impl Connect {
     pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         // Variable Header (into content)
         let mut n_bytes = UTF8String::from("MQTT").encode(writer)?;
-        n_bytes += Byte(0x05).encode(writer)?;
+        n_bytes += 0x05.write_byte(writer)?;
 
         n_bytes += ConnectFlags {
             clean_start: self.clean_start,
@@ -192,8 +192,8 @@ impl Connect {
             return Err(Error::MalformedPacket);
         }
 
-        let protocol_version = Byte::decode(reader)?;
-        if protocol_version.0 != 0x05 {
+        let protocol_version = u8::read_byte(reader)?;
+        if protocol_version != 0x05 {
             return Err(Error::MalformedPacket);
         }
 
@@ -346,8 +346,7 @@ mod unit_connect {
 
     fn connect_encoded() -> Vec<u8> {
         vec![
-            0, 4, 77, 81, 84, 84, 5, 206, 0, 10,
-            5, 17, 0, 0, 0, 10, 0, 0, 6, 3, 0, 0, 8, 0, 0, 0,
+            0, 4, 77, 81, 84, 84, 5, 206, 0, 10, 5, 17, 0, 0, 0, 10, 0, 0, 6, 3, 0, 0, 8, 0, 0, 0,
             0, 0, 0, 0, 6, 87, 105, 108, 108, 111, 119, 0, 5, 74, 97, 100, 101, 110,
         ]
     }

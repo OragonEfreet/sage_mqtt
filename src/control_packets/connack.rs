@@ -1,6 +1,6 @@
 use crate::{
-    Authentication, Byte, ControlPacketType, Decode, Encode, Error, PropertiesDecoder, Property,
-    QoS, ReasonCode, Result as SageResult, VariableByteInteger, DEFAULT_MAXIMUM_QOS,
+    Authentication, ControlPacketType, Encode, Error, PropertiesDecoder, Property, QoS, ReadByte,
+    ReasonCode, Result as SageResult, VariableByteInteger, WriteByte, DEFAULT_MAXIMUM_QOS,
     DEFAULT_RECEIVE_MAXIMUM, DEFAULT_RETAIN_AVAILABLE, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
 };
@@ -53,8 +53,8 @@ impl Default for ConnAck {
 
 impl ConnAck {
     pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = Byte(self.session_present as u8).encode(writer)?;
-        n_bytes += Byte(self.reason_code.into()).encode(writer)?;
+        let mut n_bytes = self.session_present.write_byte(writer)?;
+        n_bytes += self.reason_code.write_byte(writer)?;
 
         let mut properties = Vec::new();
 
@@ -102,16 +102,10 @@ impl ConnAck {
     }
 
     pub fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let session_present = {
-            match Byte::decode(reader)?.into() {
-                0_u8 => false,
-                1_u8 => true,
-                _ => return Err(Error::MalformedPacket),
-            }
-        };
+        let session_present = bool::read_byte(reader)?;
 
         let reason_code =
-            ReasonCode::try_parse(Byte::decode(reader)?.into(), ControlPacketType::CONNECT)?;
+            ReasonCode::try_parse(u8::read_byte(reader)?, ControlPacketType::CONNECT)?;
 
         let mut session_expiry_interval = None;
         let mut receive_maximum = DEFAULT_RECEIVE_MAXIMUM;

@@ -1,6 +1,6 @@
 use crate::{
-    Byte, ControlPacketType, Decode, Encode, Error, PropertiesDecoder, Property, ReasonCode,
-    Result as SageResult, VariableByteInteger,
+    ControlPacketType, Encode, Error, PropertiesDecoder, Property, ReadByte, ReasonCode,
+    Result as SageResult, VariableByteInteger, WriteByte,
 };
 use std::io::{Read, Write};
 
@@ -27,7 +27,7 @@ impl Default for Disconnect {
 
 impl Disconnect {
     pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = Byte(self.reason_code as u8).encode(writer)?;
+        let mut n_bytes = self.reason_code.write_byte(writer)?;
 
         let mut properties = Vec::new();
 
@@ -52,7 +52,7 @@ impl Disconnect {
 
     pub fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
         let reason_code =
-            ReasonCode::try_parse(Byte::decode(reader)?.into(), ControlPacketType::DISCONNECT)?;
+            ReasonCode::try_parse(u8::read_byte(reader)?, ControlPacketType::DISCONNECT)?;
 
         let mut user_properties = Vec::new();
         let mut properties = PropertiesDecoder::take(reader)?;

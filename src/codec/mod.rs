@@ -7,5 +7,5 @@ pub use decode::Decode;
 pub use encode::Encode;
 pub use quality_of_service::QoS;
 pub use types::{
-    BinaryData, Bits, Byte, FourByteInteger, TwoByteInteger, UTF8String, VariableByteInteger,
+    BinaryData, Bits, FourByteInteger, TwoByteInteger, UTF8String, VariableByteInteger,
 };

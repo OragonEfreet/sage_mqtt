@@ -1,6 +1,6 @@
 use crate::{
-    Byte, ControlPacketType, Decode, Encode, Error, PropertiesDecoder, Property, ReasonCode,
-    Result as SageResult, TwoByteInteger, VariableByteInteger,
+    ControlPacketType, Decode, Encode, Error, PropertiesDecoder, Property, ReadByte, ReasonCode,
+    Result as SageResult, TwoByteInteger, VariableByteInteger, WriteByte,
 };
 use std::io::{Read, Write};
 
@@ -39,7 +39,7 @@ impl PubComp {
         if n_bytes == 2 && self.reason_code != ReasonCode::Success {
             Ok(2)
         } else {
-            n_bytes += Byte(self.reason_code as u8).encode(writer)?;
+            n_bytes += self.reason_code.write_byte(writer)?;
             n_bytes += VariableByteInteger(properties.len() as u32).encode(writer)?;
             writer.write_all(&properties)?;
             Ok(n_bytes)
@@ -58,7 +58,7 @@ impl PubComp {
             pubcomp.reason_code = ReasonCode::Success;
         } else {
             pubcomp.reason_code =
-                ReasonCode::try_parse(Byte::decode(reader)?.into(), ControlPacketType::PUBCOMP)?;
+                ReasonCode::try_parse(u8::read_byte(reader)?, ControlPacketType::PUBCOMP)?;
 
             let mut properties = PropertiesDecoder::take(reader)?;
             while properties.has_properties() {

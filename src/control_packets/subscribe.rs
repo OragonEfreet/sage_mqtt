@@ -1,6 +1,6 @@
 use crate::{
-    Byte, Decode, Encode, Error, PropertiesDecoder, Property, QoS, Result as SageResult,
-    TwoByteInteger, UTF8String, VariableByteInteger, DEFAULT_MAXIMUM_QOS,
+    Decode, Encode, Error, PropertiesDecoder, Property, QoS, ReadByte, Result as SageResult,
+    TwoByteInteger, UTF8String, VariableByteInteger, WriteByte, DEFAULT_MAXIMUM_QOS,
 };
 use std::{
     convert::{TryFrom, TryInto},
@@ -47,19 +47,17 @@ impl Default for SubscriptionOptions {
 
 impl Encode for SubscriptionOptions {
     fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        Byte(
-            self.qos as u8
-                | (self.no_local as u8) << 2
-                | (self.retain_as_published as u8) << 3
-                | (self.retain_handling as u8) << 4,
-        )
-        .encode(writer)
+        let byte: u8 = self.qos as u8
+            | (self.no_local as u8) << 2
+            | (self.retain_as_published as u8) << 3
+            | (self.retain_handling as u8) << 4;
+        byte.write_byte(writer)
     }
 }
 
 impl Decode for SubscriptionOptions {
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let flags = u8::from(Byte::decode(reader)?);
+        let flags = u8::read_byte(reader)?;
         if flags & 0b1100_0000 > 0 {
             Err(Error::ProtocolError)
         } else {

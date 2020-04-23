@@ -1,6 +1,6 @@
 use crate::{
-    Byte, ControlPacketType, Decode, Encode, Error, PropertiesDecoder, Property, ReasonCode,
-    Result as SageResult, TwoByteInteger, VariableByteInteger,
+    ControlPacketType, Decode, Encode, Error, PropertiesDecoder, Property, ReadByte, ReasonCode,
+    Result as SageResult, TwoByteInteger, VariableByteInteger, WriteByte,
 };
 use std::io::{Read, Write};
 
@@ -35,7 +35,7 @@ impl SubAck {
         writer.write_all(&properties)?;
 
         for reason_code in self.reason_codes {
-            n_bytes += Byte(reason_code as u8).encode(writer)?;
+            n_bytes += reason_code.write_byte(writer)?;
         }
 
         Ok(n_bytes)
@@ -58,7 +58,7 @@ impl SubAck {
 
         while reader.limit() > 0 {
             reason_codes.push(ReasonCode::try_parse(
-                u8::from(Byte::decode(&mut reader)?),
+                u8::read_byte(&mut reader)?,
                 ControlPacketType::SUBACK,
             )?);
         }

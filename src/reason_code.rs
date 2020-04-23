@@ -1,4 +1,5 @@
-use crate::{ControlPacketType, Error, Result as SageResult};
+use crate::{ControlPacketType, Error, Result as SageResult, WriteByte};
+use std::io::Write;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ReasonCode {
@@ -208,5 +209,11 @@ impl From<ReasonCode> for u8 {
             ReasonCode::SubscriptionIdentifiersNotSupported => 0xA1,
             ReasonCode::WildcardSubscriptionsNotSupported => 0xA2,
         }
+    }
+}
+
+impl WriteByte for ReasonCode {
+    fn write_byte<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+        (self as u8).write_byte(writer)
     }
 }
