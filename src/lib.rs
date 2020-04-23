@@ -17,7 +17,7 @@ mod error;
 mod reason_code;
 
 pub use broker::Broker;
-use codec::{ReadByte, WriteByte};
+use codec::{ReadByte, ReadTwoByteInteger, WriteByte, WriteTwoByteInteger};
 pub use control_packets::{
     Auth, Authentication, ConnAck, Connect, ControlPacket, Disconnect, PubAck, PubComp, PubRec,
     PubRel, Publish, RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck, UnSubscribe,
@@ -31,8 +31,7 @@ use control_packets::{
     DEFAULT_WILL_DELAY_INTERVAL,
 };
 pub use dep_codec::{
-    BinaryData, Decode, Encode, FourByteInteger, QoS, TwoByteInteger, UTF8String,
-    VariableByteInteger,
+    BinaryData, Decode, Encode, FourByteInteger, QoS, UTF8String, VariableByteInteger,
 };
 pub use error::{Error, Result};
 pub use reason_code::ReasonCode;

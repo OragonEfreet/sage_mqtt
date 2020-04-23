@@ -1,5 +1,5 @@
 use crate::{
-    BinaryData, Error, FourByteInteger, Result as SageResult, TwoByteInteger, UTF8String,
+    BinaryData, Error, FourByteInteger, ReadTwoByteInteger, Result as SageResult, UTF8String,
     VariableByteInteger,
 };
 use std::io::{Cursor, Read};
@@ -10,17 +10,6 @@ use unicode_reader::CodePoints;
 pub trait Decode: Sized {
     /// Reads the input `Reader` and returns the parsed data.
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self>;
-}
-
-impl Decode for TwoByteInteger {
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let mut buf = [0_u8; 2];
-        if reader.read_exact(&mut buf).is_ok() {
-            Ok(TwoByteInteger(((buf[0] as u16) << 8) | buf[1] as u16))
-        } else {
-            Err(Error::MalformedPacket)
-        }
-    }
 }
 
 impl Decode for FourByteInteger {
@@ -42,7 +31,7 @@ impl Decode for FourByteInteger {
 impl Decode for UTF8String {
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
         let mut chunk = reader.take(2);
-        let size: u16 = TwoByteInteger::decode(&mut chunk)?.into();
+        let size = u16::read_two_byte_integer(&mut chunk)?;
         let size = size as usize;
 
         let mut data_buffer: Vec<u8> = Vec::with_capacity(size);
@@ -102,8 +91,7 @@ impl Decode for VariableByteInteger {
 impl Decode for BinaryData {
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
         let mut chunk = reader.take(2);
-        let size: u16 = TwoByteInteger::decode(&mut chunk)?.into();
-        let size = size as usize;
+        let size = u16::read_two_byte_integer(&mut chunk)? as usize;
 
         let mut data_buffer: Vec<u8> = Vec::with_capacity(size);
         if size > 0 {
@@ -122,24 +110,6 @@ impl Decode for BinaryData {
 mod unit_decode {
 
     use super::*;
-
-    #[test]
-    fn decode_twobyte_integer() {
-        let mut test_stream = Cursor::new([0x07, 0xC0]);
-        assert_eq!(
-            TwoByteInteger::decode(&mut test_stream).unwrap(),
-            TwoByteInteger(1984u16)
-        );
-    }
-
-    #[test]
-    fn decode_twobyte_integer_eof() {
-        let mut test_stream = Cursor::new([0x07]);
-        assert_matches!(
-            TwoByteInteger::decode(&mut test_stream),
-            Err(Error::MalformedPacket)
-        );
-    }
 
     #[test]
     fn decode_fourbyte_integer() {

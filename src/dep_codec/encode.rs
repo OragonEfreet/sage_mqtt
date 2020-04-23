@@ -1,6 +1,5 @@
 use crate::{
-    BinaryData, Error, FourByteInteger, Result as SageResult, TwoByteInteger, UTF8String,
-    VariableByteInteger,
+    BinaryData, Error, FourByteInteger, Result as SageResult, UTF8String, VariableByteInteger,
 };
 use std::io::{Error as IOError, ErrorKind, Write};
 
@@ -9,12 +8,6 @@ pub trait Encode {
     /// Encodes `this` and writes it into `write`, returning how many bytes
     /// were written.
     fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize>;
-}
-
-impl Encode for TwoByteInteger {
-    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        Ok(writer.write(&self.0.to_be_bytes())?)
-    }
 }
 
 impl Encode for FourByteInteger {
@@ -79,13 +72,6 @@ impl Encode for BinaryData {
 mod unit_encode {
 
     use super::*;
-
-    #[test]
-    fn encode_two_byte_integer() {
-        let mut result = Vec::new();
-        assert_eq!(TwoByteInteger(1984u16).encode(&mut result).unwrap(), 2);
-        assert_eq!(result, vec![0x07, 0xC0]);
-    }
 
     #[test]
     fn encode_four_byte_integer() {

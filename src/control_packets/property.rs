@@ -1,11 +1,12 @@
 use crate::{
     BinaryData, Decode, Encode, Error, FourByteInteger, PropertyId, QoS, ReadByte,
-    Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger, WriteByte,
-    DEFAULT_MAXIMUM_QOS, DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
-    DEFAULT_REQUEST_PROBLEM_INFORMATION, DEFAULT_REQUEST_RESPONSE_INFORMATION,
-    DEFAULT_RETAIN_AVAILABLE, DEFAULT_SESSION_EXPIRY_INTERVAL,
-    DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
-    DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_WILL_DELAY_INTERVAL,
+    ReadTwoByteInteger, Result as SageResult, UTF8String, VariableByteInteger, WriteByte,
+    WriteTwoByteInteger, DEFAULT_MAXIMUM_QOS, DEFAULT_PAYLOAD_FORMAT_INDICATOR,
+    DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
+    DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_RETAIN_AVAILABLE,
+    DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
+    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
+    DEFAULT_WILL_DELAY_INTERVAL,
 };
 use std::{
     collections::HashSet,
@@ -108,7 +109,7 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
                 UTF8String::decode(reader)?.into(),
             )),
             PropertyId::ServerKeepAlive => Ok(Property::ServerKeepAlive(
-                TwoByteInteger::decode(reader)?.into(),
+                u16::read_two_byte_integer(reader)?,
             )),
             PropertyId::AuthenticationMethod => Ok(Property::AuthenticationMethod(
                 UTF8String::decode(reader)?.into(),
@@ -138,16 +139,14 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             PropertyId::ReasonString => {
                 Ok(Property::ReasonString(UTF8String::decode(reader)?.into()))
             }
-            PropertyId::ReceiveMaximum => match u16::from(TwoByteInteger::decode(reader)?) {
+            PropertyId::ReceiveMaximum => match u16::read_two_byte_integer(reader)? {
                 0 => Err(Error::MalformedPacket),
                 v => Ok(Property::ReceiveMaximum(v)),
             },
             PropertyId::TopicAliasMaximum => Ok(Property::TopicAliasMaximum(
-                TwoByteInteger::decode(reader)?.into(),
+                u16::read_two_byte_integer(reader)?,
             )),
-            PropertyId::TopicAlias => {
-                Ok(Property::TopicAlias(TwoByteInteger::decode(reader)?.into()))
-            }
+            PropertyId::TopicAlias => Ok(Property::TopicAlias(u16::read_two_byte_integer(reader)?)),
             PropertyId::MaximumQoS => Ok(Property::MaximumQoS(QoS::decode(reader)?)),
             PropertyId::RetainAvailable => Ok(Property::RetainAvailable(bool::read_byte(reader)?)),
             PropertyId::UserProperty => Ok(Property::UserProperty(
@@ -219,7 +218,7 @@ impl Encode for Property {
             }
             Property::ServerKeepAlive(v) => {
                 let n_bytes = PropertyId::ServerKeepAlive.encode(writer)?;
-                Ok(n_bytes + TwoByteInteger(v).encode(writer)?)
+                Ok(n_bytes + v.write_two_byte_integer(writer)?)
             }
             Property::AuthenticationMethod(v) => {
                 let n_bytes = PropertyId::AuthenticationMethod.encode(writer)?;
@@ -270,20 +269,20 @@ impl Encode for Property {
                 DEFAULT_RECEIVE_MAXIMUM => Ok(0),
                 _ => {
                     let n_bytes = PropertyId::ReceiveMaximum.encode(writer)?;
-                    Ok(n_bytes + TwoByteInteger(v).encode(writer)?)
+                    Ok(n_bytes + v.write_two_byte_integer(writer)?)
                 }
             },
             Property::TopicAliasMaximum(v) => {
                 if v != DEFAULT_TOPIC_ALIAS_MAXIMUM {
                     let n_bytes = PropertyId::TopicAliasMaximum.encode(writer)?;
-                    Ok(n_bytes + TwoByteInteger(v).encode(writer)?)
+                    Ok(n_bytes + v.write_two_byte_integer(writer)?)
                 } else {
                     Ok(0)
                 }
             }
             Property::TopicAlias(v) => {
                 let n_bytes = PropertyId::TopicAlias.encode(writer)?;
-                Ok(n_bytes + TwoByteInteger(v).encode(writer)?)
+                Ok(n_bytes + v.write_two_byte_integer(writer)?)
             }
             Property::MaximumQoS(v) => {
                 if v != DEFAULT_MAXIMUM_QOS {

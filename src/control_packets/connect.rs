@@ -1,9 +1,9 @@
 use crate::{
     Authentication, BinaryData, Decode, Encode, Error, PropertiesDecoder, Property, QoS, ReadByte,
-    Result as SageResult, TwoByteInteger, UTF8String, VariableByteInteger, WriteByte,
-    DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
-    DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
-    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
+    ReadTwoByteInteger, Result as SageResult, UTF8String, VariableByteInteger, WriteByte,
+    WriteTwoByteInteger, DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
+    DEFAULT_REQUEST_PROBLEM_INFORMATION, DEFAULT_REQUEST_RESPONSE_INFORMATION,
+    DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
 };
 use std::{
     convert::TryInto,
@@ -118,7 +118,7 @@ impl Connect {
         }
         .write(writer)?;
 
-        n_bytes += TwoByteInteger(self.keep_alive).encode(writer)?;
+        n_bytes += self.keep_alive.write_two_byte_integer(writer)?;
 
         // Properties
         let mut properties = Vec::new();
@@ -201,7 +201,7 @@ impl Connect {
 
         let clean_start = flags.clean_start;
 
-        let keep_alive = TwoByteInteger::decode(reader)?.into();
+        let keep_alive = u16::read_two_byte_integer(reader)?;
 
         let mut session_expiry_interval = DEFAULT_SESSION_EXPIRY_INTERVAL;
         let mut receive_maximum = DEFAULT_RECEIVE_MAXIMUM;

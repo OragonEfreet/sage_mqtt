@@ -1,6 +1,7 @@
 use crate::{
-    Decode, Encode, Error, PropertiesDecoder, Property, QoS, Result as SageResult, TwoByteInteger,
-    UTF8String, VariableByteInteger, DEFAULT_PAYLOAD_FORMAT_INDICATOR,
+    Decode, Encode, Error, PropertiesDecoder, Property, QoS, ReadTwoByteInteger,
+    Result as SageResult, UTF8String, VariableByteInteger, WriteTwoByteInteger,
+    DEFAULT_PAYLOAD_FORMAT_INDICATOR,
 };
 
 use std::io::{Read, Write};
@@ -50,7 +51,7 @@ impl Publish {
 
         if self.qos != QoS::AtMostOnce {
             if let Some(packet_identifier) = self.packet_identifier {
-                n_bytes += TwoByteInteger(packet_identifier).encode(writer)?;
+                n_bytes += packet_identifier.write_two_byte_integer(writer)?;
             } else {
                 return Err(Error::ProtocolError);
             }
@@ -100,7 +101,7 @@ impl Publish {
         let topic_name = UTF8String::decode(&mut reader)?.into();
 
         let packet_identifier = if qos != QoS::AtMostOnce {
-            Some(TwoByteInteger::decode(&mut reader)?.into())
+            Some(u16::read_two_byte_integer(&mut reader)?)
         } else {
             None
         };

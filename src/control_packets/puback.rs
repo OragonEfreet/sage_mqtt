@@ -1,6 +1,6 @@
 use crate::{
-    ControlPacketType, Decode, Encode, Error, PropertiesDecoder, Property, ReadByte, ReasonCode,
-    Result as SageResult, TwoByteInteger, VariableByteInteger, WriteByte,
+    ControlPacketType, Encode, Error, PropertiesDecoder, Property, ReadByte, ReadTwoByteInteger,
+    ReasonCode, Result as SageResult, VariableByteInteger, WriteByte, WriteTwoByteInteger,
 };
 use std::io::{Read, Write};
 
@@ -25,7 +25,7 @@ impl Default for PubAck {
 
 impl PubAck {
     pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = TwoByteInteger(self.packet_identifier).encode(writer)?;
+        let mut n_bytes = self.packet_identifier.write_two_byte_integer(writer)?;
 
         let mut properties = Vec::new();
 
@@ -47,7 +47,7 @@ impl PubAck {
     }
 
     pub fn read<R: Read>(reader: &mut R, shortened: bool) -> SageResult<Self> {
-        let packet_identifier = TwoByteInteger::decode(reader)?.into();
+        let packet_identifier = u16::read_two_byte_integer(reader)?;
 
         let mut puback = PubAck {
             packet_identifier,

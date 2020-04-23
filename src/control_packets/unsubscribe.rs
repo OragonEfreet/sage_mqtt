@@ -1,6 +1,6 @@
 use crate::{
-    Decode, Encode, Error, PropertiesDecoder, Property, Result as SageResult, TwoByteInteger,
-    UTF8String, VariableByteInteger,
+    Decode, Encode, Error, PropertiesDecoder, Property, ReadTwoByteInteger, Result as SageResult,
+    UTF8String, VariableByteInteger, WriteTwoByteInteger,
 };
 use std::io::{Read, Write};
 
@@ -23,7 +23,7 @@ impl Default for UnSubscribe {
 
 impl UnSubscribe {
     pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = TwoByteInteger(self.packet_identifier).encode(writer)?;
+        let mut n_bytes = self.packet_identifier.write_two_byte_integer(writer)?;
 
         let mut properties = Vec::new();
         for (k, v) in self.user_properties {
@@ -42,7 +42,7 @@ impl UnSubscribe {
     pub fn read<R: Read>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size as u64);
 
-        let packet_identifier = TwoByteInteger::decode(&mut reader)?.into();
+        let packet_identifier = u16::read_two_byte_integer(&mut reader)?;
 
         let mut user_properties = Vec::new();
 
