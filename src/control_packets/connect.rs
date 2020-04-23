@@ -131,7 +131,7 @@ impl Connect {
         n_bytes += Property::TopicAliasMaximum(self.topic_alias_maximum).encode(&mut properties)?;
         n_bytes += Property::RequestResponseInformation(self.request_response_information)
             .encode(&mut properties)?;
-        n_bytes += Property::RequestResponseInformation(self.request_problem_information)
+        n_bytes += Property::RequestProblemInformation(self.request_problem_information)
             .encode(&mut properties)?;
         for (k, v) in self.user_properties {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
@@ -346,7 +346,8 @@ mod unit_connect {
 
     fn connect_encoded() -> Vec<u8> {
         vec![
-            0, 4, 77, 81, 84, 84, 5, 206, 0, 10, 5, 17, 0, 0, 0, 10, 0, 0, 6, 3, 0, 0, 8, 0, 0, 0,
+            0, 4, 77, 81, 84, 84, 5, 206, 0, 10,
+            5, 17, 0, 0, 0, 10, 0, 0, 6, 3, 0, 0, 8, 0, 0, 0,
             0, 0, 0, 0, 6, 87, 105, 108, 108, 111, 119, 0, 5, 74, 97, 100, 101, 110,
         ]
     }
