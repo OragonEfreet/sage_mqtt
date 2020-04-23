@@ -30,21 +30,21 @@ impl ReadFourByteInteger for u32 {
 }
 
 #[cfg(test)]
-mod unit_codec {
+mod unit {
 
     use std::io::Cursor;
 
     use super::*;
 
     #[test]
-    fn encode_four_byte_integer() {
+    fn encode() {
         let mut result = Vec::new();
         assert_eq!(220_000_u32.write_four_byte_integer(&mut result).unwrap(), 4);
         assert_eq!(result, vec![0x00, 0x03, 0x5B, 0x60]);
     }
 
     #[test]
-    fn decode_four_byte_integer() {
+    fn decode() {
         let mut test_stream = Cursor::new([0x00, 0x03, 0x5B, 0x60]);
         assert_eq!(
             u32::read_four_byte_integer(&mut test_stream).unwrap(),
@@ -53,7 +53,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_four_byte_integer_eof() {
+    fn decode_eof() {
         let mut test_stream = Cursor::new([0x07]);
         assert_matches!(
             u32::read_four_byte_integer(&mut test_stream),

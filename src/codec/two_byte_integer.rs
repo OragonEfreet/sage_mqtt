@@ -27,21 +27,21 @@ impl ReadTwoByteInteger for u16 {
 }
 
 #[cfg(test)]
-mod unit_codec {
+mod unit {
 
     use std::io::Cursor;
 
     use super::*;
 
     #[test]
-    fn encode_two_byte_integer() {
+    fn encode() {
         let mut result = Vec::new();
         assert_eq!(1984u16.write_two_byte_integer(&mut result).unwrap(), 2);
         assert_eq!(result, vec![0x07, 0xC0]);
     }
 
     #[test]
-    fn decode_two_byte_integer() {
+    fn decode() {
         let mut test_stream = Cursor::new([0x07, 0xC0]);
         assert_eq!(
             u16::read_two_byte_integer(&mut test_stream).unwrap(),
@@ -50,7 +50,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_two_byte_integer_eof() {
+    fn decode_eof() {
         let mut test_stream = Cursor::new([0x07]);
         assert_matches!(
             u16::read_two_byte_integer(&mut test_stream),

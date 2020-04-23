@@ -57,28 +57,28 @@ impl ReadUTF8String for String {
 }
 
 #[cfg(test)]
-mod unit_codec {
+mod unit {
 
     use std::io::Cursor;
 
     use super::*;
 
     #[test]
-    fn encode_utf8string() {
+    fn encode() {
         let mut result = Vec::new();
         assert_eq!("A𪛔".write_utf8_string(&mut result).unwrap(), 7);
         assert_eq!(result, vec![0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
     }
 
     #[test]
-    fn encode_utf8string_empty() {
+    fn encode_empty() {
         let mut result = Vec::new();
         assert_eq!("".write_utf8_string(&mut result).unwrap(), 2);
         assert_eq!(result, vec![0x00, 0x00]);
     }
 
     #[test]
-    fn decode_utf8string_empty() {
+    fn decode_empty() {
         let mut test_stream = Cursor::new([0x00, 0x00]);
         assert_eq!(
             String::read_utf8_string(&mut test_stream).unwrap(),
@@ -87,7 +87,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_utf8string() {
+    fn decode() {
         let mut test_stream = Cursor::new([0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
         assert_eq!(
             String::read_utf8_string(&mut test_stream).unwrap(),
@@ -96,7 +96,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_utf8string_eof() {
+    fn decode_eof() {
         let mut test_stream = Cursor::new([0x00, 0x05, 0x41]);
         assert_matches!(
             String::read_utf8_string(&mut test_stream),

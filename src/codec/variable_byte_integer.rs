@@ -70,35 +70,68 @@ impl ReadVariableByteInteger for u32 {
 }
 
 #[cfg(test)]
-mod unit_codec {
+mod unit {
 
     use std::io::Cursor;
 
     use super::*;
 
+    // The encoded value MUST use the minimum number of bytes necessary to
+    // represent the value
+    // Note: This test considers the fact that if VALUE_L and VALUE_R are
+    // both encoded into N bytes, then all values between VALUE_L and VALUE_R
+    // are encoded into N bytes as well. Meaning: we only check bounds.
     #[test]
-    fn encode_variable_byte_integer_one_lower_bound() {
+    fn mqtt_1_5_5_1() {
+        let bounds = [
+            [0u32, 12],
+            [128, 16_383],
+            [16_384, 2_097_151],
+            [2_097_152, 268_435_455],
+        ];
+
+        let mut result = Vec::new();
+
+        let mut expected_buffer_size = 1;
+
+        for bound in &bounds {
+            for i in bound {
+                let n_bytes = i.write_variable_byte_integer(&mut result).unwrap();
+                assert_eq!(
+                    n_bytes, expected_buffer_size,
+                    "Variable Byte Integer '{}' should be encoded to '{}' bytes. Used '{}' instead",
+                    i, expected_buffer_size, n_bytes
+                );
+                result.clear();
+            }
+
+            expected_buffer_size += 1;
+        }
+    }
+
+    #[test]
+    fn encode_one_lower_bound() {
         let mut result = Vec::new();
         assert_eq!(0u32.write_variable_byte_integer(&mut result).unwrap(), 1);
         assert_eq!(result, vec![0x00]);
     }
 
     #[test]
-    fn encode_variable_byte_integer_one_upper_bound() {
+    fn encode_one_upper_bound() {
         let mut result = Vec::new();
         assert_eq!(127u32.write_variable_byte_integer(&mut result).unwrap(), 1);
         assert_eq!(result, vec![0x7F]);
     }
 
     #[test]
-    fn encode_variable_byte_integer_two_lower_bound() {
+    fn encode_two_lower_bound() {
         let mut result = Vec::new();
         assert_eq!(128u32.write_variable_byte_integer(&mut result).unwrap(), 2);
         assert_eq!(result, vec![0x80, 0x01]);
     }
 
     #[test]
-    fn encode_variable_byte_integer_two_upper_bound() {
+    fn encode_two_upper_bound() {
         let mut result = Vec::new();
         assert_eq!(
             16_383u32.write_variable_byte_integer(&mut result).unwrap(),
@@ -108,7 +141,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn encode_variable_byte_integer_three_lower_bound() {
+    fn encode_three_lower_bound() {
         let mut result = Vec::new();
         assert_eq!(
             16_384u32.write_variable_byte_integer(&mut result).unwrap(),
@@ -118,7 +151,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn encode_variable_byte_integer_three_upper_bound() {
+    fn encode_three_upper_bound() {
         let mut result = Vec::new();
         assert_eq!(
             2_097_151u32
@@ -130,7 +163,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn encode_variable_byte_integer_four_lower_bound() {
+    fn encode_four_lower_bound() {
         let mut result = Vec::new();
         assert_eq!(
             2_097_152u32
@@ -142,7 +175,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn encode_variable_byte_integer_four_upper_bound() {
+    fn encode_four_upper_bound() {
         let mut result = Vec::new();
         assert_eq!(
             268_435_455u32
@@ -154,7 +187,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_variable_byte_integer_one_lower_bound() {
+    fn decode_one_lower_bound() {
         let mut test_stream = Cursor::new([0x00]);
         assert_eq!(
             u32::read_variable_byte_integer(&mut test_stream).unwrap(),
@@ -163,7 +196,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_variable_byte_integer_one_upper_bound() {
+    fn decode_one_upper_bound() {
         let mut test_stream = Cursor::new([0x7F]);
         assert_eq!(
             u32::read_variable_byte_integer(&mut test_stream).unwrap(),
@@ -172,7 +205,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_variable_byte_integer_two_lower_bound() {
+    fn decode_two_lower_bound() {
         let mut test_stream = Cursor::new([0x80, 0x01]);
         assert_eq!(
             u32::read_variable_byte_integer(&mut test_stream).unwrap(),
@@ -181,7 +214,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_variable_byte_integer_two_upper_bound() {
+    fn decode_two_upper_bound() {
         let mut test_stream = Cursor::new([0xFF, 0x7F]);
         assert_eq!(
             u32::read_variable_byte_integer(&mut test_stream).unwrap(),
@@ -190,7 +223,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_variable_byte_integer_three_lower_bound() {
+    fn decode_three_lower_bound() {
         let mut test_stream = Cursor::new([0x80, 0x80, 0x01]);
         assert_eq!(
             u32::read_variable_byte_integer(&mut test_stream).unwrap(),
@@ -199,7 +232,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_variable_byte_integer_three_upper_bound() {
+    fn decode_three_upper_bound() {
         let mut test_stream = Cursor::new([0xFF, 0xFF, 0x7F]);
         assert_eq!(
             u32::read_variable_byte_integer(&mut test_stream).unwrap(),
@@ -208,7 +241,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_variable_byte_integer_four_lower_bound() {
+    fn decode_four_lower_bound() {
         let mut test_stream = Cursor::new([0x80, 0x80, 0x80, 0x01]);
         assert_eq!(
             u32::read_variable_byte_integer(&mut test_stream).unwrap(),
@@ -217,7 +250,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_variable_byte_integer_four_upper_bound() {
+    fn decode_four_upper_bound() {
         let mut test_stream = Cursor::new([0xFF, 0xFF, 0xFF, 0x7F]);
         assert_eq!(
             u32::read_variable_byte_integer(&mut test_stream).unwrap(),
@@ -226,7 +259,7 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_variable_byte_integer_eof() {
+    fn decode_eof() {
         let mut test_stream: Cursor<[u8; 0]> = Default::default();
         assert_matches!(
             u32::read_variable_byte_integer(&mut test_stream),

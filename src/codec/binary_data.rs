@@ -43,14 +43,14 @@ impl ReadBinaryData for Vec<u8> {
 }
 
 #[cfg(test)]
-mod unit_codec {
+mod unit {
 
     use std::io::Cursor;
 
     use super::*;
 
     #[test]
-    fn encode_binarydata() {
+    fn encode() {
         let mut result = Vec::new();
         assert_eq!(
             Vec::from("A𪛔".as_bytes())
@@ -62,14 +62,14 @@ mod unit_codec {
     }
 
     #[test]
-    fn encode_binarydata_empty() {
+    fn encode_empty() {
         let mut result = Vec::new();
         assert_eq!(Vec::new().write_binary_data(&mut result).unwrap(), 2);
         assert_eq!(result, vec![0x00, 0x00]);
     }
 
     #[test]
-    fn decode_binary_data() {
+    fn decode() {
         let mut test_stream = Cursor::new([0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
         assert_eq!(
             Vec::read_binary_data(&mut test_stream).unwrap(),
@@ -78,13 +78,13 @@ mod unit_codec {
     }
 
     #[test]
-    fn decode_binary_data_empty() {
+    fn decode_empty() {
         let mut test_stream = Cursor::new([0x00, 0x00]);
         assert_eq!(Vec::read_binary_data(&mut test_stream).unwrap(), Vec::new());
     }
 
     #[test]
-    fn decode_binary_data_eof() {
+    fn decode_eof() {
         let mut test_stream = Cursor::new([0x00, 0x05, 0x41]);
         assert_matches!(
             Vec::read_binary_data(&mut test_stream),

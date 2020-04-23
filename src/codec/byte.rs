@@ -44,27 +44,27 @@ impl ReadByte for bool {
 }
 
 #[cfg(test)]
-mod unit_codec {
+mod unit {
 
     use std::io::Cursor;
 
     use super::*;
 
     #[test]
-    fn encode_byte() {
+    fn encode() {
         let mut result = Vec::new();
         assert_eq!(0b00101010.write_byte(&mut result).unwrap(), 1);
         assert_eq!(result, vec![0x2A]);
     }
 
     #[test]
-    fn decode_byte() {
+    fn decode() {
         let mut test_stream = Cursor::new([0xAF_u8]);
         assert_eq!(u8::read_byte(&mut test_stream).unwrap(), 0xAF);
     }
 
     #[test]
-    fn decode_byte_eof() {
+    fn decode_eof() {
         let mut test_stream: Cursor<[u8; 0]> = Default::default();
         assert_matches!(u8::read_byte(&mut test_stream), Err(Error::MalformedPacket));
     }
