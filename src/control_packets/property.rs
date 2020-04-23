@@ -1,12 +1,12 @@
 use crate::{
     BinaryData, Decode, Encode, Error, PropertyId, QoS, ReadByte, ReadFourByteInteger,
-    ReadTwoByteInteger, ReadVariableByteInteger, Result as SageResult, UTF8String, WriteByte,
-    WriteFourByteInteger, WriteTwoByteInteger, WriteVariableByteInteger, DEFAULT_MAXIMUM_QOS,
-    DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
-    DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_RETAIN_AVAILABLE,
-    DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_WILL_DELAY_INTERVAL,
+    ReadTwoByteInteger, ReadUTF8String, ReadVariableByteInteger, Result as SageResult, WriteByte,
+    WriteFourByteInteger, WriteTwoByteInteger, WriteUTF8String, WriteVariableByteInteger,
+    DEFAULT_MAXIMUM_QOS, DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
+    DEFAULT_REQUEST_PROBLEM_INFORMATION, DEFAULT_REQUEST_RESPONSE_INFORMATION,
+    DEFAULT_RETAIN_AVAILABLE, DEFAULT_SESSION_EXPIRY_INTERVAL,
+    DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
+    DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_WILL_DELAY_INTERVAL,
 };
 use std::{
     collections::HashSet,
@@ -84,11 +84,9 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             PropertyId::MessageExpiryInterval => Ok(Property::MessageExpiryInterval(
                 u32::read_four_byte_integer(reader)?,
             )),
-            PropertyId::ContentType => {
-                Ok(Property::ContentType(UTF8String::decode(reader)?.into()))
-            }
+            PropertyId::ContentType => Ok(Property::ContentType(String::read_utf8_string(reader)?)),
             PropertyId::ResponseTopic => {
-                Ok(Property::ResponseTopic(UTF8String::decode(reader)?.into()))
+                Ok(Property::ResponseTopic(String::read_utf8_string(reader)?))
             }
             PropertyId::CorrelationData => Ok(Property::CorrelationData(
                 BinaryData::decode(reader)?.into(),
@@ -106,13 +104,13 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
                 u32::read_four_byte_integer(reader)?,
             )),
             PropertyId::AssignedClientIdentifier => Ok(Property::AssignedClientIdentifier(
-                UTF8String::decode(reader)?.into(),
+                String::read_utf8_string(reader)?,
             )),
             PropertyId::ServerKeepAlive => Ok(Property::ServerKeepAlive(
                 u16::read_two_byte_integer(reader)?,
             )),
             PropertyId::AuthenticationMethod => Ok(Property::AuthenticationMethod(
-                UTF8String::decode(reader)?.into(),
+                String::read_utf8_string(reader)?,
             )),
             PropertyId::AuthenticationData => Ok(Property::AuthenticationData(
                 BinaryData::decode(reader)?.into(),
@@ -131,13 +129,13 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
                 _ => Err(Error::ProtocolError),
             },
             PropertyId::ResponseInformation => Ok(Property::ResponseInformation(
-                UTF8String::decode(reader)?.into(),
+                String::read_utf8_string(reader)?,
             )),
-            PropertyId::ServerReference => Ok(Property::ServerReference(
-                UTF8String::decode(reader)?.into(),
-            )),
+            PropertyId::ServerReference => {
+                Ok(Property::ServerReference(String::read_utf8_string(reader)?))
+            }
             PropertyId::ReasonString => {
-                Ok(Property::ReasonString(UTF8String::decode(reader)?.into()))
+                Ok(Property::ReasonString(String::read_utf8_string(reader)?))
             }
             PropertyId::ReceiveMaximum => match u16::read_two_byte_integer(reader)? {
                 0 => Err(Error::MalformedPacket),
@@ -150,8 +148,8 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             PropertyId::MaximumQoS => Ok(Property::MaximumQoS(QoS::decode(reader)?)),
             PropertyId::RetainAvailable => Ok(Property::RetainAvailable(bool::read_byte(reader)?)),
             PropertyId::UserProperty => Ok(Property::UserProperty(
-                UTF8String::decode(reader)?.into(),
-                UTF8String::decode(reader)?.into(),
+                String::read_utf8_string(reader)?,
+                String::read_utf8_string(reader)?,
             )),
             PropertyId::MaximumPacketSize => Ok(Property::MaximumPacketSize(
                 u32::read_four_byte_integer(reader)?,
@@ -188,11 +186,11 @@ impl Encode for Property {
             }
             Property::ContentType(v) => {
                 let n_bytes = PropertyId::ContentType.write_variable_byte_integer(writer)?;
-                Ok(n_bytes + UTF8String(v).encode(writer)?)
+                Ok(n_bytes + v.write_utf8_string(writer)?)
             }
             Property::ResponseTopic(v) => {
                 let n_bytes = PropertyId::ResponseTopic.write_variable_byte_integer(writer)?;
-                Ok(n_bytes + UTF8String(v).encode(writer)?)
+                Ok(n_bytes + v.write_utf8_string(writer)?)
             }
             Property::CorrelationData(v) => {
                 let n_bytes = PropertyId::CorrelationData.write_variable_byte_integer(writer)?;
@@ -219,7 +217,7 @@ impl Encode for Property {
             Property::AssignedClientIdentifier(v) => {
                 let n_bytes =
                     PropertyId::AssignedClientIdentifier.write_variable_byte_integer(writer)?;
-                Ok(n_bytes + UTF8String(v).encode(writer)?)
+                Ok(n_bytes + v.write_utf8_string(writer)?)
             }
             Property::ServerKeepAlive(v) => {
                 let n_bytes = PropertyId::ServerKeepAlive.write_variable_byte_integer(writer)?;
@@ -228,7 +226,7 @@ impl Encode for Property {
             Property::AuthenticationMethod(v) => {
                 let n_bytes =
                     PropertyId::AuthenticationMethod.write_variable_byte_integer(writer)?;
-                Ok(n_bytes + UTF8String(v).encode(writer)?)
+                Ok(n_bytes + v.write_utf8_string(writer)?)
             }
             Property::AuthenticationData(v) => {
                 let n_bytes = PropertyId::AuthenticationData.write_variable_byte_integer(writer)?;
@@ -264,15 +262,15 @@ impl Encode for Property {
             Property::ResponseInformation(v) => {
                 let n_bytes =
                     PropertyId::ResponseInformation.write_variable_byte_integer(writer)?;
-                Ok(n_bytes + UTF8String(v).encode(writer)?)
+                Ok(n_bytes + v.write_utf8_string(writer)?)
             }
             Property::ServerReference(v) => {
                 let n_bytes = PropertyId::ServerReference.write_variable_byte_integer(writer)?;
-                Ok(n_bytes + UTF8String(v).encode(writer)?)
+                Ok(n_bytes + v.write_utf8_string(writer)?)
             }
             Property::ReasonString(v) => {
                 let n_bytes = PropertyId::ReasonString.write_variable_byte_integer(writer)?;
-                Ok(n_bytes + UTF8String(v).encode(writer)?)
+                Ok(n_bytes + v.write_utf8_string(writer)?)
             }
             Property::ReceiveMaximum(v) => match v {
                 0 => Err(Error::MalformedPacket),
@@ -314,8 +312,8 @@ impl Encode for Property {
             }
             Property::UserProperty(k, v) => {
                 let mut n_bytes = PropertyId::UserProperty.write_variable_byte_integer(writer)?;
-                n_bytes += UTF8String(k).encode(writer)?;
-                Ok(n_bytes + (UTF8String(v).encode(writer)?))
+                n_bytes += k.write_utf8_string(writer)?;
+                Ok(n_bytes + (v.write_utf8_string(writer)?))
             }
             Property::MaximumPacketSize(v) => {
                 let n_bytes = PropertyId::MaximumPacketSize.write_variable_byte_integer(writer)?;

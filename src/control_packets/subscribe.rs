@@ -1,7 +1,7 @@
 use crate::{
     Decode, Encode, Error, PropertiesDecoder, Property, QoS, ReadByte, ReadTwoByteInteger,
-    Result as SageResult, UTF8String, WriteByte, WriteTwoByteInteger, WriteVariableByteInteger,
-    DEFAULT_MAXIMUM_QOS,
+    ReadUTF8String, Result as SageResult, WriteByte, WriteTwoByteInteger, WriteUTF8String,
+    WriteVariableByteInteger, DEFAULT_MAXIMUM_QOS,
 };
 use std::{
     convert::{TryFrom, TryInto},
@@ -108,7 +108,7 @@ impl Subscribe {
         writer.write_all(&properties)?;
 
         for option in self.subscriptions {
-            n_bytes += UTF8String(option.0).encode(writer)?;
+            n_bytes += option.0.write_utf8_string(writer)?;
             n_bytes += option.1.encode(writer)?;
         }
 
@@ -136,7 +136,7 @@ impl Subscribe {
 
         while reader.limit() > 0 {
             subscriptions.push((
-                UTF8String::decode(&mut reader)?.into(),
+                String::read_utf8_string(&mut reader)?,
                 SubscriptionOptions::decode(&mut reader)?,
             ));
         }

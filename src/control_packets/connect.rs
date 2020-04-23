@@ -1,9 +1,10 @@
 use crate::{
     Authentication, BinaryData, Decode, Encode, Error, PropertiesDecoder, Property, QoS, ReadByte,
-    ReadTwoByteInteger, Result as SageResult, UTF8String, WriteByte, WriteTwoByteInteger,
-    WriteVariableByteInteger, DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
-    DEFAULT_REQUEST_PROBLEM_INFORMATION, DEFAULT_REQUEST_RESPONSE_INFORMATION,
-    DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
+    ReadTwoByteInteger, ReadUTF8String, Result as SageResult, WriteByte, WriteTwoByteInteger,
+    WriteUTF8String, WriteVariableByteInteger, DEFAULT_PAYLOAD_FORMAT_INDICATOR,
+    DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
+    DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
+    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
 };
 use std::{
     convert::TryInto,
@@ -97,7 +98,7 @@ struct ConnectFlags {
 impl Connect {
     pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         // Variable Header (into content)
-        let mut n_bytes = UTF8String::from("MQTT").encode(writer)?;
+        let mut n_bytes = "MQTT".write_utf8_string(writer)?;
         n_bytes += 0x05.write_byte(writer)?;
 
         n_bytes += ConnectFlags {
@@ -148,7 +149,7 @@ impl Connect {
         if self.client_id.len() > 23 || self.client_id.chars().any(|c| c < '0' || c > 'z') {
             return Err(Error::MalformedPacket);
         }
-        n_bytes += UTF8String(self.client_id).encode(writer)?;
+        n_bytes += self.client_id.write_utf8_string(writer)?;
 
         if let Some(w) = self.will {
             let mut properties = Vec::new();
@@ -171,12 +172,12 @@ impl Connect {
             n_bytes += properties.len().write_variable_byte_integer(writer)?;
             writer.write_all(&properties)?;
 
-            n_bytes += UTF8String(w.topic).encode(writer)?;
+            n_bytes += w.topic.write_utf8_string(writer)?;
             n_bytes += BinaryData(w.payload).encode(writer)?;
         }
 
         if let Some(v) = self.user_name {
-            n_bytes += UTF8String(v).encode(writer)?;
+            n_bytes += v.write_utf8_string(writer)?;
         }
 
         if let Some(v) = self.password {
@@ -187,8 +188,8 @@ impl Connect {
     }
 
     pub fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let protocol_name = UTF8String::decode(reader)?;
-        if protocol_name.0 != "MQTT" {
+        let protocol_name = String::read_utf8_string(reader)?;
+        if protocol_name != "MQTT" {
             return Err(Error::MalformedPacket);
         }
 
@@ -243,7 +244,7 @@ impl Connect {
         };
 
         // Payload
-        let client_id = String::from(UTF8String::decode(reader)?);
+        let client_id = String::read_utf8_string(reader)?;
         if client_id.len() > 23 || client_id.chars().any(|c| c < '0' || c > 'z') {
             return Err(Error::MalformedPacket);
         }
@@ -264,7 +265,7 @@ impl Connect {
                     _ => return Err(Error::ProtocolError),
                 }
             }
-            w.topic = UTF8String::decode(reader)?.into();
+            w.topic = String::read_utf8_string(reader)?;
             w.payload = BinaryData::decode(reader)?.into();
             Some(w)
         } else {
@@ -272,7 +273,7 @@ impl Connect {
         };
 
         let user_name = if flags.user_name {
-            Some(UTF8String::decode(reader)?.into())
+            Some(String::read_utf8_string(reader)?)
         } else {
             None
         };

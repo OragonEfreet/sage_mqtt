@@ -1,5 +1,6 @@
 use crate::{Error, Result as SageResult};
-use std::io::{Read, Write};
+use std::io::{Cursor, Read, Write};
+use unicode_reader::CodePoints;
 
 pub trait WriteByte {
     fn write_byte<W: Write>(self, writer: &mut W) -> SageResult<usize>;
@@ -153,13 +154,59 @@ impl ReadVariableByteInteger for u32 {
     }
 }
 
-// pub trait WriteUTF8String {
-//     fn write_utf8_string<W: Write>(self, writer: &mut W) -> SageResult<usize>;
-// }
+pub trait WriteUTF8String {
+    fn write_utf8_string<W: Write>(self, writer: &mut W) -> SageResult<usize>;
+}
 
-// pub trait ReadUTF8String : Sized {
-//     fn read_utf8_string<R: Read>(reader: &mut R) -> SageResult<Self>;
-// }
+impl WriteUTF8String for &str {
+    fn write_utf8_string<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+        let len = self.len();
+        if len > i16::max_value() as usize {
+            return Err(Error::MalformedPacket);
+        }
+        writer.write_all(&(len as u16).to_be_bytes())?;
+        writer.write_all(self.as_bytes())?;
+        Ok(2 + len)
+    }
+}
+
+pub trait ReadUTF8String: Sized {
+    fn read_utf8_string<R: Read>(reader: &mut R) -> SageResult<Self>;
+}
+
+impl ReadUTF8String for String {
+    fn read_utf8_string<R: Read>(reader: &mut R) -> SageResult<Self> {
+        let mut chunk = reader.take(2);
+        let size = u16::read_two_byte_integer(&mut chunk)?;
+        let size = size as usize;
+
+        let mut data_buffer: Vec<u8> = Vec::with_capacity(size);
+        if size > 0 {
+            let mut chunk = reader.take(size as u64);
+            match chunk.read_to_end(&mut data_buffer) {
+                Ok(n) if n == size => {
+                    let mut codepoints = CodePoints::from(Cursor::new(&data_buffer));
+                    if codepoints.all(|x| match x {
+                        Ok('\u{0}') => false,
+                        Ok(_) => true,
+                        _ => false, // Will be an IO Error
+                    }) {
+                        if let Ok(string) = String::from_utf8(data_buffer) {
+                            Ok(string)
+                        } else {
+                            Err(Error::MalformedPacket)
+                        }
+                    } else {
+                        Err(Error::MalformedPacket)
+                    }
+                }
+                _ => Err(Error::MalformedPacket),
+            }
+        } else {
+            Ok(Default::default())
+        }
+    }
+}
 
 // pub trait WriteBinaryData {
 //     fn write_binary_data<W: Write>(self, writer: &mut W) -> SageResult<usize>;
@@ -444,6 +491,84 @@ mod unit_codec {
         assert_matches!(
             u32::read_variable_byte_integer(&mut test_stream),
             Err(Error::MalformedPacket)
+        );
+    }
+
+    #[test]
+    fn encode_utf8string() {
+        let mut result = Vec::new();
+        assert_eq!("A𪛔".write_utf8_string(&mut result).unwrap(), 7);
+        assert_eq!(result, vec![0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
+    }
+
+    #[test]
+    fn encode_utf8string_empty() {
+        let mut result = Vec::new();
+        assert_eq!("".write_utf8_string(&mut result).unwrap(), 2);
+        assert_eq!(result, vec![0x00, 0x00]);
+    }
+
+    #[test]
+    fn decode_utf8string_empty() {
+        let mut test_stream = Cursor::new([0x00, 0x00]);
+        assert_eq!(
+            String::read_utf8_string(&mut test_stream).unwrap(),
+            String::default()
+        );
+    }
+
+    #[test]
+    fn decode_utf8string() {
+        let mut test_stream = Cursor::new([0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
+        assert_eq!(
+            String::read_utf8_string(&mut test_stream).unwrap(),
+            String::from("A𪛔")
+        );
+    }
+
+    #[test]
+    fn decode_utf8string_eof() {
+        let mut test_stream = Cursor::new([0x00, 0x05, 0x41]);
+        assert_matches!(
+            String::read_utf8_string(&mut test_stream),
+            Err(Error::MalformedPacket)
+        );
+    }
+
+    // The character data in a UTF-8 Encoded String MUST be well-formed UTF-8 as
+    // defined by the Unicode specification [Unicode] and restated in RFC 3629
+    // [RFC3629]. In particular, the character data MUST NOT include encodings
+    // of code points between U+D800 and U+DFFF
+    #[test]
+    fn mqtt_1_5_4_1() {
+        let mut test_stream = Cursor::new([0x00, 0x02, 0xD8, 0x00]);
+        assert_matches!(
+            String::read_utf8_string(&mut test_stream),
+            Err(Error::MalformedPacket)
+        );
+    }
+
+    // A UTF-8 Encoded String MUST NOT include an encoding of the null character
+    // U+0000.
+    #[test]
+    fn mqtt_1_5_4_2() {
+        let mut test_stream = Cursor::new([0x00, 0x02, 0x00, 0x00]);
+        assert_matches!(
+            String::read_utf8_string(&mut test_stream),
+            Err(Error::MalformedPacket)
+        );
+    }
+
+    // A UTF-8 encoded sequence 0xEF 0xBB 0xBF is always interpreted as U+FEFF
+    // ("ZERO WIDTH NO-BREAK SPACE") wherever it appears in a string and MUST
+    // NOT be skipped over or stripped off by a packet receiver
+    #[test]
+    fn mqtt_1_5_4_3() {
+        let mut test_stream =
+            Cursor::new([0x00, 0x08, 0xEF, 0xBB, 0xBF, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
+        assert_eq!(
+            String::read_utf8_string(&mut test_stream).unwrap(),
+            String::from("\u{feff}A𪛔")
         );
     }
 }

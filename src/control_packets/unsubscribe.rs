@@ -1,6 +1,6 @@
 use crate::{
-    Decode, Encode, Error, PropertiesDecoder, Property, ReadTwoByteInteger, Result as SageResult,
-    UTF8String, WriteTwoByteInteger, WriteVariableByteInteger,
+    Encode, Error, PropertiesDecoder, Property, ReadTwoByteInteger, ReadUTF8String,
+    Result as SageResult, WriteTwoByteInteger, WriteUTF8String, WriteVariableByteInteger,
 };
 use std::io::{Read, Write};
 
@@ -33,7 +33,7 @@ impl UnSubscribe {
         writer.write_all(&properties)?;
 
         for option in self.subscriptions {
-            n_bytes += UTF8String(option).encode(writer)?;
+            n_bytes += option.write_utf8_string(writer)?;
         }
 
         Ok(n_bytes)
@@ -57,7 +57,7 @@ impl UnSubscribe {
         let mut subscriptions = Vec::new();
 
         while reader.limit() > 0 {
-            subscriptions.push(UTF8String::decode(&mut reader)?.into());
+            subscriptions.push(String::read_utf8_string(&mut reader)?);
         }
 
         if subscriptions.is_empty() {
