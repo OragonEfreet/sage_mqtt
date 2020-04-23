@@ -10,18 +10,14 @@ macro_rules! assert_matches {
 }
 
 mod broker;
-mod byte;
 mod codec;
 mod control_packets;
+mod dep_codec;
 mod error;
 mod reason_code;
 
 pub use broker::Broker;
-use byte::{ReadByte, WriteByte};
-pub use codec::{
-    BinaryData, Bits, Decode, Encode, FourByteInteger, QoS, TwoByteInteger, UTF8String,
-    VariableByteInteger,
-};
+use codec::{ReadByte, WriteByte};
 pub use control_packets::{
     Auth, Authentication, ConnAck, Connect, ControlPacket, Disconnect, PubAck, PubComp, PubRec,
     PubRel, Publish, RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck, UnSubscribe,
@@ -33,6 +29,10 @@ use control_packets::{
     DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
     DEFAULT_WILL_DELAY_INTERVAL,
+};
+pub use dep_codec::{
+    BinaryData, Bits, Decode, Encode, FourByteInteger, QoS, TwoByteInteger, UTF8String,
+    VariableByteInteger,
 };
 pub use error::{Error, Result};
 pub use reason_code::ReasonCode;
