@@ -11,6 +11,12 @@ use std::{
     io::{Read, Write},
 };
 
+/// Due to the unstable nature of a connexion, the client can loose its
+/// connection to the server. This ungraceful disconnect can be notified
+/// to every other clients by specifying a Last Will message that is given
+/// upon connection.
+/// When a server ungracefully disconnect from a server (when the keep alive
+/// is reached), the server will publish the Last Will message.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Will {
     // Sorted
@@ -45,23 +51,114 @@ impl Default for Will {
     }
 }
 
-/// The `Connect` control packet is used to open a connection
+/// The `Connect` control packet is used to open a session. It is the first
+/// Packet a client must send to a server once the connection is established.
+/// A _Connect_ packet can only be sent once for each connection.
+///
+/// # Session and connection
+///
+/// A unique connection can only send a _Connect_ packet once. If the server
+/// received a second _Connect_ packet over a same connection, it is considered
+/// as a protocol error.
+/// Yet, a same session can continue accross different sequences of connections.
+/// In that case, `clean_start` must be set to `false` (default) to continue the
+/// session.
+///
+/// # Client identifier
+///
+/// The client identifier is a server-unique `String` used to identify the
+/// client accross operations. It is possible not to give a client identifier
+/// to the server by setting `client_id` to either `None` or an empty string.
+/// In that case the server will decide itself for an identifier and return
+/// it into the _CONNACK_ packet.
 #[derive(PartialEq, Debug, Clone)]
 pub struct Connect {
-    // Sorted
+    /// If set, the server will start a new session and drop any existing one
+    /// if any.
     pub clean_start: bool,
+
+    /// An optional user name to send to the server.
     pub user_name: Option<String>,
+
+    /// An option password to send to the server.
     pub password: Option<Vec<u8>>,
+
+    /// Specifies the maximum amount of time the client and the server may not
+    /// communicate with each other. This value is expressed in seconds.
+    /// If the server does not receive any packet from the client in one and 
+    /// a half times this interval, it will close the connection. Likewise, the
+    /// client will close the connection under the same condition. The default
+    /// keep alive value is `600` (10mn).
+    /// Not that the keep alive mechanism is deactivated if the value is `0`.
     pub keep_alive: u16,
+
+    /// Once the connection is closed, the client and server still keep the
+    /// session active during a certain amount of time expressed in seconds.
+    /// - If the value is `0` (default) the session ends when the connection is closed.
+    /// - If the value is `0xFFFFFFFF` the session never expires.
+    /// The client can override the session expiry interval within the
+    /// DISCONNECT packet.
     pub session_expiry_interval: u32,
+
+    /// This value sets the maximum number of _AtLeastOnce_ and _ExactlyOnce_
+    /// packets that should be processed concurrently.
+    /// There is no such limit for QoS `AtMostOnce` packets.
+    /// The default value is `65_535`
     pub receive_maximum: u16,
+
+    /// Defines the maximum size per packet the client is willing to receive 
+    /// from the server. It is a procotol error to send a packet which size 
+    /// exceeds this value and the client is expected to disconnect from the
+    /// server with a `PacketTooLarge` error.
+    /// This value cannot be `0`. Sending or receiving a CONNECT packet with a
+    /// `maximum_packet_size` of value `0` is a procotol error.
+    /// `maximum_packet_size` is `None` (default), there is no size limit.
     pub maximum_packet_size: Option<u32>,
+
+    /// Topic aliases are a way to reduce the size of packets by substituting
+    /// aliases (which are strings) to integer values.
+    /// The number of aliases allowed by the client from the server is defined
+    /// with the `topic_alias_maximum`. It can be `0`, meaning aliases are 
+    /// entirely disallowed.
     pub topic_alias_maximum: u16,
+
+    /// This flag can be set to ask the server to send back response information
+    /// that can be used as an hint by the client to determine a response topic
+    /// used in Request/Response type communication.
+    /// This is only an optional hint and the server is allowed not to send any
+    /// reponse information even if the value of the field is `true`.
+    /// By default, `request_response_information` is `false`.
     pub request_response_information: bool,
+
+    /// In any packet sent by the server that contains a `ReasonCode`, the 
+    /// latter can be described using a reason string or user properties. These
+    /// are called "problem information".
+    /// If `request_problem_information` is `true` the server is allowed to
+    /// sent problem information in any packet with a `ReasonCode`.
+    /// If `false` (default), the server is only allowed to send problem
+    /// information on `Publish`, `Connack` and `Disconnect` packets.
     pub request_problem_information: bool,
+
+    /// General purpose properties
+    /// By default, a Connect packet has no properties.
     pub user_properties: Vec<(String, String)>,
+
+    /// Define an `Authentication` structure to provide enhanced authentication.
+    /// By default, `authentication` is `None`, which means no or basic 
+    /// authentication using only `user_name` and `password`.
     pub authentication: Option<Authentication>,
+
+    /// The client id is an identifier that uniquely represents the client
+    /// from the server point of view. The client id is used to ensure `AtLeastOnce`
+    /// and `ExactlyOnce` qualities of service.
+    /// A client id is mandatory within a session. Yet, the `Connect` packet
+    /// may omit if by setting `client_id` to `None` (default). In that case
+    /// the id is created by the server and returns to the client with the 
+    /// `Connack`  packet.
     pub client_id: Option<String>,
+
+    /// The client's Last Will to send in case of ungraceful disconnection.
+    /// This is optional and default is `None`.
     pub will: Option<Will>,
 }
 
@@ -71,7 +168,7 @@ impl Default for Connect {
             clean_start: false,
             user_name: None,
             password: Default::default(),
-            keep_alive: 300,
+            keep_alive: 600,
             session_expiry_interval: DEFAULT_SESSION_EXPIRY_INTERVAL,
             receive_maximum: DEFAULT_RECEIVE_MAXIMUM,
             maximum_packet_size: None,
@@ -148,10 +245,11 @@ impl Connect {
         // Payload
         if let Some(client_id) = self.client_id {
             if client_id.len() > 23 || client_id.chars().any(|c| c < '0' || c > 'z') {
-            return Err(Error::MalformedPacket);
-        }
+                return Err(Error::MalformedPacket);
+            }
             n_bytes += client_id.write_utf8_string(writer)?;
-        } else { // Still write empty client id
+        } else {
+            // Still write empty client id
             n_bytes += "".write_utf8_string(writer)?;
         }
 
@@ -249,17 +347,16 @@ impl Connect {
 
         // Payload
         let client_id = {
-        let client_id = String::read_utf8_string(reader)?;
+            let client_id = String::read_utf8_string(reader)?;
             if client_id.is_empty() {
                 None
             } else {
-        if client_id.len() > 23 || client_id.chars().any(|c| c < '0' || c > 'z') {
-            return Err(Error::MalformedPacket);
-        }
-            Some(client_id)
-        }
+                if client_id.len() > 23 || client_id.chars().any(|c| c < '0' || c > 'z') {
+                    return Err(Error::MalformedPacket);
+                }
+                Some(client_id)
+            }
         };
-        
 
         let will = if flags.will {
             let mut decoder = PropertiesDecoder::take(reader)?;
