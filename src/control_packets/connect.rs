@@ -61,7 +61,7 @@ pub struct Connect {
     pub request_problem_information: bool,
     pub user_properties: Vec<(String, String)>,
     pub authentication: Option<Authentication>,
-    pub client_id: String,
+    pub client_id: Option<String>,
     pub will: Option<Will>,
 }
 
@@ -80,7 +80,7 @@ impl Default for Connect {
             request_problem_information: DEFAULT_REQUEST_PROBLEM_INFORMATION,
             user_properties: Default::default(),
             authentication: None,
-            client_id: Default::default(),
+            client_id: None,
             will: None,
         }
     }
@@ -146,10 +146,14 @@ impl Connect {
         writer.write_all(&properties)?;
 
         // Payload
-        if self.client_id.len() > 23 || self.client_id.chars().any(|c| c < '0' || c > 'z') {
+        if let Some(client_id) = self.client_id {
+            if client_id.len() > 23 || client_id.chars().any(|c| c < '0' || c > 'z') {
             return Err(Error::MalformedPacket);
         }
-        n_bytes += self.client_id.write_utf8_string(writer)?;
+            n_bytes += client_id.write_utf8_string(writer)?;
+        } else { // Still write empty client id
+            n_bytes += "".write_utf8_string(writer)?;
+        }
 
         if let Some(w) = self.will {
             let mut properties = Vec::new();
@@ -244,10 +248,18 @@ impl Connect {
         };
 
         // Payload
+        let client_id = {
         let client_id = String::read_utf8_string(reader)?;
+            if client_id.is_empty() {
+                None
+            } else {
         if client_id.len() > 23 || client_id.chars().any(|c| c < '0' || c > 'z') {
             return Err(Error::MalformedPacket);
         }
+            Some(client_id)
+        }
+        };
+        
 
         let will = if flags.will {
             let mut decoder = PropertiesDecoder::take(reader)?;
