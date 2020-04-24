@@ -2,6 +2,9 @@
 //! The library consists in pivot types, such as `UTF8String` that can be
 //! written to and read from a stream as well as converted to standard Rust
 //! types.
+#![warn(missing_docs)]
+#![warn(missing_doc_code_examples)]
+
 #[allow(unused_macros)]
 macro_rules! assert_matches {
     ($expression:expr, $( $pattern:pat )|+ $( if $guard: expr )?) => {
@@ -9,14 +12,12 @@ macro_rules! assert_matches {
     }
 }
 
-mod broker;
 mod codec;
 mod control_packets;
 mod error;
 mod quality_of_service;
 mod reason_code;
 
-pub use broker::Broker;
 use codec::{
     ReadBinaryData, ReadByte, ReadFourByteInteger, ReadTwoByteInteger, ReadUTF8String,
     ReadVariableByteInteger, WriteBinaryData, WriteByte, WriteFourByteInteger, WriteTwoByteInteger,
