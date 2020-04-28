@@ -24,7 +24,7 @@ impl Default for PubAck {
 }
 
 impl PubAck {
-    pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = self.packet_identifier.write_two_byte_integer(writer)?;
 
         let mut properties = Vec::new();
@@ -46,7 +46,7 @@ impl PubAck {
         }
     }
 
-    pub fn read<R: Read>(reader: &mut R, shortened: bool) -> SageResult<Self> {
+    pub(crate) fn read<R: Read>(reader: &mut R, shortened: bool) -> SageResult<Self> {
         let packet_identifier = u16::read_two_byte_integer(reader)?;
 
         let mut puback = PubAck {

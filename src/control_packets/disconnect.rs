@@ -26,7 +26,7 @@ impl Default for Disconnect {
 }
 
 impl Disconnect {
-    pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = self.reason_code.write_byte(writer)?;
 
         let mut properties = Vec::new();
@@ -50,7 +50,7 @@ impl Disconnect {
         Ok(n_bytes)
     }
 
-    pub fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
+    pub(crate) fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
         let reason_code =
             ReasonCode::try_parse(u8::read_byte(reader)?, ControlPacketType::DISCONNECT)?;
         let mut user_properties = Vec::new();

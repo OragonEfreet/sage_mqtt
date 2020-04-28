@@ -52,7 +52,7 @@ impl Default for ConnAck {
 }
 
 impl ConnAck {
-    pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = self.session_present.write_byte(writer)?;
         n_bytes += self.reason_code.write_byte(writer)?;
 
@@ -102,7 +102,7 @@ impl ConnAck {
         Ok(n_bytes)
     }
 
-    pub fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
+    pub(crate) fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
         let session_present = bool::read_byte(reader)?;
 
         let reason_code =

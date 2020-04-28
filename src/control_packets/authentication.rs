@@ -28,7 +28,7 @@ pub struct Authentication {
 }
 
 impl Authentication {
-    pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = Property::AuthenticationMethod(self.method).encode(writer)?;
         if !self.data.is_empty() {
             n_bytes += Property::AuthenticationData(self.data).encode(writer)?;

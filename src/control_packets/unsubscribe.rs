@@ -22,7 +22,7 @@ impl Default for UnSubscribe {
 }
 
 impl UnSubscribe {
-    pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = self.packet_identifier.write_two_byte_integer(writer)?;
 
         let mut properties = Vec::new();
@@ -39,7 +39,7 @@ impl UnSubscribe {
         Ok(n_bytes)
     }
 
-    pub fn read<R: Read>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
+    pub(crate) fn read<R: Read>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size as u64);
 
         let packet_identifier = u16::read_two_byte_integer(&mut reader)?;

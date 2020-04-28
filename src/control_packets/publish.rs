@@ -46,7 +46,7 @@ impl Default for Publish {
 }
 
 impl Publish {
-    pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = self.topic_name.write_utf8_string(writer)?;
 
         if self.qos != QoS::AtMostOnce {
@@ -89,7 +89,7 @@ impl Publish {
         Ok(n_bytes)
     }
 
-    pub fn read<R: Read>(
+    pub(crate) fn read<R: Read>(
         reader: &mut R,
         duplicate: bool,
         qos: QoS,

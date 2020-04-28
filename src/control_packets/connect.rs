@@ -227,7 +227,7 @@ impl Connect {
     /// In case of failure, the underlying system can raise a `std::io::Error`.
     /// If the data are not valid according to MQTT 5 specifications, the 
     /// function will return a `ProtocolError`.
-    pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         // Variable Header (into content)
         let mut n_bytes = "MQTT".write_utf8_string(writer)?;
         n_bytes += 0x05.write_byte(writer)?;
@@ -335,7 +335,7 @@ impl Connect {
     /// 
     /// The function can send a `ProtocolError` in case of invalid data or
     /// any `std::io::Error` returned by the underlying system.
-    pub fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
+    pub(crate) fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
         let protocol_name = String::read_utf8_string(reader)?;
         if protocol_name != "MQTT" {
             return Err(Error::MalformedPacket);
@@ -462,7 +462,7 @@ impl Connect {
 }
 
 impl ConnectFlags {
-    pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let bits = ((self.user_name as u8) << 7)
             | ((self.password as u8) << 6)
             | ((self.will_retain as u8) << 5)
@@ -472,7 +472,7 @@ impl ConnectFlags {
         bits.write_byte(writer)
     }
 
-    pub fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
+    pub(crate) fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
         let bits = u8::read_byte(reader)?;
 
         if bits & 0x01 != 0 {
