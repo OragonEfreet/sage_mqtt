@@ -4,10 +4,17 @@ use crate::{
 };
 use std::io::{Read, Write};
 
+/// An `Unsubscribe` packet is sent from the client to unsubsribe to a topic.
 #[derive(Debug, PartialEq, Clone)]
 pub struct UnSubscribe {
+    /// The packet identifier is used to identify the message throughout the
+    /// communication.
     pub packet_identifier: u16,
+
+    /// General purpose user-properties
     pub user_properties: Vec<(String, String)>,
+
+    /// The list of topics to unsubsribe to. They can contains wildcards.
     pub subscriptions: Vec<String>,
 }
 

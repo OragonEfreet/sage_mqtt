@@ -16,7 +16,7 @@ pub struct SubAck {
     pub user_properties: Vec<(String, String)>,
 
     /// The reason codes. The array contains one `ReasonCode` per subscription.
-    /// The indices in this array match the incides in the `Subscribe`'s 
+    /// The indices in this array match the incides in the `Subscribe`'s
     /// subscriptions array.
     pub reason_codes: Vec<ReasonCode>,
 }
