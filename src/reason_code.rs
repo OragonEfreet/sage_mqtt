@@ -1,57 +1,157 @@
 use crate::{ControlPacketType, Error, Result as SageResult, WriteByte};
 use std::io::Write;
 
+/// A `ReasonCode` is an identifier describing a response in any ackowledgement
+/// packet (such as `Connack` or `SubAck`)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ReasonCode {
+    /// Generic success reason code indicating an operation performed well.
     Success,
+
+    /// Used within a `Disconnect` packet to indicate the connection is normal
+    /// and the Last Will message should not be sent.
     NormalDisconnection,
+
+    /// The subscription is accepted and the maximum QoS sent will be QoS 0.
     GrantedQoS0,
+
+    /// The subscription is accepted and the maximum QoS sent will be QoS 1.
     GrantedQoS1,
+
+    /// The subscription is accepted and any received QoS will be sent..
     GrantedQoS2,
+
+    /// The client disconnects but want the last will to be sent anyways.
     DisconnectWithWillMessage,
+
+    /// The message is accepted but there are no subscribers.
     NoMatchingSubscribers,
+
+    /// No matching topic filter is being used by the client
     NoSubscriptionExisted,
+
+    /// Continue de authentication with another step
     ContinueAuthentication,
+
+    /// Initiate re-Authentication
     ReAuthenticate,
+
+    /// The server doesn't want or cannot describe the error
     UnspecifiedError,
+
+    /// The control packet cannot be parsed or is ill-formed
     MalformedPacket,
+
+    /// The control packet is well formed but invalid according to specifications.
     ProtocolError,
+
+    /// The operation is valid but not accepted by, the server
     ImplementationSpecificError,
+
+    /// The requested MQTT version is not supported
     UnsupportedProtocolVersion,
+
+    /// The client identifier is not valid
     ClientIdentifierNotValid,
+
+    /// The server does not accept the given user name or password
     BadUserNameOrPassword,
+
+    /// The operation is not permitted
     NotAuthorized,
+
+    /// The server is not available
     ServerUnavailable,
+
+    /// The server is busy
     ServerBusy,
+
+    /// The client is banned
     Banned,
+
+    /// The server is currently shutting down
     ServerShuttingDown,
+
+    /// The authentication method is not supported by the server
     BadAuthenticationMethod,
+
+    /// The connection is closed because not packet has been received for
+    /// 1.5 times the keep alive period.
     KeepAliveTimeout,
+
+    /// Another connection using the same client id has connected, causing this
+    /// connection to be closed.
     SessionTakenOver,
+
+    /// The topic filter is correctly formed but not accepted by the server.
     TopicFilterInvalid,
+
+    /// The topic name is correctly formed but not accepted by the server
     TopicNameInvalid,
+
+    /// The packet identifier is already in use. This might indicate a mismatch
+    /// in the session state between the client and the server.
     PacketIdentifierInUse,
+
+    /// The Packet Identifier is not known. This is not an error during
+    /// recovery, but at other times indicates a mismatch between the Session
+    /// State on the Client and Server.
     PacketIdentifierNotFound,
+
+    /// The Client or Server has received more than receive maximum.
     ReceiveMaximumExceeded,
+
+    /// The topic alias is invalid
     TopicAliasInvalid,
+
+    /// The packet size is greater than the maximum packet size fo rthis client
+    /// or server.
     PacketTooLarge,
+
+    /// The received data is too high
     MessageRateTooHigh,
+
+    /// An implementation or administrative limite has been exceeded
     QuotaExceeded,
+
+    /// The connection is closed due to an administrative action
     AdministrativeAction,
+
+    /// The payload format does not match the one indicated in the payload
+    /// format indicator.
     PayloadFormatInvalid,
+
+    /// The server does not support retain messages
     RetainNotSupported,
+
+    /// The client specified a QoS greater than the maximum indicated in the
+    /// `Connack` packet.
     QoSNotSupported,
+
+    /// The client should temporarily change its server.
     UseAnotherServer,
+
+    /// The client should permanently change its server.
     ServerMoved,
+
+    /// The server does not support shared subscriptions
     SharedSubscriptionsNotSupported,
+
+    /// The connection is closed because the connection rate is too high
     ConnectionRateExceeded,
+
+    /// The maximum connect time authorized for this connection has exceeded.
     MaximumConnectTime,
+
+    /// The server does no support subscription identifiers.
     SubscriptionIdentifiersNotSupported,
+
+    /// The server does not support wildcard subcriptions.
     WildcardSubscriptionsNotSupported,
 }
 
 impl ReasonCode {
-    pub fn try_parse(code: u8, packet_type: ControlPacketType) -> SageResult<Self> {
+    pub(crate) fn try_parse(code: u8, packet_type: ControlPacketType) -> SageResult<Self> {
         match (code, packet_type) {
             (0x00, ControlPacketType::CONNACK) => Ok(ReasonCode::Success),
             (0x00, ControlPacketType::PUBACK) => Ok(ReasonCode::Success),
