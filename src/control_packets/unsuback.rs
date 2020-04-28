@@ -4,11 +4,22 @@ use crate::{
 };
 use std::io::{Read, Write};
 
+/// An `UnSubAck` is sent by the server to acknowledge an unsubscribe request.
 #[derive(Debug, PartialEq, Clone)]
 pub struct UnSubAck {
+    /// The packet identifier is used to identify the message throughout the
+    /// communication
     pub packet_identifier: u16,
+
+    /// An optional description of the acknowledgement.
     pub reason_string: Option<String>,
+
+    /// General purpose user-defined properties
     pub user_properties: Vec<(String, String)>,
+
+    /// A list of reason codes ackowledging the unsubscribtion.
+    /// Each `ReasonCode` at a given index correspond to a unsubscribe request
+    /// from the `Unsubscribe` packet at the same index.
     pub reason_codes: Vec<ReasonCode>,
 }
 
