@@ -4,12 +4,59 @@ use crate::{
 };
 use std::io::{Read, Write};
 
+/// A `Disconnect` packet can be sent by the client or the server to gracefully
+/// disconnect.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Disconnect {
+    /// The reason code code the `Disconnect` notice.can be any of:
+    /// - Client or Server
+    ///   + `AdministrativeAction`
+    ///   + `ImplementationSpecificError`
+    ///   + `MalformedPacket`
+    ///   + `MessageRateTooHigh`
+    ///   + `NormalDisconnection`
+    ///   + `PacketTooLarge`
+    ///   + `PayloadFormatInvalid`
+    ///   + `ProtocolError`
+    ///   + `QuotaExceeded`
+    ///   + `ReceiveMaximumExceeded`
+    ///   + `TopicAliasInvalid`
+    ///   + `TopicNameInvalid`
+    ///   + `UnspecifiedError`
+    /// - Server Only
+    ///   + `ConnectionRateExceeded`
+    ///   + `KeepAliveTimeout`
+    ///   + `MaximumConnectTime`
+    ///   + `NotAuthorized`
+    ///   + `QoSNotSupported`
+    ///   + `RetainNotSupported`
+    ///   + `ServerBusy`
+    ///   + `ServerMoved`
+    ///   + `ServerShuttingDown`
+    ///   + `SessionTakenOver`
+    ///   + `SharedSubscriptionsNotSupported`
+    ///   + `SubscriptionIdentifiersNotSupported`
+    ///   + `TopicFilterInvalid`
+    ///   + `UseAnotherServer`
+    ///   + `WildcardSubscriptionsNotSupported`
+    /// - Client Only
+    ///   + `DisconnectWithWillMessage`
     pub reason_code: ReasonCode,
+
+    /// `session_expiry_interval` can be used to override the session expiry
+    /// period formerly set upon connection. If not present, the session expiry
+    /// interval value set using `Connect` or `Connack` is still in use.
     pub session_expiry_interval: Option<u32>,
+
+    /// An optional descriptin of the reason for deconnecting.
     pub reason_string: Option<String>,
+
+    /// General purpose user properties.
     pub user_properties: Vec<(String, String)>,
+
+    /// If the reason code is `ServerMoved` or `UserAnotherServer`, the
+    /// `reference` field is used to inform the client about why new server to
+    /// connect to instead.
     pub reference: Option<String>,
 }
 
