@@ -315,7 +315,6 @@ impl Property {
             }
             Property::MaximumQoS(v) => match v {
                 DEFAULT_MAXIMUM_QOS => Ok(0),
-                QoS::ExactlyOnce => Err(Error::ProtocolError),
                 _ => {
                     let n_bytes = PropertyId::MaximumQoS.write_variable_byte_integer(writer)?;
                     Ok(n_bytes + v.write_byte(writer)?)
