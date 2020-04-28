@@ -276,6 +276,9 @@ impl Connect {
             n_bytes += properties.len().write_variable_byte_integer(writer)?;
             writer.write_all(&properties)?;
 
+            if w.topic.is_empty() {
+                return Err(Error::ProtocolError);
+            }
             n_bytes += w.topic.write_utf8_string(writer)?;
             n_bytes += w.payload.write_binary_data(writer)?;
         }
@@ -377,6 +380,9 @@ impl Connect {
                 }
             }
             w.topic = String::read_utf8_string(reader)?;
+            if w.topic.is_empty() {
+                return Err(Error::ProtocolError);
+            }
             w.payload = Vec::read_binary_data(reader)?;
             Some(w)
         } else {
@@ -452,7 +458,7 @@ mod unit_connect {
 
     fn encoded() -> Vec<u8> {
         vec![
-            0, 4, 77, 81, 84, 84, 5, 206, 0, 10, 5, 17, 0, 0, 0, 10, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 6, 87, 105, 108, 108, 111, 119, 0, 5, 74, 97, 100, 101, 110,
+            0, 4, 77, 81, 84, 84, 5, 206, 0, 10, 5, 17, 0, 0, 0, 10, 0, 0, 3, 3, 0, 0, 0, 6, 67, 108, 111, 90, 101, 101, 0, 0, 0, 6, 87, 105, 108, 108, 111, 119, 0, 5, 74, 97, 100, 101, 110,
         ]
     }
 
@@ -468,6 +474,7 @@ mod unit_connect {
             password: Some("Jaden".into()),
             will: Some(Will {
                 qos: QoS::AtLeastOnce,
+                topic: "CloZee".into(),
                 ..Default::default()
             }),
             ..Default::default()
@@ -481,7 +488,7 @@ mod unit_connect {
 
         let n_bytes = test_data.write(&mut tested_result).unwrap();
         assert_eq!(tested_result, encoded());
-        assert_eq!(n_bytes, 41);
+        assert_eq!(n_bytes, 47);
     }
 
     #[test]

@@ -11,6 +11,7 @@ fn main() {
         password: Some("Jaden".into()),
         will: Some(Will {
             qos: QoS::AtLeastOnce,
+            topic: "CloZee".into(),
             ..Default::default()
         }),
         ..Default::default()
