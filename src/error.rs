@@ -38,8 +38,6 @@ pub enum Error {
 
     /// 0xA2: Wildcard Subscriptions not supported
     WildcardSubscriptionsNotSupported,
-
-    DebugMarker(String),
 }
 
 impl Display for Error {
@@ -61,7 +59,6 @@ impl Display for Error {
             Error::WildcardSubscriptionsNotSupported => {
                 write!(f, "Wildcard Subscriptions not supported")
             }
-            Error::DebugMarker(what) => write!(f, "DBG: {}", what),
         }
     }
 }
