@@ -15,21 +15,47 @@ use std::{
 /// connection to the server. This ungraceful disconnect can be notified
 /// to every other clients by specifying a Last Will message that is given
 /// upon connection.
-/// When a server ungracefully disconnect from a server (when the keep alive
-/// is reached), the server will publish the Last Will message.
+/// When a client ungracefully disconnect from a server (when the keep alive
+/// is reached), the server will publish the Last Will message to anyone
+/// subscribed to its topic.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Will {
-    // Sorted
+    /// The quality of service for the will message. 
     pub qos: QoS,
+
+    /// If the message is to be retained. A retain message is kept
+    /// in memory by a broker (one per topic) to sent to future subscriptions.
     pub retain: bool,
+
+    /// Delay in seconds the broket will wait after a deconnction before
+    /// publishing the will message. The will message can also be published
+    /// at session expires if it happens first.
     pub delay_interval: u32,
+
+    /// If true, the will message will be a valid UTF-8 encoded string. If not
+    /// the will message can be anything, even a unicorn.
     pub payload_format_indicator: bool,
+
+    /// Corresponds to the expiry interval of the `Publish` message sent.
     pub message_expiry_interval: Option<u32>,
+
+    /// Described the type of content of the payload. Is generally a MIME 
+    /// descriptor.
     pub content_type: String,
+
+    /// Optional topic used as response if the Will message is a request.
     pub response_topic: Option<String>,
+
+    /// Optional correlation optionaly used if the Will message is a request.
     pub correlation_data: Option<Vec<u8>>,
+
+    /// General purpose properties
     pub user_properties: Vec<(String, String)>,
+
+    /// The Last Will Topic. Cannot be empty.
     pub topic: String,
+
+    /// The last will payload.
     pub payload: Vec<u8>,
 }
 
@@ -193,6 +219,14 @@ struct ConnectFlags {
 }
 
 impl Connect {
+    /// Encodes the variable header and payload of the `Connect` packet into
+    /// `w`, returning the number of bytes written in case of success.
+    /// This function does not encode the fixed header part. To generate a
+    /// full write, use `ControlPacket`.
+    /// 
+    /// In case of failure, the underlying system can raise a `std::io::Error`.
+    /// If the data are not valid according to MQTT 5 specifications, the 
+    /// function will return a `ProtocolError`.
     pub fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         // Variable Header (into content)
         let mut n_bytes = "MQTT".write_utf8_string(writer)?;
@@ -294,6 +328,13 @@ impl Connect {
         Ok(n_bytes)
     }
 
+    /// Reads the variable header and payload part of a connect packet from `reader`
+    /// and returns a `Connect` in case of success.
+    /// This function does not read the fixed header part of the packet, which
+    /// is read using `ControlPacket`.
+    /// 
+    /// The function can send a `ProtocolError` in case of invalid data or
+    /// any `std::io::Error` returned by the underlying system.
     pub fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
         let protocol_name = String::read_utf8_string(reader)?;
         if protocol_name != "MQTT" {
