@@ -40,7 +40,7 @@ pub enum Property {
     UserProperty(String, String),
     MaximumPacketSize(u32),
     WildcardSubscriptionAvailable(bool),
-    SubscriptionIdentifierAvailable(bool),
+    SubscriptionIdentifiersAvailable(bool),
     SharedSubscriptionAvailable(bool),
 }
 
@@ -154,7 +154,15 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
                 u16::read_two_byte_integer(reader)?,
             )),
             PropertyId::TopicAlias => Ok(Property::TopicAlias(u16::read_two_byte_integer(reader)?)),
-            PropertyId::MaximumQoS => Ok(Property::MaximumQoS(QoS::read_byte(reader)?)),
+            PropertyId::MaximumQoS => {
+                let qos = QoS::read_byte(reader)?;
+                if qos == QoS::ExactlyOnce {
+                    Err(Error::ProtocolError)
+                } else {
+                    Ok(Property::MaximumQoS(qos))
+
+                }
+            },
             PropertyId::RetainAvailable => Ok(Property::RetainAvailable(bool::read_byte(reader)?)),
             PropertyId::UserProperty => Ok(Property::UserProperty(
                 String::read_utf8_string(reader)?,
@@ -166,8 +174,8 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             PropertyId::WildcardSubscriptionAvailable => Ok(
                 Property::WildcardSubscriptionAvailable(bool::read_byte(reader)?),
             ),
-            PropertyId::SubscriptionIdentifierAvailable => Ok(
-                Property::SubscriptionIdentifierAvailable(bool::read_byte(reader)?),
+            PropertyId::SubscriptionIdentifiersAvailable => Ok(
+                Property::SubscriptionIdentifiersAvailable(bool::read_byte(reader)?),
             ),
             PropertyId::SharedSubscriptionAvailable => Ok(Property::SharedSubscriptionAvailable(
                 bool::read_byte(reader)?,
@@ -307,11 +315,13 @@ impl Property {
                 Ok(n_bytes + v.write_two_byte_integer(writer)?)
             }
             Property::MaximumQoS(v) => {
-                if v != DEFAULT_MAXIMUM_QOS {
-                    let n_bytes = PropertyId::MaximumQoS.write_variable_byte_integer(writer)?;
-                    Ok(n_bytes + v.write_byte(writer)?)
-                } else {
-                    Ok(0)
+                match v {
+                    DEFAULT_MAXIMUM_QOS => Ok(0),
+                    QoS::ExactlyOnce => Err(Error::ProtocolError),
+                    _ => {
+                        let n_bytes = PropertyId::MaximumQoS.write_variable_byte_integer(writer)?;
+                        Ok(n_bytes + v.write_byte(writer)?)
+                    }
                 }
             }
             Property::RetainAvailable(v) => {
@@ -341,8 +351,8 @@ impl Property {
                     Ok(0)
                 }
             }
-            Property::SubscriptionIdentifierAvailable(v) => {
-                let n_bytes = PropertyId::SubscriptionIdentifierAvailable
+            Property::SubscriptionIdentifiersAvailable(v) => {
+                let n_bytes = PropertyId::SubscriptionIdentifiersAvailable
                     .write_variable_byte_integer(writer)?;
                 Ok(n_bytes + v.write_byte(writer)?)
             }

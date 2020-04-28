@@ -2,7 +2,7 @@ use crate::{
     Authentication, ControlPacketType, Error, PropertiesDecoder, Property, QoS, ReadByte,
     ReasonCode, Result as SageResult, WriteByte, WriteVariableByteInteger, DEFAULT_MAXIMUM_QOS,
     DEFAULT_RECEIVE_MAXIMUM, DEFAULT_RETAIN_AVAILABLE, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
+    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE,
 };
 use std::io::{Read, Write};
 
@@ -20,6 +20,7 @@ pub struct ConnAck {
     pub reason_string: String,
     pub user_properties: Vec<(String, String)>,
     pub wildcard_subscription_available: bool,
+    pub subscription_identifiers_available: bool,
     pub shared_subscription_available: bool,
     pub keep_alive: Option<u16>,
     pub response_information: String,
@@ -42,6 +43,7 @@ impl Default for ConnAck {
             reason_string: Default::default(),
             user_properties: Default::default(),
             wildcard_subscription_available: DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
+            subscription_identifiers_available: DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE,
             shared_subscription_available: DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
             keep_alive: None,
             response_information: Default::default(),
@@ -118,6 +120,7 @@ impl ConnAck {
         let mut reason_string = Default::default();
         let mut user_properties = Vec::new();
         let mut wildcard_subscription_available = DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE;
+        let mut subscription_identifiers_available = DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE;
         let mut shared_subscription_available = DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE;
         let mut keep_alive = None;
         let mut response_information = Default::default();
@@ -138,6 +141,7 @@ impl ConnAck {
                 Property::ReasonString(v) => reason_string = v,
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
                 Property::WildcardSubscriptionAvailable(v) => wildcard_subscription_available = v,
+                Property::SubscriptionIdentifiersAvailable(v) => subscription_identifiers_available = v,
                 Property::SharedSubscriptionAvailable(v) => shared_subscription_available = v,
                 Property::ServerKeepAlive(v) => keep_alive = Some(v),
                 Property::ResponseInformation(v) => response_information = v,
@@ -173,6 +177,7 @@ impl ConnAck {
             reason_string,
             user_properties,
             wildcard_subscription_available,
+            subscription_identifiers_available,
             shared_subscription_available,
             keep_alive,
             response_information,
@@ -190,12 +195,7 @@ mod unit {
 
     fn encoded() -> Vec<u8> {
         vec![
-            1, 138, 109, 17, 0, 0, 5, 57, 33, 0, 30, 36, 1, 37, 0, 39, 0, 0, 1, 0, 18, 0, 11, 87,
-            97, 108, 107, 84, 104, 105, 115, 87, 97, 121, 34, 0, 10, 31, 0, 7, 82, 85, 78, 45, 68,
-            77, 67, 38, 0, 7, 77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116, 40, 0, 19, 0, 17,
-            26, 0, 9, 65, 101, 114, 111, 115, 109, 105, 116, 104, 28, 0, 14, 80, 97, 105, 110, 116,
-            32, 73, 116, 32, 66, 108, 97, 99, 107, 21, 0, 6, 87, 105, 108, 108, 111, 119, 22, 0, 4,
-            13, 21, 234, 94,
+            1, 138, 111, 17, 0, 0, 5, 57, 33, 0, 30, 36, 1, 37, 0, 39, 0, 0, 1, 0, 18, 0, 11, 87, 97, 108, 107, 84, 104, 105, 115, 87, 97, 121, 34, 0, 10, 31, 0, 7, 82, 85, 78, 45, 68, 77, 67, 38, 0, 7, 77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116, 40, 0, 42, 0, 19, 0, 17, 26, 0, 9, 65, 101, 114, 111, 115, 109, 105, 116, 104, 28, 0, 14, 80, 97, 105, 110, 116, 32, 73, 116, 32, 66, 108, 97, 99, 107, 21, 0, 6, 87, 105, 108, 108, 111, 119, 22, 0, 4, 13, 21, 234, 94,
         ]
     }
 
@@ -213,7 +213,8 @@ mod unit {
             reason_string: "RUN-DMC".into(),
             user_properties: vec![("Mogwaï".into(), "Cat".into())],
             wildcard_subscription_available: false,
-            shared_subscription_available: true,
+            subscription_identifiers_available: true,
+            shared_subscription_available: false,
             keep_alive: Some(17),
             response_information: "Aerosmith".into(),
             reference: Some("Paint It Black".into()),
@@ -230,7 +231,7 @@ mod unit {
         let mut tested_result = Vec::new();
         let n_bytes = test_data.write(&mut tested_result).unwrap();
         assert_eq!(tested_result, encoded());
-        assert_eq!(n_bytes, 112);
+        assert_eq!(n_bytes, 114);
     }
 
     #[test]

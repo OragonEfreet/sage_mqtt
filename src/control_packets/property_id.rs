@@ -28,7 +28,7 @@ pub enum PropertyId {
     UserProperty = 0x26,
     MaximumPacketSize = 0x27,
     WildcardSubscriptionAvailable = 0x28,
-    SubscriptionIdentifierAvailable = 0x29,
+    SubscriptionIdentifiersAvailable = 0x29,
     SharedSubscriptionAvailable = 0x2A,
 }
 
@@ -66,7 +66,7 @@ impl ReadVariableByteInteger for PropertyId {
             0x26 => Ok(PropertyId::UserProperty),
             0x27 => Ok(PropertyId::MaximumPacketSize),
             0x28 => Ok(PropertyId::WildcardSubscriptionAvailable),
-            0x29 => Ok(PropertyId::SubscriptionIdentifierAvailable),
+            0x29 => Ok(PropertyId::SubscriptionIdentifiersAvailable),
             0x2A => Ok(PropertyId::SharedSubscriptionAvailable),
             _ => Err(Error::ProtocolError),
         }
