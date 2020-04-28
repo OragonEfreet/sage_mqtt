@@ -4,26 +4,60 @@ use crate::{
 };
 use std::io::{Read, Write};
 
+/// The standard type to manipulate a Read/Write-able MQTT packet. Each packet
+/// is an enum value with its own type.
 #[derive(Debug, Clone)]
 pub enum ControlPacket {
+    /// CONNECT MQTT packet. Opens a connection request.
     Connect(Connect),
+    /// CONNACK MQTT packet. Aknowledge a connectio request.
     ConnAck(ConnAck),
+
+    /// PUBLISH MQTT packet. Delivery a message to or from a server.
     Publish(Publish),
+
+    /// PUBACK MQTT packet. Ackowledge a QoS 1 or QoS 2 message.
     PubAck(PubAck),
+
+    /// PUBREC MQTT packet. Ackowledge a QoS 2 message.
     PubRec(PubRec),
+
+    /// PUBREL MQTT packet. Ackowledge a QoS 2 message.
     PubRel(PubRel),
+
+    /// PUBCOMP MQTT packet. Ackowledge a QoS 2 message.
     PubComp(PubComp),
+
+    /// SUBSCRIBE MQTT packet. Subscribe a client to topics.
     Subscribe(Subscribe),
+
+    /// SUBACK MQTT packet. Acknowledge a client SUBSCRIBE packet.
     SubAck(SubAck),
+
+    /// UNSUBSCRIBE MQTT packet. Unsubscribe a client from topics.
     UnSubscribe(UnSubscribe),
+
+    /// UNSUBACK MQTT packet. Acknowledge a client UNSUBSCRIBE packet.
     UnSubAck(UnSubAck),
+
+    /// PINGREQ MQTT packet. Send a ping request.
     PingReq,
+
+    /// PINGRESP MQTT packet. Respond to a ping request.
     PingResp,
+
+    /// DISCONNECT MQTT packet. Disconnect a connextion and optionally a session.
     Disconnect(Disconnect),
+
+    /// AUTH MQTT packet. Performs authentication exchanges between clients and server.
     Auth(Auth),
 }
 
 impl ControlPacket {
+    /// Writes the entire `ControlPacket` to `writer`, returning the number of
+    /// bytes written.
+    /// In case of failure, the operation will return any MQTT-related error, or
+    /// `std::io::Error`.
     pub fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut variable_and_payload = Vec::new();
         let (packet_type, remaining_size) = match self {
@@ -102,6 +136,9 @@ impl ControlPacket {
         Ok(fixed_size)
     }
 
+    /// Reads a control packet from `reader`, returning a new `ControlPacket`.
+    /// In case of failure, the operation will return any MQTT-related error, or
+    /// `std::io::Error`.
     pub fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
         let fixed_header = FixedHeader::decode(reader)?;
 
