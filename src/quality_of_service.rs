@@ -4,7 +4,7 @@ use std::{
     io::{Read, Write},
 };
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Eq)]
 pub enum QoS {
     AtMostOnce = 0x00,
     AtLeastOnce = 0x01,
