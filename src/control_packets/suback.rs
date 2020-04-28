@@ -4,10 +4,20 @@ use crate::{
 };
 use std::io::{Read, Write};
 
+/// The `SubAck` packet is sent by a server to confirm a `Subscribe` has been
+/// received and processed.
 #[derive(Debug, PartialEq, Clone)]
 pub struct SubAck {
+    /// The packet identifier is used to identify the message throughout the
+    /// communication.
     pub packet_identifier: u16,
+
+    /// User defined properties
     pub user_properties: Vec<(String, String)>,
+
+    /// The reason codes. The array contains one `ReasonCode` per subscription.
+    /// The indices in this array match the incides in the `Subscribe`'s 
+    /// subscriptions array.
     pub reason_codes: Vec<ReasonCode>,
 }
 
