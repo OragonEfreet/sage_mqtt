@@ -4,11 +4,30 @@ use crate::{
 };
 use std::io::{Read, Write};
 
+/// A `PubAck` is the response for a `Publish` message with `AtLeastOnce` as
+/// quality of service.
 #[derive(Debug, PartialEq, Clone)]
 pub struct PubAck {
+    /// The packet identifier is used to identify the message throughout the
+    /// communication.
     pub packet_identifier: u16,
+
+    /// The reason code for the acknowledgement. Can be any of:
+    /// - `Success`
+    /// - `NoMatchingSubscribers`
+    /// - `UnspecifiedError`
+    /// - `ImplementationSpecificError`
+    /// - `NotAuthorized`
+    /// - `TopicNameInvalid`
+    /// - `PacketIdentifierInUse`
+    /// - `QuotaExceeded`
+    /// - `PayloadFormatInvalid`
     pub reason_code: ReasonCode,
+
+    /// If available, the reason string describing the acknowledgement.
     pub reason_string: Option<String>,
+
+    /// General purpose user properties
     pub user_properties: Vec<(String, String)>,
 }
 
