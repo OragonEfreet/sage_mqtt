@@ -2,29 +2,97 @@ use crate::{
     Authentication, ControlPacketType, Error, PropertiesDecoder, Property, QoS, ReadByte,
     ReasonCode, Result as SageResult, WriteByte, WriteVariableByteInteger, DEFAULT_MAXIMUM_QOS,
     DEFAULT_RECEIVE_MAXIMUM, DEFAULT_RETAIN_AVAILABLE, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE,
+    DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
+    DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
 };
 use std::io::{Read, Write};
 
+/// The `Connack` message is sent from the server to the client to acknowledge
+/// the connection request. This can be the direct response to a `Connect`
+/// message or the closing exchange of `Auth` packets.
 #[derive(PartialEq, Debug, Clone)]
 pub struct ConnAck {
+    /// If the `session_present` is true, the connection is accepted using a
+    /// previously and unexpired session.
     pub session_present: bool,
+
+    /// The reason code for the connect acknowledgement.
+    /// - `Success`
+    /// - `UnspecifiedError`
+    /// - `MalformedPacket`
+    /// - `ProtocolError`
+    /// - `ImplementationSpecificError`
+    /// - `UnsupportedProtocolVersion`
+    /// - `ClientIdentifierNotValid`
+    /// - `BadUserNameOrPassword`
+    /// - `NotAuthorized`
+    /// - `ServerUnavailable`
+    /// - `ServerBusy`
     pub reason_code: ReasonCode,
+
+    /// The session expiry interval the server will use. If absent the server
+    /// simply accepted the value sent by the server in the `Connect` packet.
     pub session_expiry_interval: Option<u32>,
+
+    /// The maximum number of `AtLeastOnce` and `ExactlyOnce` qualities of
+    /// service the server will concurrently treat for the client.
     pub receive_maximum: u16,
+
+    /// The maximum quality of service the server is willing to accept.
+    /// This value cannot be `ExactlyOnce`. Any server receiving a message
+    /// with QoS higher than it's maximum is expected to close the connection.
     pub maximum_qos: QoS,
+
+    /// `true` if the server supports retaining messages. `false` otherwise.
+    /// Sending retain messages (including Last Will) to a server which does not
+    /// support this feature will resulting in a disconnection.
     pub retain_available: bool,
+
+    /// The maximum size in bytes the server is willing to accept. This value
+    /// cannot be `0`. If absent there is not maximum packet size.
     pub maximum_packet_size: Option<u32>,
+
+    /// If the `Connect` packet did not have any client id, the server will
+    /// send one using `assigned_client_id`.
     pub assigned_client_id: Option<String>,
+
+    /// The maximum value the server will accept as topic alias. If `0` the
+    /// server does not accept topic aliases.
     pub topic_alias_maximum: u16,
+
+    /// A human readable reason string used to describe the connack. This field
+    /// is optional.
     pub reason_string: String,
+
+    /// General purpose user properties.
     pub user_properties: Vec<(String, String)>,
+
+    /// If `true`, the server accepts subscribing to topics using wildcards.
     pub wildcard_subscription_available: bool,
+
+    /// If `true`, the server accepts subscription identifiers.
     pub subscription_identifiers_available: bool,
+
+    /// If `true`, the server accepts shared subscriptions.
     pub shared_subscription_available: bool,
+
+    /// The server can override the keep alive value requested by the client
+    /// upon `Connect`.
     pub keep_alive: Option<u16>,
+
+    /// If the client asked for response information, the server may send it
+    /// in `response_information`.
+    /// The response information can be used by the client as an hint to
+    /// generate reponse topic when making Request/Reponse messages.
     pub response_information: String,
+
+    /// If the reason code is `ServerMoved` or `UserAnotherServer`, the
+    /// `reference` field is used to inform the client about why new server to
+    /// connect to instead.
     pub reference: Option<String>,
+
+    /// Upon using enhanced connexion, ending the `Auth` exchange will result in
+    /// a `ConnAck` packet which may contain `Authentication` data.
     pub authentication: Option<Authentication>,
 }
 
@@ -141,7 +209,9 @@ impl ConnAck {
                 Property::ReasonString(v) => reason_string = v,
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
                 Property::WildcardSubscriptionAvailable(v) => wildcard_subscription_available = v,
-                Property::SubscriptionIdentifiersAvailable(v) => subscription_identifiers_available = v,
+                Property::SubscriptionIdentifiersAvailable(v) => {
+                    subscription_identifiers_available = v
+                }
                 Property::SharedSubscriptionAvailable(v) => shared_subscription_available = v,
                 Property::ServerKeepAlive(v) => keep_alive = Some(v),
                 Property::ResponseInformation(v) => response_information = v,
@@ -195,7 +265,12 @@ mod unit {
 
     fn encoded() -> Vec<u8> {
         vec![
-            1, 138, 111, 17, 0, 0, 5, 57, 33, 0, 30, 36, 1, 37, 0, 39, 0, 0, 1, 0, 18, 0, 11, 87, 97, 108, 107, 84, 104, 105, 115, 87, 97, 121, 34, 0, 10, 31, 0, 7, 82, 85, 78, 45, 68, 77, 67, 38, 0, 7, 77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116, 40, 0, 42, 0, 19, 0, 17, 26, 0, 9, 65, 101, 114, 111, 115, 109, 105, 116, 104, 28, 0, 14, 80, 97, 105, 110, 116, 32, 73, 116, 32, 66, 108, 97, 99, 107, 21, 0, 6, 87, 105, 108, 108, 111, 119, 22, 0, 4, 13, 21, 234, 94,
+            1, 138, 111, 17, 0, 0, 5, 57, 33, 0, 30, 36, 1, 37, 0, 39, 0, 0, 1, 0, 18, 0, 11, 87,
+            97, 108, 107, 84, 104, 105, 115, 87, 97, 121, 34, 0, 10, 31, 0, 7, 82, 85, 78, 45, 68,
+            77, 67, 38, 0, 7, 77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116, 40, 0, 42, 0, 19,
+            0, 17, 26, 0, 9, 65, 101, 114, 111, 115, 109, 105, 116, 104, 28, 0, 14, 80, 97, 105,
+            110, 116, 32, 73, 116, 32, 66, 108, 97, 99, 107, 21, 0, 6, 87, 105, 108, 108, 111, 119,
+            22, 0, 4, 13, 21, 234, 94,
         ]
     }
 
