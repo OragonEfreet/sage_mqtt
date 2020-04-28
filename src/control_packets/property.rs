@@ -160,9 +160,8 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
                     Err(Error::ProtocolError)
                 } else {
                     Ok(Property::MaximumQoS(qos))
-
                 }
-            },
+            }
             PropertyId::RetainAvailable => Ok(Property::RetainAvailable(bool::read_byte(reader)?)),
             PropertyId::UserProperty => Ok(Property::UserProperty(
                 String::read_utf8_string(reader)?,
@@ -314,16 +313,14 @@ impl Property {
                 let n_bytes = PropertyId::TopicAlias.write_variable_byte_integer(writer)?;
                 Ok(n_bytes + v.write_two_byte_integer(writer)?)
             }
-            Property::MaximumQoS(v) => {
-                match v {
-                    DEFAULT_MAXIMUM_QOS => Ok(0),
-                    QoS::ExactlyOnce => Err(Error::ProtocolError),
-                    _ => {
-                        let n_bytes = PropertyId::MaximumQoS.write_variable_byte_integer(writer)?;
-                        Ok(n_bytes + v.write_byte(writer)?)
-                    }
+            Property::MaximumQoS(v) => match v {
+                DEFAULT_MAXIMUM_QOS => Ok(0),
+                QoS::ExactlyOnce => Err(Error::ProtocolError),
+                _ => {
+                    let n_bytes = PropertyId::MaximumQoS.write_variable_byte_integer(writer)?;
+                    Ok(n_bytes + v.write_byte(writer)?)
                 }
-            }
+            },
             Property::RetainAvailable(v) => {
                 if v != DEFAULT_RETAIN_AVAILABLE {
                     let n_bytes =

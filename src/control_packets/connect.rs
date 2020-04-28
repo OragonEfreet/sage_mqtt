@@ -20,7 +20,7 @@ use std::{
 /// subscribed to its topic.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Will {
-    /// The quality of service for the will message. 
+    /// The quality of service for the will message.
     pub qos: QoS,
 
     /// If the message is to be retained. A retain message is kept
@@ -39,7 +39,7 @@ pub struct Will {
     /// Corresponds to the expiry interval of the `Publish` message sent.
     pub message_expiry_interval: Option<u32>,
 
-    /// Described the type of content of the payload. Is generally a MIME 
+    /// Described the type of content of the payload. Is generally a MIME
     /// descriptor.
     pub content_type: String,
 
@@ -111,7 +111,7 @@ pub struct Connect {
 
     /// Specifies the maximum amount of time the client and the server may not
     /// communicate with each other. This value is expressed in seconds.
-    /// If the server does not receive any packet from the client in one and 
+    /// If the server does not receive any packet from the client in one and
     /// a half times this interval, it will close the connection. Likewise, the
     /// client will close the connection under the same condition. The default
     /// keep alive value is `600` (10mn).
@@ -132,8 +132,8 @@ pub struct Connect {
     /// The default value is `65_535`
     pub receive_maximum: u16,
 
-    /// Defines the maximum size per packet the client is willing to receive 
-    /// from the server. It is a procotol error to send a packet which size 
+    /// Defines the maximum size per packet the client is willing to receive
+    /// from the server. It is a procotol error to send a packet which size
     /// exceeds this value and the client is expected to disconnect from the
     /// server with a `PacketTooLarge` error.
     /// This value cannot be `0`. Sending or receiving a CONNECT packet with a
@@ -144,7 +144,7 @@ pub struct Connect {
     /// Topic aliases are a way to reduce the size of packets by substituting
     /// aliases (which are strings) to integer values.
     /// The number of aliases allowed by the client from the server is defined
-    /// with the `topic_alias_maximum`. It can be `0`, meaning aliases are 
+    /// with the `topic_alias_maximum`. It can be `0`, meaning aliases are
     /// entirely disallowed.
     pub topic_alias_maximum: u16,
 
@@ -156,7 +156,7 @@ pub struct Connect {
     /// By default, `request_response_information` is `false`.
     pub request_response_information: bool,
 
-    /// In any packet sent by the server that contains a `ReasonCode`, the 
+    /// In any packet sent by the server that contains a `ReasonCode`, the
     /// latter can be described using a reason string or user properties. These
     /// are called "problem information".
     /// If `request_problem_information` is `true` the server is allowed to
@@ -170,7 +170,7 @@ pub struct Connect {
     pub user_properties: Vec<(String, String)>,
 
     /// Define an `Authentication` structure to provide enhanced authentication.
-    /// By default, `authentication` is `None`, which means no or basic 
+    /// By default, `authentication` is `None`, which means no or basic
     /// authentication using only `user_name` and `password`.
     pub authentication: Option<Authentication>,
 
@@ -179,7 +179,7 @@ pub struct Connect {
     /// and `ExactlyOnce` qualities of service.
     /// A client id is mandatory within a session. Yet, the `Connect` packet
     /// may omit if by setting `client_id` to `None` (default). In that case
-    /// the id is created by the server and returns to the client with the 
+    /// the id is created by the server and returns to the client with the
     /// `Connack`  packet.
     pub client_id: Option<String>,
 
@@ -223,9 +223,9 @@ impl Connect {
     /// `w`, returning the number of bytes written in case of success.
     /// This function does not encode the fixed header part. To generate a
     /// full write, use `ControlPacket`.
-    /// 
+    ///
     /// In case of failure, the underlying system can raise a `std::io::Error`.
-    /// If the data are not valid according to MQTT 5 specifications, the 
+    /// If the data are not valid according to MQTT 5 specifications, the
     /// function will return a `ProtocolError`.
     pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         // Variable Header (into content)
@@ -332,7 +332,7 @@ impl Connect {
     /// and returns a `Connect` in case of success.
     /// This function does not read the fixed header part of the packet, which
     /// is read using `ControlPacket`.
-    /// 
+    ///
     /// The function can send a `ProtocolError` in case of invalid data or
     /// any `std::io::Error` returned by the underlying system.
     pub(crate) fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
@@ -499,7 +499,9 @@ mod unit_connect {
 
     fn encoded() -> Vec<u8> {
         vec![
-            0, 4, 77, 81, 84, 84, 5, 206, 0, 10, 5, 17, 0, 0, 0, 10, 0, 0, 3, 3, 0, 0, 0, 6, 67, 108, 111, 90, 101, 101, 0, 0, 0, 6, 87, 105, 108, 108, 111, 119, 0, 5, 74, 97, 100, 101, 110,
+            0, 4, 77, 81, 84, 84, 5, 206, 0, 10, 5, 17, 0, 0, 0, 10, 0, 0, 3, 3, 0, 0, 0, 6, 67,
+            108, 111, 90, 101, 101, 0, 0, 0, 6, 87, 105, 108, 108, 111, 119, 0, 5, 74, 97, 100,
+            101, 110,
         ]
     }
 

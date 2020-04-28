@@ -9,7 +9,7 @@ use std::io::Write;
 /// `ContinueAuthentication` until eventually one is send with either `Success`
 /// or any relevant error code and, in that case, close the connection.
 /// The authentication method which is used as an agreement on how authentication
-/// exchanges will perform. Authentication data can be sent at any moment 
+/// exchanges will perform. Authentication data can be sent at any moment
 /// according to this agreement.
 /// See the section 4.12 (Enhanced Authentication) of the MQTT 5 specifications
 /// for examples.
@@ -22,7 +22,7 @@ pub struct Authentication {
     /// `BadAuthenticationMethod` and close the connection.
     pub method: String,
 
-    /// Authentication may contains data. The content depends on the 
+    /// Authentication may contains data. The content depends on the
     /// authentication method.
     pub data: Vec<u8>,
 }

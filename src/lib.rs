@@ -25,15 +25,16 @@ use codec::{
 };
 pub use control_packets::{
     Auth, Authentication, ConnAck, Connect, ControlPacket, Disconnect, PubAck, PubComp, PubRec,
-    PubRel, Publish, RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck, UnSubscribe, Will,
+    PubRel, Publish, RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck, UnSubscribe,
+    Will,
 };
 use control_packets::{
     ControlPacketType, FixedHeader, PropertiesDecoder, Property, PropertyId, DEFAULT_MAXIMUM_QOS,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_RETAIN_AVAILABLE,
     DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_WILL_DELAY_INTERVAL,DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE,
+    DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
+    DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_WILL_DELAY_INTERVAL,
 };
 pub use error::{Error, Result};
 pub use quality_of_service::QoS;

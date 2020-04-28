@@ -7,7 +7,7 @@ use std::io::{Read, Write};
 /// The `Auth` packet is used for enhanced authentication upon connection.
 /// When a client connects to a server, it can initiates an authentication using
 /// the `Authentication` structure. Then the client and server exchange `Auth`
-/// packets until either the the client sends a `Disconnect` packet or the 
+/// packets until either the the client sends a `Disconnect` packet or the
 /// server respond with a `Connack` packet.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Auth {
@@ -40,7 +40,6 @@ impl Default for Auth {
 }
 
 impl Auth {
-    
     pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = self.reason_code.write_byte(writer)?;
         let mut properties = Vec::new();
