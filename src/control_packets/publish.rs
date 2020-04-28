@@ -21,7 +21,9 @@ pub struct Publish {
     pub user_properties: Vec<(String, String)>,
     pub subscription_identifiers: Vec<u32>,
     pub content_type: String,
-    pub application_message: Vec<u8>,
+
+
+    pub message: Vec<u8>,
 }
 
 impl Default for Publish {
@@ -40,7 +42,7 @@ impl Default for Publish {
             user_properties: Default::default(),
             subscription_identifiers: Default::default(),
             content_type: Default::default(),
-            application_message: Default::default(),
+            message: Default::default(),
         }
     }
 }
@@ -84,7 +86,7 @@ impl Publish {
         n_bytes += properties.len().write_variable_byte_integer(writer)?;
         writer.write_all(&properties)?;
 
-        n_bytes += writer.write(&self.application_message)?;
+        n_bytes += writer.write(&self.message)?;
 
         Ok(n_bytes)
     }
@@ -129,8 +131,8 @@ impl Publish {
             }
         }
 
-        let mut application_message = Vec::new();
-        reader.read_to_end(&mut application_message)?;
+        let mut message = Vec::new();
+        reader.read_to_end(&mut message)?;
 
         Ok(Publish {
             duplicate,
@@ -146,7 +148,7 @@ impl Publish {
             user_properties,
             subscription_identifiers,
             content_type,
-            application_message,
+            message,
         })
     }
 }
@@ -184,7 +186,7 @@ mod unit {
             user_properties: vec![("Mogwaï".into(), "Cat".into())],
             subscription_identifiers: vec![34, 32, 10, 11],
             content_type: "Nirvana".into(),
-            application_message: "all the bases are belong to us".into(),
+            message: "all the bases are belong to us".into(),
         }
     }
 

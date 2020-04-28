@@ -39,7 +39,7 @@ pub struct Will {
     /// Corresponds to the expiry interval of the `Publish` message sent.
     pub message_expiry_interval: Option<u32>,
 
-    /// Described the type of content of the payload. Is generally a MIME
+    /// Describes the type of content of the payload. Is generally a MIME
     /// descriptor.
     pub content_type: String,
 
@@ -56,7 +56,7 @@ pub struct Will {
     pub topic: String,
 
     /// The last will payload.
-    pub payload: Vec<u8>,
+    pub message: Vec<u8>,
 }
 
 impl Default for Will {
@@ -72,7 +72,7 @@ impl Default for Will {
             correlation_data: None,
             user_properties: Default::default(),
             topic: Default::default(),
-            payload: Default::default(),
+            message: Default::default(),
         }
     }
 }
@@ -314,7 +314,7 @@ impl Connect {
                 return Err(Error::ProtocolError);
             }
             n_bytes += w.topic.write_utf8_string(writer)?;
-            n_bytes += w.payload.write_binary_data(writer)?;
+            n_bytes += w.message.write_binary_data(writer)?;
         }
 
         if let Some(v) = self.user_name {
@@ -424,7 +424,7 @@ impl Connect {
             if w.topic.is_empty() {
                 return Err(Error::ProtocolError);
             }
-            w.payload = Vec::read_binary_data(reader)?;
+            w.message = Vec::read_binary_data(reader)?;
             Some(w)
         } else {
             None
