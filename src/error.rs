@@ -5,8 +5,10 @@ use std::{
     result::Result as StdResult,
 };
 
+/// Standard Result type for Sage MQTT
 pub type Result<T> = StdResult<T, Error>;
 
+/// The error type for Sage MQTT operations
 #[derive(Debug)]
 pub enum Error {
     /// Standard Rust IO Error
