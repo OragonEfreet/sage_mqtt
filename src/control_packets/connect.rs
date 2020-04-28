@@ -26,7 +26,7 @@ pub struct Will {
     pub payload_format_indicator: bool,
     pub message_expiry_interval: Option<u32>,
     pub content_type: String,
-    pub response_topic: String,
+    pub response_topic: Option<String>,
     pub correlation_data: Option<Vec<u8>>,
     pub user_properties: Vec<(String, String)>,
     pub topic: String,
@@ -42,7 +42,7 @@ impl Default for Will {
             payload_format_indicator: DEFAULT_PAYLOAD_FORMAT_INDICATOR,
             message_expiry_interval: None,
             content_type: Default::default(),
-            response_topic: Default::default(),
+            response_topic: None,
             correlation_data: None,
             user_properties: Default::default(),
             topic: Default::default(),
@@ -263,7 +263,9 @@ impl Connect {
                 n_bytes += Property::MessageExpiryInterval(v).encode(&mut properties)?;
             }
             n_bytes += Property::ContentType(w.content_type).encode(&mut properties)?;
-            n_bytes += Property::ResponseTopic(w.response_topic).encode(&mut properties)?;
+            if let Some(response_topic) = w.response_topic {
+                n_bytes += Property::ResponseTopic(response_topic).encode(&mut properties)?;
+            }
             if let Some(v) = w.correlation_data {
                 n_bytes += Property::CorrelationData(v).encode(&mut properties)?;
             }
@@ -368,7 +370,7 @@ impl Connect {
                     Property::PayloadFormatIndicator(v) => w.payload_format_indicator = v,
                     Property::MessageExpiryInterval(v) => w.message_expiry_interval = Some(v),
                     Property::ContentType(v) => w.content_type = v,
-                    Property::ResponseTopic(v) => w.response_topic = v,
+                    Property::ResponseTopic(v) => w.response_topic = Some(v),
                     Property::CorrelationData(v) => w.correlation_data = Some(v),
                     Property::UserProperty(k, v) => w.user_properties.push((k, v)),
                     _ => return Err(Error::ProtocolError),
@@ -450,8 +452,7 @@ mod unit_connect {
 
     fn encoded() -> Vec<u8> {
         vec![
-            0, 4, 77, 81, 84, 84, 5, 206, 0, 10, 5, 17, 0, 0, 0, 10, 0, 0, 6, 3, 0, 0, 8, 0, 0, 0,
-            0, 0, 0, 0, 6, 87, 105, 108, 108, 111, 119, 0, 5, 74, 97, 100, 101, 110,
+            0, 4, 77, 81, 84, 84, 5, 206, 0, 10, 5, 17, 0, 0, 0, 10, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 6, 87, 105, 108, 108, 111, 119, 0, 5, 74, 97, 100, 101, 110,
         ]
     }
 
@@ -480,7 +481,7 @@ mod unit_connect {
 
         let n_bytes = test_data.write(&mut tested_result).unwrap();
         assert_eq!(tested_result, encoded());
-        assert_eq!(n_bytes, 44);
+        assert_eq!(n_bytes, 41);
     }
 
     #[test]

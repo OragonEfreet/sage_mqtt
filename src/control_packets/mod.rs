@@ -22,7 +22,7 @@ mod unsubscribe;
 pub use auth::Auth;
 pub use authentication::Authentication;
 pub use connack::ConnAck;
-pub use connect::Connect;
+pub use connect::{Connect, Will};
 pub use control_packet::ControlPacket;
 pub use control_packet_type::ControlPacketType;
 pub use defaults::{

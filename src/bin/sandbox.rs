@@ -3,15 +3,17 @@ use sage_mqtt::*;
 fn main() {
     let mut encoded = Vec::new();
 
-    ControlPacket::UnSubscribe(UnSubscribe {
-        packet_identifier: 1337,
-        user_properties: vec![("Mogwaï".into(), "Cat".into())],
-        subscriptions: vec![
-            "harder".into(),
-            "better".into(),
-            "faster".into(),
-            "stronger".into(),
-        ],
+    ControlPacket::Connect(Connect {
+        keep_alive: 10,
+        clean_start: true,
+        session_expiry_interval: 10,
+        user_name: Some("Willow".into()),
+        password: Some("Jaden".into()),
+        will: Some(Will {
+            qos: QoS::AtLeastOnce,
+            ..Default::default()
+        }),
+        ..Default::default()
     })
     .encode(&mut encoded)
     .unwrap();

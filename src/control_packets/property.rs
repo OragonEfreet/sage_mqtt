@@ -90,7 +90,12 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             )),
             PropertyId::ContentType => Ok(Property::ContentType(String::read_utf8_string(reader)?)),
             PropertyId::ResponseTopic => {
-                Ok(Property::ResponseTopic(String::read_utf8_string(reader)?))
+                let topic = String::read_utf8_string(reader)?;
+                if topic.is_empty() {
+                    Err(Error::ProtocolError)
+                } else {
+                    Ok(Property::ResponseTopic(topic))
+                }
             }
             PropertyId::CorrelationData => {
                 Ok(Property::CorrelationData(Vec::read_binary_data(reader)?))
@@ -193,8 +198,12 @@ impl Property {
                 Ok(n_bytes + v.write_utf8_string(writer)?)
             }
             Property::ResponseTopic(v) => {
-                let n_bytes = PropertyId::ResponseTopic.write_variable_byte_integer(writer)?;
-                Ok(n_bytes + v.write_utf8_string(writer)?)
+                if v.is_empty() {
+                    Err(Error::ProtocolError)
+                } else {
+                    let n_bytes = PropertyId::ResponseTopic.write_variable_byte_integer(writer)?;
+                    Ok(n_bytes + v.write_utf8_string(writer)?)
+                }
             }
             Property::CorrelationData(v) => {
                 let n_bytes = PropertyId::CorrelationData.write_variable_byte_integer(writer)?;
