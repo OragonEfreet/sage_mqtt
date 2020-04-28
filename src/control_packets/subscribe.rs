@@ -8,10 +8,17 @@ use std::{
     io::{Read, Write},
 };
 
+/// This option specifies whether retained messages are sent when the
+/// subscription is established;
 #[derive(Eq, Debug, PartialEq, Clone, Copy)]
 pub enum RetainHandling {
+    /// Send retained messages at the time of the subscribe
     OnSubscribe = 0x00,
+
+    /// Send retained messages at the time of the first subscribe
     OnFirstSubscribe = 0x01,
+
+    /// Don't send retained messages
     DontSend = 0x02,
 }
 
@@ -27,11 +34,22 @@ impl TryFrom<u8> for RetainHandling {
     }
 }
 
+/// Options used to describe a specific subscription.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct SubscriptionOptions {
+    /// The maximum quality of service the client is expected to receive
+    /// messages.
     pub qos: QoS,
+
+    /// If the value is `true`, messages must not be forwarded to a connection
+    /// with a ClientID equal to the client id of the publishing connection.
     pub no_local: bool,
+
+    /// If `true` messages forwarded using this subscription will keep their
+    /// retain flag unchanged. Otherwise they won't be retain messages anymore.
     pub retain_as_published: bool,
+
+    /// How retain messages are handled upon subscription.
     pub retain_handling: RetainHandling,
 }
 
@@ -70,11 +88,23 @@ impl SubscriptionOptions {
     }
 }
 
+/// The subscribe packet is a request from the client to listen to one or more
+/// topics.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Subscribe {
+    /// The packet identifier is used to identify the message throughout the
+    /// communication.
     pub packet_identifier: u16,
+
+    /// Optional identifier used to represent the subscription in nextcoming
+    /// mmessages.
     pub subscription_identifier: Option<u32>,
+
+    /// General purpose user properies
     pub user_properties: Vec<(String, String)>,
+
+    /// The list of topics to subscribe to with options.
+    /// Each topics can use wildcards.
     pub subscriptions: Vec<(String, SubscriptionOptions)>,
 }
 
