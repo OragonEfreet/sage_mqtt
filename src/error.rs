@@ -79,20 +79,3 @@ impl From<IOError> for Error {
         Error::Io(err)
     }
 }
-
-impl Error {
-    pub(crate) fn reason_code(&self) -> Option<u8> {
-        match *self {
-            Error::MalformedPacket => Some(0x81),
-            Error::ProtocolError => Some(0x82),
-            Error::ReceiveMaximumExceeded => Some(0x93),
-            Error::PacketTooLarge => Some(0x95),
-            Error::RetainNotSupported => Some(0x9A),
-            Error::QoSNotSupported => Some(0x9B),
-            Error::SharedSubscriptionNotSupported => Some(0x9E),
-            Error::SubscriptionIdentifiersNotSupported => Some(0xA1),
-            Error::WildcardSubscriptionsNotSupported => Some(0xA2),
-            _ => None,
-        }
-    }
-}
