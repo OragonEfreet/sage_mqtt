@@ -6,23 +6,62 @@ use crate::{
 
 use std::io::{Read, Write};
 
+/// The `Publish` packet is used to send an application message to a given
+/// topic.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Publish {
+    /// In case of `AtLeastOnce` and `ExactlyOnce` qualities of service,
+    /// `duplicate` is set to `true` when the message is a new attempt to send
+    /// an earlier one.
     pub duplicate: bool,
+
+    /// The quality of service of the message.
     pub qos: QoS,
+
+    /// If true, the server must retain it in order to publish it for delivery
+    /// upon future connections.
     pub retain: bool,
+
+    /// The name of the topic to publish the message to.
     pub topic_name: String,
+
+    /// The packet identifier is used in `AtLeastOnce` and `ExactlyOnce`
+    /// qualities of service to keep track of the packet.
     pub packet_identifier: Option<u16>,
+
+    /// If true, the will message will be a valid UTF-8 encoded string. If not
+    /// the will message can be anything, even a unicorn.
     pub payload_format_indicator: bool,
+
+    /// Optional delay before the server must drop a message before it does
+    /// not deliver it to anyone.
     pub message_expiry_interval: Option<u32>,
+
+    /// The topic alias. It is used to replace the topic string.
     pub topic_alias: Option<u16>,
+
+    /// If the message is part of a Request/Response communication, the response
+    /// topic is use to assign the topic which must be used as response. The
+    /// presence of a response topic identifies the message as a requestion.
     pub response_topic: Option<String>,
+
+    /// If the message is part of a Request/Response communication, it can be
+    /// optionnaly accompagnied with correlation data which are exchanged
+    /// between the communication endpoints.
     pub correlation_data: Option<Vec<u8>>,
+
+    /// General purpose user properties.
     pub user_properties: Vec<(String, String)>,
+
+    /// References the different subscriptions identifiers that are used for
+    /// the message delivery.
     pub subscription_identifiers: Vec<u32>,
+
+    /// Describes the type of content of the payload. Is generally a MIME
+    /// descriptor.
     pub content_type: String,
 
-
+    /// The content of the message
     pub message: Vec<u8>,
 }
 
