@@ -4,11 +4,27 @@ use crate::{
 };
 use std::io::{Read, Write};
 
+/// The `Auth` packet is used for enhanced authentication upon connection.
+/// When a client connects to a server, it can initiates an authentication using
+/// the `Authentication` structure. Then the client and server exchange `Auth`
+/// packets until either the the client sends a `Disconnect` packet or the 
+/// server respond with a `Connack` packet.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Auth {
+    /// The packet reason code. Can be any of:
+    /// - Success: The authentication is successful
+    /// - ReAuthenticate (client only): Ask for a new authentication
+    /// - ContinueAuthentication: Continue the authentication with another step
     pub reason_code: ReasonCode,
+
+    /// The `Authentication` data which consists in an authentication method and
+    /// optionnaly data.
     pub authentication: Authentication,
+
+    /// Optional reason string sent by the server.
     pub reason_string: Option<String>,
+
+    /// General purpose user properties.
     pub user_properties: Vec<(String, String)>,
 }
 
