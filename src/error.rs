@@ -79,7 +79,7 @@ impl From<IOError> for Error {
 }
 
 impl Error {
-    pub fn reason_code(&self) -> Option<u8> {
+    pub(crate) fn reason_code(&self) -> Option<u8> {
         match *self {
             Error::MalformedPacket => Some(0x81),
             Error::ProtocolError => Some(0x82),
