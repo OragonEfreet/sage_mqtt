@@ -19,6 +19,9 @@ mod subscribe;
 mod unsuback;
 mod unsubscribe;
 
+/// String alias to represent a client identifier
+pub type ClientID = String;
+
 pub use auth::Auth;
 pub use authentication::Authentication;
 pub use connack::ConnAck;

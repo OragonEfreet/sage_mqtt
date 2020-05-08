@@ -24,9 +24,9 @@ use codec::{
     WriteUTF8String, WriteVariableByteInteger,
 };
 pub use control_packets::{
-    Auth, Authentication, ConnAck, Connect, ControlPacket, Disconnect, PubAck, PubComp, PubRec,
-    PubRel, Publish, RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck, UnSubscribe,
-    Will,
+    Auth, Authentication, ClientID, ConnAck, Connect, ControlPacket, Disconnect, PubAck, PubComp,
+    PubRec, PubRel, Publish, RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck,
+    UnSubscribe, Will,
 };
 use control_packets::{
     ControlPacketType, FixedHeader, PropertiesDecoder, Property, PropertyId, DEFAULT_MAXIMUM_QOS,

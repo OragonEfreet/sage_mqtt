@@ -1,5 +1,5 @@
 use crate::{
-    Authentication, Error, PropertiesDecoder, Property, QoS, ReadBinaryData, ReadByte,
+    Authentication, ClientID, Error, PropertiesDecoder, Property, QoS, ReadBinaryData, ReadByte,
     ReadTwoByteInteger, ReadUTF8String, Result as SageResult, WriteBinaryData, WriteByte,
     WriteTwoByteInteger, WriteUTF8String, WriteVariableByteInteger,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
@@ -181,7 +181,7 @@ pub struct Connect {
     /// may omit if by setting `client_id` to `None` (default). In that case
     /// the id is created by the server and returns to the client with the
     /// `Connack`  packet.
-    pub client_id: Option<String>,
+    pub client_id: Option<ClientID>,
 
     /// The client's Last Will to send in case of ungraceful disconnection.
     /// This is optional and default is `None`.

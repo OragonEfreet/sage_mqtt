@@ -1,5 +1,5 @@
 use crate::{
-    Authentication, ControlPacketType, Error, PropertiesDecoder, Property, QoS, ReadByte,
+    Authentication, ClientID, ControlPacketType, Error, PropertiesDecoder, Property, QoS, ReadByte,
     ReasonCode, Result as SageResult, WriteByte, WriteVariableByteInteger, DEFAULT_MAXIMUM_QOS,
     DEFAULT_RECEIVE_MAXIMUM, DEFAULT_RETAIN_AVAILABLE, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
     DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
@@ -54,7 +54,7 @@ pub struct ConnAck {
 
     /// If the `Connect` packet did not have any client id, the server will
     /// send one using `assigned_client_id`.
-    pub assigned_client_id: Option<String>,
+    pub assigned_client_id: Option<ClientID>,
 
     /// The maximum value the server will accept as topic alias. If `0` the
     /// server does not accept topic aliases.
