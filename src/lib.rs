@@ -12,24 +12,19 @@ macro_rules! assert_matches {
     }
 }
 
-mod codec;
+pub(crate) mod codec;
 mod control_packets;
 mod error;
 mod quality_of_service;
 mod reason_code;
 
-use codec::{
-    ReadBinaryData, ReadByte, ReadFourByteInteger, ReadTwoByteInteger, ReadUTF8String,
-    ReadVariableByteInteger, WriteBinaryData, WriteByte, WriteFourByteInteger, WriteTwoByteInteger,
-    WriteUTF8String, WriteVariableByteInteger,
-};
 pub use control_packets::{
     Auth, Authentication, ClientID, ConnAck, Connect, ControlPacket, Disconnect, PubAck, PubComp,
     PubRec, PubRel, Publish, RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck,
     UnSubscribe, Will,
 };
 use control_packets::{
-    ControlPacketType, FixedHeader, PropertiesDecoder, Property, PropertyId, DEFAULT_MAXIMUM_QOS,
+    ControlPacketType, FixedHeader, PropertiesDecoder, Property, DEFAULT_MAXIMUM_QOS,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_RETAIN_AVAILABLE,
     DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,

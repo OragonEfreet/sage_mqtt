@@ -1,8 +1,5 @@
-use crate::{Error as SageError, ReadByte, Result as SageResult, WriteByte};
-use std::{
-    convert::TryFrom,
-    io::{Read, Write},
-};
+use crate::Error as SageError;
+use std::convert::TryFrom;
 
 /// Description the quality of service used in message publishing.
 #[derive(Debug, PartialEq, Clone, Copy, Eq)]
@@ -25,23 +22,6 @@ pub enum QoS {
     /// `Publish` packet acknowledges receipt with a two-step
     /// acknowledgement process.
     ExactlyOnce = 0x02,
-}
-
-impl ReadByte for QoS {
-    fn read_byte<R: Read>(reader: &mut R) -> SageResult<Self> {
-        match u8::read_byte(reader)? {
-            0x00 => Ok(QoS::AtMostOnce),
-            0x01 => Ok(QoS::AtLeastOnce),
-            0x02 => Ok(QoS::ExactlyOnce),
-            _ => Err(SageError::ProtocolError),
-        }
-    }
-}
-
-impl WriteByte for QoS {
-    fn write_byte<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        (self as u8).write_byte(writer)
-    }
 }
 
 impl TryFrom<u8> for QoS {

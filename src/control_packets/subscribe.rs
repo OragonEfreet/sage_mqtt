@@ -1,7 +1,5 @@
 use crate::{
-    Error, PropertiesDecoder, Property, QoS, ReadByte, ReadTwoByteInteger, ReadUTF8String,
-    Result as SageResult, WriteByte, WriteTwoByteInteger, WriteUTF8String,
-    WriteVariableByteInteger, DEFAULT_MAXIMUM_QOS,
+    codec, Error, PropertiesDecoder, Property, QoS, Result as SageResult, DEFAULT_MAXIMUM_QOS,
 };
 use std::{
     convert::{TryFrom, TryInto},
@@ -70,11 +68,11 @@ impl SubscriptionOptions {
             | (self.no_local as u8) << 2
             | (self.retain_as_published as u8) << 3
             | (self.retain_handling as u8) << 4;
-        byte.write_byte(writer)
+        codec::write_byte(byte, writer)
     }
 
     fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let flags = u8::read_byte(reader)?;
+        let flags = codec::read_byte(reader)?;
         if flags & 0b1100_0000 > 0 {
             Err(Error::ProtocolError)
         } else {
@@ -121,7 +119,7 @@ impl Default for Subscribe {
 
 impl Subscribe {
     pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = self.packet_identifier.write_two_byte_integer(writer)?;
+        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer)?;
 
         let mut properties = Vec::new();
 
@@ -132,11 +130,11 @@ impl Subscribe {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
         }
 
-        n_bytes += properties.len().write_variable_byte_integer(writer)?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
         writer.write_all(&properties)?;
 
         for option in self.subscriptions {
-            n_bytes += option.0.write_utf8_string(writer)?;
+            n_bytes += codec::write_utf8_string(&option.0, writer)?;
             n_bytes += option.1.encode(writer)?;
         }
 
@@ -145,7 +143,7 @@ impl Subscribe {
 
     pub(crate) fn read<R: Read>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size as u64);
-        let packet_identifier = u16::read_two_byte_integer(&mut reader)?;
+        let packet_identifier = codec::read_two_byte_integer(&mut reader)?;
 
         let mut user_properties = Vec::new();
         let mut subscription_identifier = None;
@@ -165,7 +163,7 @@ impl Subscribe {
 
         while reader.limit() > 0 {
             subscriptions.push((
-                String::read_utf8_string(&mut reader)?,
+                codec::read_utf8_string(&mut reader)?,
                 SubscriptionOptions::decode(&mut reader)?,
             ));
         }

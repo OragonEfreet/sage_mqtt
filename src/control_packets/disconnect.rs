@@ -1,6 +1,5 @@
 use crate::{
-    ControlPacketType, Error, PropertiesDecoder, Property, ReadByte, ReasonCode,
-    Result as SageResult, WriteByte, WriteVariableByteInteger,
+    codec, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
 };
 use std::io::{Read, Write};
 
@@ -74,7 +73,7 @@ impl Default for Disconnect {
 
 impl Disconnect {
     pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = self.reason_code.write_byte(writer)?;
+        let mut n_bytes = codec::write_reason_code(self.reason_code, writer)?;
 
         let mut properties = Vec::new();
 
@@ -91,7 +90,7 @@ impl Disconnect {
             n_bytes += Property::ServerReference(v).encode(&mut properties)?;
         }
 
-        n_bytes += properties.len().write_variable_byte_integer(writer)?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
         writer.write_all(&properties)?;
 
         Ok(n_bytes)
@@ -99,7 +98,7 @@ impl Disconnect {
 
     pub(crate) fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
         let reason_code =
-            ReasonCode::try_parse(u8::read_byte(reader)?, ControlPacketType::DISCONNECT)?;
+            ReasonCode::try_parse(codec::read_byte(reader)?, ControlPacketType::DISCONNECT)?;
         let mut user_properties = Vec::new();
         let mut properties = PropertiesDecoder::take(reader)?;
         let mut session_expiry_interval = None;

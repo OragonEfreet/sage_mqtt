@@ -8,7 +8,6 @@ mod defaults;
 mod disconnect;
 mod fixed_header;
 mod property;
-mod property_id;
 mod puback;
 mod pubcomp;
 mod publish;
@@ -38,8 +37,7 @@ pub use defaults::{
 };
 pub use disconnect::Disconnect;
 pub use fixed_header::FixedHeader;
-pub use property::{PropertiesDecoder, Property};
-pub use property_id::PropertyId;
+pub use property::{PropertiesDecoder, Property, PropertyId};
 pub use puback::PubAck;
 pub use pubcomp::PubComp;
 pub use publish::Publish;

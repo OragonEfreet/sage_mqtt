@@ -1,45 +1,29 @@
 use crate::{Error, Result as SageResult};
 use std::io::{Read, Write};
 
-pub trait WriteByte {
-    fn write_byte<W: Write>(self, writer: &mut W) -> SageResult<usize>;
+pub fn write_byte<W: Write>(byte: u8, writer: &mut W) -> SageResult<usize> {
+    Ok(writer.write(&[byte])?)
 }
 
-impl WriteByte for u8 {
-    fn write_byte<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        Ok(writer.write(&[self])?)
+pub fn read_bool<R: Read>(reader: &mut R) -> SageResult<bool> {
+    let byte = read_byte(reader)?;
+    match byte {
+        0 => Ok(false),
+        1 => Ok(true),
+        _ => Err(Error::ProtocolError),
     }
 }
 
-impl WriteByte for bool {
-    fn write_byte<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        Ok(writer.write(&[self as u8])?)
-    }
+pub fn write_bool<W: Write>(data: bool, writer: &mut W) -> SageResult<usize> {
+    Ok(writer.write(&[data as u8])?)
 }
 
-pub trait ReadByte: Sized {
-    fn read_byte<R: Read>(reader: &mut R) -> SageResult<Self>;
-}
-
-impl ReadByte for u8 {
-    fn read_byte<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let mut buf = [0u8; 1];
-        if reader.read_exact(&mut buf).is_ok() {
-            Ok(buf[0])
-        } else {
-            Err(Error::MalformedPacket)
-        }
-    }
-}
-
-impl ReadByte for bool {
-    fn read_byte<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let byte = u8::read_byte(reader)?;
-        match byte {
-            0 => Ok(false),
-            1 => Ok(true),
-            _ => Err(Error::ProtocolError),
-        }
+pub fn read_byte<R: Read>(reader: &mut R) -> SageResult<u8> {
+    let mut buf = [0u8; 1];
+    if reader.read_exact(&mut buf).is_ok() {
+        Ok(buf[0])
+    } else {
+        Err(Error::MalformedPacket)
     }
 }
 
@@ -53,19 +37,19 @@ mod unit {
     #[test]
     fn encode() {
         let mut result = Vec::new();
-        assert_eq!(0b00101010.write_byte(&mut result).unwrap(), 1);
+        assert_eq!(write_byte(0b00101010, &mut result).unwrap(), 1);
         assert_eq!(result, vec![0x2A]);
     }
 
     #[test]
     fn decode() {
         let mut test_stream = Cursor::new([0xAF_u8]);
-        assert_eq!(u8::read_byte(&mut test_stream).unwrap(), 0xAF);
+        assert_eq!(read_byte(&mut test_stream).unwrap(), 0xAF);
     }
 
     #[test]
     fn decode_eof() {
         let mut test_stream: Cursor<[u8; 0]> = Default::default();
-        assert_matches!(u8::read_byte(&mut test_stream), Err(Error::MalformedPacket));
+        assert_matches!(read_byte(&mut test_stream), Err(Error::MalformedPacket));
     }
 }

@@ -1,72 +1,45 @@
 use crate::{Error, Result as SageResult};
 use std::io::{Read, Write};
 
-pub trait WriteVariableByteInteger {
-    fn write_variable_byte_integer<W: Write>(self, writer: &mut W) -> SageResult<usize>;
-}
-impl WriteVariableByteInteger for usize {
-    fn write_variable_byte_integer<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        (self as u32).write_variable_byte_integer(writer)
-    }
-}
-
-impl WriteVariableByteInteger for u32 {
-    fn write_variable_byte_integer<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_encoded_bytes = 0;
-        let mut x = self;
-        loop {
-            let mut encoded_byte = (x % 128) as u8;
-            x /= 128;
-            if x > 0 {
-                encoded_byte |= 128u8;
-            }
-            n_encoded_bytes += writer.write(&[encoded_byte])?;
-            if x == 0 {
-                break;
-            }
+pub fn write_variable_byte_integer<W: Write>(data: u32, writer: &mut W) -> SageResult<usize> {
+    let mut n_encoded_bytes = 0;
+    let mut x = data;
+    loop {
+        let mut encoded_byte = (x % 128) as u8;
+        x /= 128;
+        if x > 0 {
+            encoded_byte |= 128u8;
         }
-        Ok(n_encoded_bytes)
+        n_encoded_bytes += writer.write(&[encoded_byte])?;
+        if x == 0 {
+            break;
+        }
     }
+    Ok(n_encoded_bytes)
 }
 
-pub trait ReadVariableByteInteger: Sized {
-    fn read_variable_byte_integer<R: Read>(reader: &mut R) -> SageResult<Self>;
-}
+pub fn read_variable_byte_integer<R: Read>(reader: &mut R) -> SageResult<u32> {
+    let mut multiplier = 1_u32;
+    let mut value = 0_u32;
 
-impl ReadVariableByteInteger for usize {
-    fn read_variable_byte_integer<R: Read>(reader: &mut R) -> SageResult<Self> {
-        Ok(u32::read_variable_byte_integer(reader)? as usize)
-    }
-}
-impl ReadVariableByteInteger for u64 {
-    fn read_variable_byte_integer<R: Read>(reader: &mut R) -> SageResult<Self> {
-        Ok(u32::read_variable_byte_integer(reader)? as u64)
-    }
-}
-impl ReadVariableByteInteger for u32 {
-    fn read_variable_byte_integer<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let mut multiplier = 1_u32;
-        let mut value = 0_u32;
-
-        loop {
-            let mut buffer = vec![0u8; 1];
-            if reader.read_exact(&mut buffer).is_ok() {
-                let encoded_byte = buffer[0];
-                value += ((encoded_byte & 127u8) as u32) * multiplier;
-                if multiplier > 2_097_152 {
-                    return Err(Error::MalformedPacket);
-                }
-                multiplier *= 128;
-                if encoded_byte & 128u8 == 0 {
-                    break;
-                }
-            } else {
+    loop {
+        let mut buffer = vec![0u8; 1];
+        if reader.read_exact(&mut buffer).is_ok() {
+            let encoded_byte = buffer[0];
+            value += ((encoded_byte & 127u8) as u32) * multiplier;
+            if multiplier > 2_097_152 {
                 return Err(Error::MalformedPacket);
             }
+            multiplier *= 128;
+            if encoded_byte & 128u8 == 0 {
+                break;
+            }
+        } else {
+            return Err(Error::MalformedPacket);
         }
-
-        Ok(value)
     }
+
+    Ok(value)
 }
 
 #[cfg(test)]
@@ -96,7 +69,7 @@ mod unit {
 
         for bound in &bounds {
             for i in bound {
-                let n_bytes = i.write_variable_byte_integer(&mut result).unwrap();
+                let n_bytes = write_variable_byte_integer(*i, &mut result).unwrap();
                 assert_eq!(
                     n_bytes, expected_buffer_size,
                     "Variable Byte Integer '{}' should be encoded to '{}' bytes. Used '{}' instead",
@@ -112,21 +85,21 @@ mod unit {
     #[test]
     fn encode_one_lower_bound() {
         let mut result = Vec::new();
-        assert_eq!(0u32.write_variable_byte_integer(&mut result).unwrap(), 1);
+        assert_eq!(write_variable_byte_integer(0u32, &mut result).unwrap(), 1);
         assert_eq!(result, vec![0x00]);
     }
 
     #[test]
     fn encode_one_upper_bound() {
         let mut result = Vec::new();
-        assert_eq!(127u32.write_variable_byte_integer(&mut result).unwrap(), 1);
+        assert_eq!(write_variable_byte_integer(127u32, &mut result).unwrap(), 1);
         assert_eq!(result, vec![0x7F]);
     }
 
     #[test]
     fn encode_two_lower_bound() {
         let mut result = Vec::new();
-        assert_eq!(128u32.write_variable_byte_integer(&mut result).unwrap(), 2);
+        assert_eq!(write_variable_byte_integer(128u32, &mut result).unwrap(), 2);
         assert_eq!(result, vec![0x80, 0x01]);
     }
 
@@ -134,7 +107,7 @@ mod unit {
     fn encode_two_upper_bound() {
         let mut result = Vec::new();
         assert_eq!(
-            16_383u32.write_variable_byte_integer(&mut result).unwrap(),
+            write_variable_byte_integer(16_383u32, &mut result).unwrap(),
             2
         );
         assert_eq!(result, vec![0xFF, 0x7F]);
@@ -144,7 +117,7 @@ mod unit {
     fn encode_three_lower_bound() {
         let mut result = Vec::new();
         assert_eq!(
-            16_384u32.write_variable_byte_integer(&mut result).unwrap(),
+            write_variable_byte_integer(16_384u32, &mut result).unwrap(),
             3
         );
         assert_eq!(result, vec![0x80, 0x80, 0x01]);
@@ -154,9 +127,7 @@ mod unit {
     fn encode_three_upper_bound() {
         let mut result = Vec::new();
         assert_eq!(
-            2_097_151u32
-                .write_variable_byte_integer(&mut result)
-                .unwrap(),
+            write_variable_byte_integer(2_097_151u32, &mut result).unwrap(),
             3
         );
         assert_eq!(result, vec![0xFF, 0xFF, 0x7F]);
@@ -166,9 +137,7 @@ mod unit {
     fn encode_four_lower_bound() {
         let mut result = Vec::new();
         assert_eq!(
-            2_097_152u32
-                .write_variable_byte_integer(&mut result)
-                .unwrap(),
+            write_variable_byte_integer(2_097_152u32, &mut result).unwrap(),
             4
         );
         assert_eq!(result, vec![0x80, 0x80, 0x80, 0x01]);
@@ -178,9 +147,7 @@ mod unit {
     fn encode_four_upper_bound() {
         let mut result = Vec::new();
         assert_eq!(
-            268_435_455u32
-                .write_variable_byte_integer(&mut result)
-                .unwrap(),
+            write_variable_byte_integer(268_435_455u32, &mut result).unwrap(),
             4
         );
         assert_eq!(result, vec![0xFF, 0xFF, 0xFF, 0x7F]);
@@ -189,17 +156,14 @@ mod unit {
     #[test]
     fn decode_one_lower_bound() {
         let mut test_stream = Cursor::new([0x00]);
-        assert_eq!(
-            u32::read_variable_byte_integer(&mut test_stream).unwrap(),
-            0u32
-        );
+        assert_eq!(read_variable_byte_integer(&mut test_stream).unwrap(), 0u32);
     }
 
     #[test]
     fn decode_one_upper_bound() {
         let mut test_stream = Cursor::new([0x7F]);
         assert_eq!(
-            u32::read_variable_byte_integer(&mut test_stream).unwrap(),
+            read_variable_byte_integer(&mut test_stream).unwrap(),
             127u32
         );
     }
@@ -208,7 +172,7 @@ mod unit {
     fn decode_two_lower_bound() {
         let mut test_stream = Cursor::new([0x80, 0x01]);
         assert_eq!(
-            u32::read_variable_byte_integer(&mut test_stream).unwrap(),
+            read_variable_byte_integer(&mut test_stream).unwrap(),
             128u32
         );
     }
@@ -217,7 +181,7 @@ mod unit {
     fn decode_two_upper_bound() {
         let mut test_stream = Cursor::new([0xFF, 0x7F]);
         assert_eq!(
-            u32::read_variable_byte_integer(&mut test_stream).unwrap(),
+            read_variable_byte_integer(&mut test_stream).unwrap(),
             16_383u32
         );
     }
@@ -226,7 +190,7 @@ mod unit {
     fn decode_three_lower_bound() {
         let mut test_stream = Cursor::new([0x80, 0x80, 0x01]);
         assert_eq!(
-            u32::read_variable_byte_integer(&mut test_stream).unwrap(),
+            read_variable_byte_integer(&mut test_stream).unwrap(),
             16_384u32
         );
     }
@@ -235,7 +199,7 @@ mod unit {
     fn decode_three_upper_bound() {
         let mut test_stream = Cursor::new([0xFF, 0xFF, 0x7F]);
         assert_eq!(
-            u32::read_variable_byte_integer(&mut test_stream).unwrap(),
+            read_variable_byte_integer(&mut test_stream).unwrap(),
             2_097_151u32
         );
     }
@@ -244,7 +208,7 @@ mod unit {
     fn decode_four_lower_bound() {
         let mut test_stream = Cursor::new([0x80, 0x80, 0x80, 0x01]);
         assert_eq!(
-            u32::read_variable_byte_integer(&mut test_stream).unwrap(),
+            read_variable_byte_integer(&mut test_stream).unwrap(),
             2_097_152u32
         );
     }
@@ -253,7 +217,7 @@ mod unit {
     fn decode_four_upper_bound() {
         let mut test_stream = Cursor::new([0xFF, 0xFF, 0xFF, 0x7F]);
         assert_eq!(
-            u32::read_variable_byte_integer(&mut test_stream).unwrap(),
+            read_variable_byte_integer(&mut test_stream).unwrap(),
             268_435_455u32
         );
     }
@@ -262,7 +226,7 @@ mod unit {
     fn decode_eof() {
         let mut test_stream: Cursor<[u8; 0]> = Default::default();
         assert_matches!(
-            u32::read_variable_byte_integer(&mut test_stream),
+            read_variable_byte_integer(&mut test_stream),
             Err(Error::MalformedPacket)
         );
     }

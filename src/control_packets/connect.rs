@@ -1,7 +1,5 @@
 use crate::{
-    Authentication, ClientID, Error, PropertiesDecoder, Property, QoS, ReadBinaryData, ReadByte,
-    ReadTwoByteInteger, ReadUTF8String, Result as SageResult, WriteBinaryData, WriteByte,
-    WriteTwoByteInteger, WriteUTF8String, WriteVariableByteInteger,
+    codec, Authentication, ClientID, Error, PropertiesDecoder, Property, QoS, Result as SageResult,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
@@ -229,8 +227,8 @@ impl Connect {
     /// function will return a `ProtocolError`.
     pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
         // Variable Header (into content)
-        let mut n_bytes = "MQTT".write_utf8_string(writer)?;
-        n_bytes += 0x05.write_byte(writer)?;
+        let mut n_bytes = codec::write_utf8_string("MQTT", writer)?;
+        n_bytes += codec::write_byte(0x05, writer)?;
 
         n_bytes += ConnectFlags {
             clean_start: self.clean_start,
@@ -250,7 +248,7 @@ impl Connect {
         }
         .write(writer)?;
 
-        n_bytes += self.keep_alive.write_two_byte_integer(writer)?;
+        n_bytes += codec::write_two_byte_integer(self.keep_alive, writer)?;
 
         // Properties
         let mut properties = Vec::new();
@@ -273,7 +271,7 @@ impl Connect {
             n_bytes += authentication.write(writer)?;
         }
 
-        n_bytes += properties.len().write_variable_byte_integer(writer)?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
         writer.write_all(&properties)?;
 
         // Payload
@@ -281,10 +279,10 @@ impl Connect {
             if client_id.len() > 23 || client_id.chars().any(|c| c < '0' || c > 'z') {
                 return Err(Error::MalformedPacket);
             }
-            n_bytes += client_id.write_utf8_string(writer)?;
+            n_bytes += codec::write_utf8_string(&client_id, writer)?;
         } else {
             // Still write empty client id
-            n_bytes += "".write_utf8_string(writer)?;
+            n_bytes += codec::write_utf8_string("", writer)?;
         }
 
         if let Some(w) = self.will {
@@ -307,22 +305,22 @@ impl Connect {
                 n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
             }
 
-            n_bytes += properties.len().write_variable_byte_integer(writer)?;
+            n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
             writer.write_all(&properties)?;
 
             if w.topic.is_empty() {
                 return Err(Error::ProtocolError);
             }
-            n_bytes += w.topic.write_utf8_string(writer)?;
-            n_bytes += w.message.write_binary_data(writer)?;
+            n_bytes += codec::write_utf8_string(&w.topic, writer)?;
+            n_bytes += codec::write_binary_data(&w.message, writer)?;
         }
 
         if let Some(v) = self.user_name {
-            n_bytes += v.write_utf8_string(writer)?;
+            n_bytes += codec::write_utf8_string(&v, writer)?;
         }
 
         if let Some(v) = self.password {
-            n_bytes += v.write_binary_data(writer)?;
+            n_bytes += codec::write_binary_data(&v, writer)?;
         }
 
         Ok(n_bytes)
@@ -336,12 +334,12 @@ impl Connect {
     /// The function can send a `ProtocolError` in case of invalid data or
     /// any `std::io::Error` returned by the underlying system.
     pub(crate) fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let protocol_name = String::read_utf8_string(reader)?;
+        let protocol_name = codec::read_utf8_string(reader)?;
         if protocol_name != "MQTT" {
             return Err(Error::MalformedPacket);
         }
 
-        let protocol_version = u8::read_byte(reader)?;
+        let protocol_version = codec::read_byte(reader)?;
         if protocol_version != 0x05 {
             return Err(Error::MalformedPacket);
         }
@@ -350,7 +348,7 @@ impl Connect {
 
         let clean_start = flags.clean_start;
 
-        let keep_alive = u16::read_two_byte_integer(reader)?;
+        let keep_alive = codec::read_two_byte_integer(reader)?;
 
         let mut session_expiry_interval = DEFAULT_SESSION_EXPIRY_INTERVAL;
         let mut receive_maximum = DEFAULT_RECEIVE_MAXIMUM;
@@ -393,7 +391,7 @@ impl Connect {
 
         // Payload
         let client_id = {
-            let client_id = String::read_utf8_string(reader)?;
+            let client_id = codec::read_utf8_string(reader)?;
             if client_id.is_empty() {
                 None
             } else {
@@ -420,24 +418,24 @@ impl Connect {
                     _ => return Err(Error::ProtocolError),
                 }
             }
-            w.topic = String::read_utf8_string(reader)?;
+            w.topic = codec::read_utf8_string(reader)?;
             if w.topic.is_empty() {
                 return Err(Error::ProtocolError);
             }
-            w.message = Vec::read_binary_data(reader)?;
+            w.message = codec::read_binary_data(reader)?;
             Some(w)
         } else {
             None
         };
 
         let user_name = if flags.user_name {
-            Some(String::read_utf8_string(reader)?)
+            Some(codec::read_utf8_string(reader)?)
         } else {
             None
         };
 
         let password = if flags.password {
-            Some(Vec::read_binary_data(reader)?)
+            Some(codec::read_binary_data(reader)?)
         } else {
             None
         };
@@ -469,11 +467,11 @@ impl ConnectFlags {
             | (self.will_qos as u8) << 3
             | ((self.will as u8) << 2)
             | ((self.clean_start as u8) << 1);
-        bits.write_byte(writer)
+        codec::write_byte(bits, writer)
     }
 
     pub(crate) fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let bits = u8::read_byte(reader)?;
+        let bits = codec::read_byte(reader)?;
 
         if bits & 0x01 != 0 {
             Err(Error::MalformedPacket)

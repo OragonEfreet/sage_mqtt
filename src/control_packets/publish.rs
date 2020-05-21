@@ -1,6 +1,5 @@
 use crate::{
-    Error, PropertiesDecoder, Property, QoS, ReadTwoByteInteger, ReadUTF8String,
-    Result as SageResult, WriteTwoByteInteger, WriteUTF8String, WriteVariableByteInteger,
+    codec, Error, PropertiesDecoder, Property, QoS, Result as SageResult,
     DEFAULT_PAYLOAD_FORMAT_INDICATOR,
 };
 
@@ -88,11 +87,11 @@ impl Default for Publish {
 
 impl Publish {
     pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = self.topic_name.write_utf8_string(writer)?;
+        let mut n_bytes = codec::write_utf8_string(&self.topic_name, writer)?;
 
         if self.qos != QoS::AtMostOnce {
             if let Some(packet_identifier) = self.packet_identifier {
-                n_bytes += packet_identifier.write_two_byte_integer(writer)?;
+                n_bytes += codec::write_two_byte_integer(packet_identifier, writer)?;
             } else {
                 return Err(Error::ProtocolError);
             }
@@ -122,7 +121,7 @@ impl Publish {
         }
         n_bytes += Property::ContentType(self.content_type).encode(&mut properties)?;
 
-        n_bytes += properties.len().write_variable_byte_integer(writer)?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
         writer.write_all(&properties)?;
 
         n_bytes += writer.write(&self.message)?;
@@ -139,10 +138,10 @@ impl Publish {
     ) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size);
 
-        let topic_name = String::read_utf8_string(&mut reader)?;
+        let topic_name = codec::read_utf8_string(&mut reader)?;
 
         let packet_identifier = if qos != QoS::AtMostOnce {
-            Some(u16::read_two_byte_integer(&mut reader)?)
+            Some(codec::read_two_byte_integer(&mut reader)?)
         } else {
             None
         };

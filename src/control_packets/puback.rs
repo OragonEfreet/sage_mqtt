@@ -1,6 +1,5 @@
 use crate::{
-    ControlPacketType, Error, PropertiesDecoder, Property, ReadByte, ReadTwoByteInteger,
-    ReasonCode, Result as SageResult, WriteByte, WriteTwoByteInteger, WriteVariableByteInteger,
+    codec, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
 };
 use std::io::{Read, Write};
 
@@ -44,7 +43,7 @@ impl Default for PubAck {
 
 impl PubAck {
     pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = self.packet_identifier.write_two_byte_integer(writer)?;
+        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer)?;
 
         let mut properties = Vec::new();
 
@@ -58,15 +57,15 @@ impl PubAck {
         if n_bytes == 2 && self.reason_code != ReasonCode::Success {
             Ok(2)
         } else {
-            n_bytes += self.reason_code.write_byte(writer)?;
-            n_bytes += properties.len().write_variable_byte_integer(writer)?;
+            n_bytes += codec::write_reason_code(self.reason_code, writer)?;
+            n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
             writer.write_all(&properties)?;
             Ok(n_bytes)
         }
     }
 
     pub(crate) fn read<R: Read>(reader: &mut R, shortened: bool) -> SageResult<Self> {
-        let packet_identifier = u16::read_two_byte_integer(reader)?;
+        let packet_identifier = codec::read_two_byte_integer(reader)?;
 
         let mut puback = PubAck {
             packet_identifier,
@@ -77,7 +76,7 @@ impl PubAck {
             puback.reason_code = ReasonCode::Success;
         } else {
             puback.reason_code =
-                ReasonCode::try_parse(u8::read_byte(reader)?, ControlPacketType::PUBACK)?;
+                ReasonCode::try_parse(codec::read_byte(reader)?, ControlPacketType::PUBACK)?;
 
             let mut properties = PropertiesDecoder::take(reader)?;
             while properties.has_properties() {

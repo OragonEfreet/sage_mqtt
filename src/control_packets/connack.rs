@@ -1,7 +1,7 @@
 use crate::{
-    Authentication, ClientID, ControlPacketType, Error, PropertiesDecoder, Property, QoS, ReadByte,
-    ReasonCode, Result as SageResult, WriteByte, WriteVariableByteInteger, DEFAULT_MAXIMUM_QOS,
-    DEFAULT_RECEIVE_MAXIMUM, DEFAULT_RETAIN_AVAILABLE, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
+    codec, Authentication, ClientID, ControlPacketType, Error, PropertiesDecoder, Property, QoS,
+    ReasonCode, Result as SageResult, DEFAULT_MAXIMUM_QOS, DEFAULT_RECEIVE_MAXIMUM,
+    DEFAULT_RETAIN_AVAILABLE, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
     DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
     DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
 };
@@ -123,8 +123,8 @@ impl Default for ConnAck {
 
 impl ConnAck {
     pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = self.session_present.write_byte(writer)?;
-        n_bytes += self.reason_code.write_byte(writer)?;
+        let mut n_bytes = codec::write_bool(self.session_present, writer)?;
+        n_bytes += codec::write_reason_code(self.reason_code, writer)?;
 
         let mut properties = Vec::new();
 
@@ -166,17 +166,17 @@ impl ConnAck {
             }
         }
 
-        n_bytes += properties.len().write_variable_byte_integer(writer)?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
         writer.write_all(&properties)?;
 
         Ok(n_bytes)
     }
 
     pub(crate) fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let session_present = bool::read_byte(reader)?;
+        let session_present = codec::read_bool(reader)?;
 
         let reason_code =
-            ReasonCode::try_parse(u8::read_byte(reader)?, ControlPacketType::CONNACK)?;
+            ReasonCode::try_parse(codec::read_byte(reader)?, ControlPacketType::CONNACK)?;
 
         let mut session_expiry_interval = None;
         let mut receive_maximum = DEFAULT_RECEIVE_MAXIMUM;

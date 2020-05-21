@@ -1,7 +1,4 @@
-use crate::{
-    Error, PropertiesDecoder, Property, ReadTwoByteInteger, ReadUTF8String, Result as SageResult,
-    WriteTwoByteInteger, WriteUTF8String, WriteVariableByteInteger,
-};
+use crate::{codec, Error, PropertiesDecoder, Property, Result as SageResult};
 use std::io::{Read, Write};
 
 /// An `Unsubscribe` packet is sent from the client to unsubsribe to a topic.
@@ -30,17 +27,17 @@ impl Default for UnSubscribe {
 
 impl UnSubscribe {
     pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = self.packet_identifier.write_two_byte_integer(writer)?;
+        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer)?;
 
         let mut properties = Vec::new();
         for (k, v) in self.user_properties {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
         }
-        n_bytes += properties.len().write_variable_byte_integer(writer)?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
         writer.write_all(&properties)?;
 
         for option in self.subscriptions {
-            n_bytes += option.write_utf8_string(writer)?;
+            n_bytes += codec::write_utf8_string(&option, writer)?;
         }
 
         Ok(n_bytes)
@@ -49,7 +46,7 @@ impl UnSubscribe {
     pub(crate) fn read<R: Read>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size as u64);
 
-        let packet_identifier = u16::read_two_byte_integer(&mut reader)?;
+        let packet_identifier = codec::read_two_byte_integer(&mut reader)?;
 
         let mut user_properties = Vec::new();
 
@@ -64,7 +61,7 @@ impl UnSubscribe {
         let mut subscriptions = Vec::new();
 
         while reader.limit() > 0 {
-            subscriptions.push(String::read_utf8_string(&mut reader)?);
+            subscriptions.push(codec::read_utf8_string(&mut reader)?);
         }
 
         if subscriptions.is_empty() {
