@@ -1,5 +1,7 @@
 # Sage MQTT
 
+[![Actions Status](https://github.com/OragonEfreet/sage_mqtt/workflows/Rust/badge.svg)](https://github.com/OragonEfreet/sage_mqtt/actions)
+
 > OASIS Message Queuing Telemetry Transport (MQTT) is a connectivity procol for machine-to-machine communication. It is mainly used for Internet of things (IoT) solutions.
 
 **At the moment, this is a toy project. Feel free to use it but don't consider it fully functionnal until version 1.0.0.**
