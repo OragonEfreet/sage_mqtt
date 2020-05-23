@@ -3,7 +3,8 @@ use crate::{
     DEFAULT_PAYLOAD_FORMAT_INDICATOR,
 };
 
-use std::io::{Read, Write};
+use async_std::io::{prelude::*, Read, Write};
+use std::marker::Unpin;
 
 /// The `Publish` packet is used to send an application message to a given
 /// topic.
@@ -86,12 +87,14 @@ impl Default for Publish {
 }
 
 impl Publish {
-    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = codec::write_utf8_string(&self.topic_name, writer)?;
+        /// Write the `Publish` body of a packet, returning the written size in bytes
+    /// in case of success.
+pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+        let mut n_bytes = codec::write_utf8_string(&self.topic_name, writer).await?;
 
         if self.qos != QoS::AtMostOnce {
             if let Some(packet_identifier) = self.packet_identifier {
-                n_bytes += codec::write_two_byte_integer(packet_identifier, writer)?;
+                n_bytes += codec::write_two_byte_integer(packet_identifier, writer).await?;
             } else {
                 return Err(Error::ProtocolError);
             }
@@ -99,37 +102,50 @@ impl Publish {
 
         let mut properties = Vec::new();
         n_bytes += Property::PayloadFormatIndicator(self.payload_format_indicator)
-            .encode(&mut properties)?;
+            .encode(&mut properties)
+            .await?;
         if let Some(message_expiry_interval) = self.message_expiry_interval {
-            n_bytes +=
-                Property::MessageExpiryInterval(message_expiry_interval).encode(&mut properties)?;
+            n_bytes += Property::MessageExpiryInterval(message_expiry_interval)
+                .encode(&mut properties)
+                .await?;
         }
         if let Some(topic_alias) = self.topic_alias {
-            n_bytes += Property::TopicAlias(topic_alias).encode(&mut properties)?;
+            n_bytes += Property::TopicAlias(topic_alias)
+                .encode(&mut properties)
+                .await?;
         }
         if let Some(response_topic) = self.response_topic {
-            n_bytes += Property::ResponseTopic(response_topic).encode(&mut properties)?;
+            n_bytes += Property::ResponseTopic(response_topic)
+                .encode(&mut properties)
+                .await?;
         }
         if let Some(correlation_data) = self.correlation_data {
-            n_bytes += Property::CorrelationData(correlation_data).encode(&mut properties)?;
+            n_bytes += Property::CorrelationData(correlation_data)
+                .encode(&mut properties)
+                .await?;
         }
         for (k, v) in self.user_properties {
-            n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
+            n_bytes += Property::UserProperty(k, v).encode(&mut properties).await?;
         }
         for v in self.subscription_identifiers {
-            n_bytes += Property::SubscriptionIdentifier(v).encode(&mut properties)?;
+            n_bytes += Property::SubscriptionIdentifier(v)
+                .encode(&mut properties)
+                .await?;
         }
-        n_bytes += Property::ContentType(self.content_type).encode(&mut properties)?;
+        n_bytes += Property::ContentType(self.content_type)
+            .encode(&mut properties)
+            .await?;
 
-        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
-        writer.write_all(&properties)?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
+        writer.write_all(&properties).await?;
 
-        n_bytes += writer.write(&self.message)?;
+        n_bytes += writer.write(&self.message).await?;
 
         Ok(n_bytes)
     }
 
-    pub(crate) fn read<R: Read>(
+        /// Read the `Publish` body from `reader`, retuning it in case of success.
+pub async fn read<R: Read + Unpin>(
         reader: &mut R,
         duplicate: bool,
         qos: QoS,
@@ -138,10 +154,10 @@ impl Publish {
     ) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size);
 
-        let topic_name = codec::read_utf8_string(&mut reader)?;
+        let topic_name = codec::read_utf8_string(&mut reader).await?;
 
         let packet_identifier = if qos != QoS::AtMostOnce {
-            Some(codec::read_two_byte_integer(&mut reader)?)
+            Some(codec::read_two_byte_integer(&mut reader).await?)
         } else {
             None
         };
@@ -154,9 +170,9 @@ impl Publish {
         let mut subscription_identifiers = Vec::new();
         let mut content_type = Default::default();
 
-        let mut properties = PropertiesDecoder::take(&mut reader)?;
+        let mut properties = PropertiesDecoder::take(&mut reader).await?;
         while properties.has_properties() {
-            match properties.read()? {
+            match properties.read().await? {
                 Property::PayloadFormatIndicator(v) => payload_format_indicator = v,
                 Property::MessageExpiryInterval(v) => message_expiry_interval = Some(v),
                 Property::TopicAlias(v) => topic_alias = Some(v),
@@ -170,7 +186,7 @@ impl Publish {
         }
 
         let mut message = Vec::new();
-        reader.read_to_end(&mut message)?;
+        reader.read_to_end(&mut message).await?;
 
         Ok(Publish {
             duplicate,
@@ -195,7 +211,7 @@ impl Publish {
 mod unit {
 
     use super::*;
-    use std::io::Cursor;
+    use async_std::io::Cursor;
 
     fn encoded() -> Vec<u8> {
         vec![
@@ -228,20 +244,21 @@ mod unit {
         }
     }
 
-    #[test]
-    fn encode() {
+    #[async_std::test]
+    async fn encode() {
         let test_data = decoded();
         let mut tested_result = Vec::new();
-        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        let n_bytes = test_data.write(&mut tested_result).await.unwrap();
         assert_eq!(tested_result, encoded());
         assert_eq!(n_bytes, 124);
     }
 
-    #[test]
-    fn decode() {
+    #[async_std::test]
+    async fn decode() {
         let mut test_data = Cursor::new(encoded());
-        let tested_result =
-            Publish::read(&mut test_data, false, QoS::AtLeastOnce, true, 124).unwrap();
+        let tested_result = Publish::read(&mut test_data, false, QoS::AtLeastOnce, true, 124)
+            .await
+            .unwrap();
         assert_eq!(tested_result, decoded());
     }
 }

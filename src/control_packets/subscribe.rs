@@ -1,9 +1,10 @@
 use crate::{
     codec, Error, PropertiesDecoder, Property, QoS, Result as SageResult, DEFAULT_MAXIMUM_QOS,
 };
+use async_std::io::{prelude::*, Read, Write};
 use std::{
     convert::{TryFrom, TryInto},
-    io::{Read, Write},
+    marker::Unpin,
 };
 
 /// This option specifies whether retained messages are sent when the
@@ -63,16 +64,16 @@ impl Default for SubscriptionOptions {
 }
 
 impl SubscriptionOptions {
-    fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+    async fn encode<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let byte: u8 = self.qos as u8
             | (self.no_local as u8) << 2
             | (self.retain_as_published as u8) << 3
             | (self.retain_handling as u8) << 4;
-        codec::write_byte(byte, writer)
+        codec::write_byte(byte, writer).await
     }
 
-    fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let flags = codec::read_byte(reader)?;
+    async fn decode<R: Read + Unpin>(reader: &mut R) -> SageResult<Self> {
+        let flags = codec::read_byte(reader).await?;
         if flags & 0b1100_0000 > 0 {
             Err(Error::ProtocolError)
         } else {
@@ -118,53 +119,56 @@ impl Default for Subscribe {
 }
 
 impl Subscribe {
-    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer)?;
+        /// Write the `Subscribe` body of a packet, returning the written size in bytes
+    /// in case of success.
+pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
 
         let mut properties = Vec::new();
 
         if let Some(v) = self.subscription_identifier {
-            n_bytes += Property::SubscriptionIdentifier(v).encode(&mut properties)?;
+            n_bytes += Property::SubscriptionIdentifier(v)
+                .encode(&mut properties)
+                .await?;
         }
         for (k, v) in self.user_properties {
-            n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
+            n_bytes += Property::UserProperty(k, v).encode(&mut properties).await?;
         }
 
-        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
-        writer.write_all(&properties)?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
+        writer.write_all(&properties).await?;
 
         for option in self.subscriptions {
-            n_bytes += codec::write_utf8_string(&option.0, writer)?;
-            n_bytes += option.1.encode(writer)?;
+            n_bytes += codec::write_utf8_string(&option.0, writer).await?;
+            n_bytes += option.1.encode(writer).await?;
         }
 
         Ok(n_bytes)
     }
 
-    pub(crate) fn read<R: Read>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
+        /// Read the `Subscribe` body from `reader`, retuning it in case of success.
+pub async fn read<R: Read + Unpin>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size as u64);
-        let packet_identifier = codec::read_two_byte_integer(&mut reader)?;
+        let packet_identifier = codec::read_two_byte_integer(&mut reader).await?;
 
         let mut user_properties = Vec::new();
         let mut subscription_identifier = None;
 
-        let mut properties = PropertiesDecoder::take(&mut reader)?;
+        let mut properties = PropertiesDecoder::take(&mut reader).await?;
         while properties.has_properties() {
-            match properties.read()? {
+            match properties.read().await? {
                 Property::SubscriptionIdentifier(v) => subscription_identifier = Some(v),
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
                 _ => return Err(Error::ProtocolError),
             }
         }
 
-        //        return Err(Error::DebugMarker("TOUT VA BIEN".into()));
-
         let mut subscriptions = Vec::new();
 
         while reader.limit() > 0 {
             subscriptions.push((
-                codec::read_utf8_string(&mut reader)?,
-                SubscriptionOptions::decode(&mut reader)?,
+                codec::read_utf8_string(&mut reader).await?,
+                SubscriptionOptions::decode(&mut reader).await?,
             ));
         }
 
@@ -184,7 +188,7 @@ impl Subscribe {
 #[cfg(test)]
 mod unit {
     use super::*;
-    use std::io::Cursor;
+    use async_std::io::Cursor;
 
     fn encoded() -> Vec<u8> {
         vec![
@@ -240,19 +244,19 @@ mod unit {
         }
     }
 
-    #[test]
-    fn encode() {
+    #[async_std::test]
+    async fn encode() {
         let test_data = decoded();
         let mut tested_result = Vec::new();
-        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        let n_bytes = test_data.write(&mut tested_result).await.unwrap();
         assert_eq!(tested_result, encoded());
         assert_eq!(n_bytes, 59);
     }
 
-    #[test]
-    fn decode() {
+    #[async_std::test]
+    async fn decode() {
         let mut test_data = Cursor::new(encoded());
-        let tested_result = Subscribe::read(&mut test_data, 59).unwrap();
+        let tested_result = Subscribe::read(&mut test_data, 59).await.unwrap();
         assert_eq!(tested_result, decoded());
     }
 }

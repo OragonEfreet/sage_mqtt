@@ -5,11 +5,12 @@ use crate::{
     DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
     DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
 };
-use std::io::{Read, Write};
+use async_std::io::{prelude::*, Read, Write};
+use std::marker::Unpin;
 
 /// The `Connack` message is sent from the server to the client to acknowledge
 /// the connection request. This can be the direct response to a `Connect`
-/// message or the closing exchange of `Auth` packets.
+/// message or the closing exchange of `Connack` packets.
 #[derive(PartialEq, Debug, Clone)]
 pub struct ConnAck {
     /// If the `session_present` is true, the connection is accepted using a
@@ -91,7 +92,7 @@ pub struct ConnAck {
     /// connect to instead.
     pub reference: Option<String>,
 
-    /// Upon using enhanced connexion, ending the `Auth` exchange will result in
+    /// Upon using enhanced connexion, ending the `Connack` exchange will result in
     /// a `ConnAck` packet which may contain `Authentication` data.
     pub authentication: Option<Authentication>,
 }
@@ -122,61 +123,86 @@ impl Default for ConnAck {
 }
 
 impl ConnAck {
-    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = codec::write_bool(self.session_present, writer)?;
-        n_bytes += codec::write_reason_code(self.reason_code, writer)?;
+
+        /// Write the `Connack` body of a packet, returning the written size in bytes
+    /// in case of success.
+pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+        let mut n_bytes = codec::write_bool(self.session_present, writer).await?;
+        n_bytes += codec::write_reason_code(self.reason_code, writer).await?;
 
         let mut properties = Vec::new();
 
         if let Some(v) = self.session_expiry_interval {
-            n_bytes += Property::SessionExpiryInterval(v).encode(&mut properties)?;
+            n_bytes += Property::SessionExpiryInterval(v)
+                .encode(&mut properties)
+                .await?;
         }
-        n_bytes += Property::ReceiveMaximum(self.receive_maximum).encode(&mut properties)?;
-        n_bytes += Property::MaximumQoS(self.maximum_qos).encode(&mut properties)?;
-        n_bytes += Property::RetainAvailable(self.retain_available).encode(&mut properties)?;
+        n_bytes += Property::ReceiveMaximum(self.receive_maximum)
+            .encode(&mut properties)
+            .await?;
+        n_bytes += Property::MaximumQoS(self.maximum_qos)
+            .encode(&mut properties)
+            .await?;
+        n_bytes += Property::RetainAvailable(self.retain_available)
+            .encode(&mut properties)
+            .await?;
         if let Some(v) = self.maximum_packet_size {
-            n_bytes += Property::MaximumPacketSize(v).encode(&mut properties)?;
+            n_bytes += Property::MaximumPacketSize(v)
+                .encode(&mut properties)
+                .await?;
         }
         if let Some(v) = self.assigned_client_id {
-            n_bytes += Property::AssignedClientIdentifier(v).encode(&mut properties)?;
+            n_bytes += Property::AssignedClientIdentifier(v)
+                .encode(&mut properties)
+                .await?;
         }
-        n_bytes += Property::TopicAliasMaximum(self.topic_alias_maximum).encode(&mut properties)?;
-        n_bytes += Property::ReasonString(self.reason_string).encode(&mut properties)?;
+        n_bytes += Property::TopicAliasMaximum(self.topic_alias_maximum)
+            .encode(&mut properties)
+            .await?;
+        n_bytes += Property::ReasonString(self.reason_string)
+            .encode(&mut properties)
+            .await?;
         for (k, v) in self.user_properties {
-            n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
+            n_bytes += Property::UserProperty(k, v).encode(&mut properties).await?;
         }
         n_bytes += Property::WildcardSubscriptionAvailable(self.wildcard_subscription_available)
-            .encode(&mut properties)?;
+            .encode(&mut properties)
+            .await?;
         n_bytes += Property::SharedSubscriptionAvailable(self.shared_subscription_available)
-            .encode(&mut properties)?;
+            .encode(&mut properties)
+            .await?;
         if let Some(v) = self.keep_alive {
-            n_bytes += Property::ServerKeepAlive(v).encode(&mut properties)?;
+            n_bytes += Property::ServerKeepAlive(v).encode(&mut properties).await?;
         }
-        n_bytes +=
-            Property::ResponseInformation(self.response_information).encode(&mut properties)?;
+        n_bytes += Property::ResponseInformation(self.response_information)
+            .encode(&mut properties)
+            .await?;
         if let Some(v) = self.reference {
-            n_bytes += Property::ServerReference(v).encode(&mut properties)?;
+            n_bytes += Property::ServerReference(v).encode(&mut properties).await?;
         }
         if let Some(authentication) = self.authentication {
-            n_bytes +=
-                Property::AuthenticationMethod(authentication.method).encode(&mut properties)?;
+            n_bytes += Property::AuthenticationMethod(authentication.method)
+                .encode(&mut properties)
+                .await?;
             if !authentication.data.is_empty() {
-                n_bytes +=
-                    Property::AuthenticationData(authentication.data).encode(&mut properties)?;
+                n_bytes += Property::AuthenticationData(authentication.data)
+                    .encode(&mut properties)
+                    .await?;
             }
         }
 
-        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
-        writer.write_all(&properties)?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
+        writer.write_all(&properties).await?;
 
         Ok(n_bytes)
     }
 
-    pub(crate) fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let session_present = codec::read_bool(reader)?;
+        /// Read the `Connack` body from `reader`, retuning it in case of success.
+pub async fn read<R: Read + Unpin>(reader: &mut R) -> SageResult<Self> {
+        let session_present = codec::read_bool(reader).await?;
 
         let reason_code =
-            ReasonCode::try_parse(codec::read_byte(reader)?, ControlPacketType::CONNACK)?;
+            ReasonCode::try_parse(codec::read_byte(reader).await?, ControlPacketType::CONNACK)?;
 
         let mut session_expiry_interval = None;
         let mut receive_maximum = DEFAULT_RECEIVE_MAXIMUM;
@@ -196,9 +222,9 @@ impl ConnAck {
         let mut authentication_method = None;
         let mut authentication_data = Default::default();
 
-        let mut decoder = PropertiesDecoder::take(reader)?;
+        let mut decoder = PropertiesDecoder::take(reader).await?;
         while decoder.has_properties() {
-            match decoder.read()? {
+            match decoder.read().await? {
                 Property::SessionExpiryInterval(v) => session_expiry_interval = Some(v),
                 Property::ReceiveMaximum(v) => receive_maximum = v,
                 Property::MaximumQoS(v) => maximum_qos = v,
@@ -261,7 +287,7 @@ impl ConnAck {
 mod unit {
 
     use super::*;
-    use std::io::Cursor;
+    use async_std::io::Cursor;
 
     fn encoded() -> Vec<u8> {
         vec![
@@ -300,19 +326,19 @@ mod unit {
         }
     }
 
-    #[test]
-    fn encode() {
+    #[async_std::test]
+    async fn encode() {
         let test_data = decoded();
         let mut tested_result = Vec::new();
-        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        let n_bytes = test_data.write(&mut tested_result).await.unwrap();
         assert_eq!(tested_result, encoded());
         assert_eq!(n_bytes, 114);
     }
 
-    #[test]
-    fn decode() {
+    #[async_std::test]
+    async fn decode() {
         let mut test_data = Cursor::new(encoded());
-        let tested_result = ConnAck::read(&mut test_data).unwrap();
+        let tested_result = ConnAck::read(&mut test_data).await.unwrap();
         assert_eq!(tested_result, decoded());
     }
 }

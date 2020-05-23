@@ -1,7 +1,8 @@
 use crate::{
     codec, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
 };
-use std::io::{Read, Write};
+use async_std::io::{prelude::*, Read, Write};
+use std::marker::Unpin;
 
 /// A `Disconnect` packet can be sent by the client or the server to gracefully
 /// disconnect.
@@ -72,41 +73,48 @@ impl Default for Disconnect {
 }
 
 impl Disconnect {
-    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = codec::write_reason_code(self.reason_code, writer)?;
+        /// Write the `Disconnect` body of a packet, returning the written size in bytes
+    /// in case of success.
+pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+        let mut n_bytes = codec::write_reason_code(self.reason_code, writer).await?;
 
         let mut properties = Vec::new();
 
         if let Some(v) = self.session_expiry_interval {
-            n_bytes += Property::SessionExpiryInterval(v).encode(&mut properties)?;
+            n_bytes += Property::SessionExpiryInterval(v)
+                .encode(&mut properties)
+                .await?;
         }
         if let Some(v) = self.reason_string {
-            n_bytes += Property::ReasonString(v).encode(&mut properties)?;
+            n_bytes += Property::ReasonString(v).encode(&mut properties).await?;
         }
         for (k, v) in self.user_properties {
-            n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
+            n_bytes += Property::UserProperty(k, v).encode(&mut properties).await?;
         }
         if let Some(v) = self.reference {
-            n_bytes += Property::ServerReference(v).encode(&mut properties)?;
+            n_bytes += Property::ServerReference(v).encode(&mut properties).await?;
         }
 
-        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
-        writer.write_all(&properties)?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
+        writer.write_all(&properties).await?;
 
         Ok(n_bytes)
     }
 
-    pub(crate) fn read<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let reason_code =
-            ReasonCode::try_parse(codec::read_byte(reader)?, ControlPacketType::DISCONNECT)?;
+        /// Read the `Disconnect` body from `reader`, retuning it in case of success.
+pub async fn read<R: Read + Unpin>(reader: &mut R) -> SageResult<Self> {
+        let reason_code = ReasonCode::try_parse(
+            codec::read_byte(reader).await?,
+            ControlPacketType::DISCONNECT,
+        )?;
         let mut user_properties = Vec::new();
-        let mut properties = PropertiesDecoder::take(reader)?;
+        let mut properties = PropertiesDecoder::take(reader).await?;
         let mut session_expiry_interval = None;
         let mut reason_string = None;
         let mut reference = None;
 
         while properties.has_properties() {
-            match properties.read()? {
+            match properties.read().await? {
                 Property::SessionExpiryInterval(v) => session_expiry_interval = Some(v),
                 Property::ReasonString(v) => reason_string = Some(v),
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
@@ -129,7 +137,7 @@ impl Disconnect {
 mod unit {
 
     use super::*;
-    use std::io::Cursor;
+    use async_std::io::Cursor;
 
     fn encoded() -> Vec<u8> {
         vec![
@@ -153,19 +161,19 @@ mod unit {
         }
     }
 
-    #[test]
-    fn encode() {
+    #[async_std::test]
+    async fn encode() {
         let test_data = decoded();
         let mut tested_result = Vec::new();
-        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        let n_bytes = test_data.write(&mut tested_result).await.unwrap();
         assert_eq!(tested_result, encoded());
         assert_eq!(n_bytes, 76);
     }
 
-    #[test]
-    fn decode() {
+    #[async_std::test]
+    async fn decode() {
         let mut test_data = Cursor::new(encoded());
-        let tested_result = Disconnect::read(&mut test_data).unwrap();
+        let tested_result = Disconnect::read(&mut test_data).await.unwrap();
         assert_eq!(tested_result, decoded());
     }
 }

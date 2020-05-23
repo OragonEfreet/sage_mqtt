@@ -7,5 +7,4 @@
 - [MQTT.org](http://mqtt.org/)
 - [OASIS Standard](https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html)
 
-Sage MQTT is a encode/decode library for MQTT protocol.
-
+Sage MQTT is a encode/decode library for MQTT protocol with async functions.

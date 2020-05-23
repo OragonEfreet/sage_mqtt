@@ -2,7 +2,8 @@ use crate::{
     Auth, ConnAck, Connect, ControlPacketType, Disconnect, Error, FixedHeader, PubAck, PubComp,
     PubRec, PubRel, Publish, Result as SageResult, SubAck, Subscribe, UnSubAck, UnSubscribe,
 };
-use std::io::{Read, Write};
+use async_std::io::{prelude::*, Read, Write};
+use std::marker::Unpin;
 
 /// The standard type to manipulate a Read/Write-able MQTT packet. Each packet
 /// is an enum value with its own type.
@@ -58,58 +59,58 @@ impl ControlPacket {
     /// bytes written.
     /// In case of failure, the operation will return any MQTT-related error, or
     /// `std::io::Error`.
-    pub fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn encode<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut variable_and_payload = Vec::new();
         let (packet_type, remaining_size) = match self {
             ControlPacket::Connect(packet) => (
                 ControlPacketType::CONNECT,
-                packet.write(&mut variable_and_payload)?,
+                packet.write(&mut variable_and_payload).await?,
             ),
             ControlPacket::ConnAck(packet) => (
                 ControlPacketType::CONNACK,
-                packet.write(&mut variable_and_payload)?,
+                packet.write(&mut variable_and_payload).await?,
             ),
             ControlPacket::PingReq => (ControlPacketType::PINGREQ, 0),
             ControlPacket::PingResp => (ControlPacketType::PINGRESP, 0),
             ControlPacket::UnSubAck(packet) => (
                 ControlPacketType::UNSUBACK,
-                packet.write(&mut variable_and_payload)?,
+                packet.write(&mut variable_and_payload).await?,
             ),
             ControlPacket::Auth(packet) => (
                 ControlPacketType::AUTH,
-                packet.write(&mut variable_and_payload)?,
+                packet.write(&mut variable_and_payload).await?,
             ),
             ControlPacket::PubAck(packet) => (
                 ControlPacketType::PUBACK,
-                packet.write(&mut variable_and_payload)?,
+                packet.write(&mut variable_and_payload).await?,
             ),
             ControlPacket::UnSubscribe(packet) => (
                 ControlPacketType::UNSUBSCRIBE,
-                packet.write(&mut variable_and_payload)?,
+                packet.write(&mut variable_and_payload).await?,
             ),
             ControlPacket::PubRec(packet) => (
                 ControlPacketType::PUBREC,
-                packet.write(&mut variable_and_payload)?,
+                packet.write(&mut variable_and_payload).await?,
             ),
             ControlPacket::Disconnect(packet) => (
                 ControlPacketType::DISCONNECT,
-                packet.write(&mut variable_and_payload)?,
+                packet.write(&mut variable_and_payload).await?,
             ),
             ControlPacket::PubRel(packet) => (
                 ControlPacketType::PUBREL,
-                packet.write(&mut variable_and_payload)?,
+                packet.write(&mut variable_and_payload).await?,
             ),
             ControlPacket::SubAck(packet) => (
                 ControlPacketType::SUBACK,
-                packet.write(&mut variable_and_payload)?,
+                packet.write(&mut variable_and_payload).await?,
             ),
             ControlPacket::PubComp(packet) => (
                 ControlPacketType::PUBCOMP,
-                packet.write(&mut variable_and_payload)?,
+                packet.write(&mut variable_and_payload).await?,
             ),
             ControlPacket::Subscribe(packet) => (
                 ControlPacketType::SUBSCRIBE,
-                packet.write(&mut variable_and_payload)?,
+                packet.write(&mut variable_and_payload).await?,
             ),
             ControlPacket::Publish(packet) => (
                 ControlPacketType::PUBLISH {
@@ -117,7 +118,7 @@ impl ControlPacket {
                     qos: packet.qos,
                     retain: packet.retain,
                 },
-                packet.write(&mut variable_and_payload)?,
+                packet.write(&mut variable_and_payload).await?,
             ),
         };
 
@@ -127,66 +128,72 @@ impl ControlPacket {
             packet_type,
             remaining_size,
         }
-        .encode(&mut fixed_header_buffer)?;
+        .encode(&mut fixed_header_buffer)
+        .await?;
 
         println!("{:?}", fixed_header_buffer);
 
-        writer.write_all(&fixed_header_buffer)?;
-        writer.write_all(&variable_and_payload)?;
+        writer.write_all(&fixed_header_buffer).await?;
+        writer.write_all(&variable_and_payload).await?;
         Ok(fixed_size)
     }
 
     /// Reads a control packet from `reader`, returning a new `ControlPacket`.
     /// In case of failure, the operation will return any MQTT-related error, or
     /// `std::io::Error`.
-    pub fn decode<R: Read>(reader: &mut R) -> SageResult<Self> {
-        let fixed_header = FixedHeader::decode(reader)?;
+    pub async fn decode<R: Read + Unpin>(reader: &mut R) -> SageResult<Self> {
+        let fixed_header = FixedHeader::decode(reader).await?;
 
         let packet = match fixed_header.packet_type {
-            ControlPacketType::CONNECT => ControlPacket::Connect(Connect::read(reader)?),
-            ControlPacketType::CONNACK => ControlPacket::ConnAck(ConnAck::read(reader)?),
+            ControlPacketType::CONNECT => ControlPacket::Connect(Connect::read(reader).await?),
+            ControlPacketType::CONNACK => ControlPacket::ConnAck(ConnAck::read(reader).await?),
             ControlPacketType::PUBACK => {
-                ControlPacket::PubAck(PubAck::read(reader, fixed_header.remaining_size == 2)?)
+                ControlPacket::PubAck(PubAck::read(reader, fixed_header.remaining_size == 2).await?)
             }
             ControlPacketType::PUBREC => {
-                ControlPacket::PubRec(PubRec::read(reader, fixed_header.remaining_size == 2)?)
+                ControlPacket::PubRec(PubRec::read(reader, fixed_header.remaining_size == 2).await?)
             }
             ControlPacketType::PINGREQ => ControlPacket::PingReq,
             ControlPacketType::PINGRESP => ControlPacket::PingResp,
             ControlPacketType::SUBACK => {
-                ControlPacket::SubAck(SubAck::read(reader, fixed_header.remaining_size)?)
+                ControlPacket::SubAck(SubAck::read(reader, fixed_header.remaining_size).await?)
             }
-            ControlPacketType::UNSUBSCRIBE => {
-                ControlPacket::UnSubscribe(UnSubscribe::read(reader, fixed_header.remaining_size)?)
-            }
-            ControlPacketType::AUTH => ControlPacket::Auth(Auth::read(reader)?),
+            ControlPacketType::UNSUBSCRIBE => ControlPacket::UnSubscribe(
+                UnSubscribe::read(reader, fixed_header.remaining_size).await?,
+            ),
+            ControlPacketType::AUTH => ControlPacket::Auth(Auth::read(reader).await?),
             ControlPacketType::PUBREL => {
-                ControlPacket::PubRel(PubRel::read(reader, fixed_header.remaining_size == 2)?)
+                ControlPacket::PubRel(PubRel::read(reader, fixed_header.remaining_size == 2).await?)
             }
-            ControlPacketType::DISCONNECT => ControlPacket::Disconnect(Disconnect::read(reader)?),
-            ControlPacketType::PUBCOMP => {
-                ControlPacket::PubComp(PubComp::read(reader, fixed_header.remaining_size == 2)?)
+            ControlPacketType::DISCONNECT => {
+                ControlPacket::Disconnect(Disconnect::read(reader).await?)
             }
+            ControlPacketType::PUBCOMP => ControlPacket::PubComp(
+                PubComp::read(reader, fixed_header.remaining_size == 2).await?,
+            ),
 
-            ControlPacketType::SUBSCRIBE => {
-                ControlPacket::Subscribe(Subscribe::read(reader, fixed_header.remaining_size)?)
-            }
+            ControlPacketType::SUBSCRIBE => ControlPacket::Subscribe(
+                Subscribe::read(reader, fixed_header.remaining_size).await?,
+            ),
 
             ControlPacketType::UNSUBACK => {
-                ControlPacket::UnSubAck(UnSubAck::read(reader, fixed_header.remaining_size)?)
+                ControlPacket::UnSubAck(UnSubAck::read(reader, fixed_header.remaining_size).await?)
             }
 
             ControlPacketType::PUBLISH {
                 duplicate,
                 qos,
                 retain,
-            } => ControlPacket::Publish(Publish::read(
-                reader,
-                duplicate,
-                qos,
-                retain,
-                fixed_header.remaining_size as u64,
-            )?),
+            } => ControlPacket::Publish(
+                Publish::read(
+                    reader,
+                    duplicate,
+                    qos,
+                    retain,
+                    fixed_header.remaining_size as u64,
+                )
+                .await?,
+            ),
             _ => return Err(Error::ProtocolError),
         };
 

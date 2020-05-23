@@ -6,13 +6,12 @@ use crate::{
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
     DEFAULT_WILL_DELAY_INTERVAL,
 };
-use std::{
-    collections::HashSet,
-    io::{Read, Take, Write},
-};
+use async_std::io::{prelude::*, Read, Take, Write};
+use std::collections::HashSet;
+use std::marker::Unpin;
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]
-pub enum PropertyId {
+pub(crate) enum PropertyId {
     PayloadFormatIndicator = 0x01,
     MessageExpiryInterval = 0x02,
     ContentType = 0x03,
@@ -42,12 +41,12 @@ pub enum PropertyId {
     SharedSubscriptionAvailable = 0x2A,
 }
 
-fn write_property_id<W: Write>(id: PropertyId, writer: &mut W) -> SageResult<usize> {
-    codec::write_variable_byte_integer(id as u32, writer)
+async fn write_property_id<W: Write + Unpin>(id: PropertyId, writer: &mut W) -> SageResult<usize> {
+    codec::write_variable_byte_integer(id as u32, writer).await
 }
 
-fn read_property_id<R: Read>(reader: &mut R) -> SageResult<PropertyId> {
-    match codec::read_variable_byte_integer(reader)? {
+async fn read_property_id<R: Read + Unpin>(reader: &mut R) -> SageResult<PropertyId> {
+    match codec::read_variable_byte_integer(reader).await? {
         0x01 => Ok(PropertyId::PayloadFormatIndicator),
         0x02 => Ok(PropertyId::MessageExpiryInterval),
         0x03 => Ok(PropertyId::ContentType),
@@ -110,27 +109,32 @@ pub enum Property {
     SharedSubscriptionAvailable(bool),
 }
 
-pub struct PropertiesDecoder<'a, R: Read> {
-    reader: Take<&'a mut R>,
+pub struct PropertiesDecoder<R: Read + Unpin> {
+    reader: Take<R>,
     marked: HashSet<PropertyId>,
 }
 
-impl<'a, R: Read> PropertiesDecoder<'a, R> {
-    pub fn take(reader: &'a mut R) -> SageResult<Self> {
-        let len = codec::read_variable_byte_integer(reader)? as u64;
+impl<'a, R: Read + Unpin> PropertiesDecoder<R> {
+    pub async fn take(mut stream: R) -> SageResult<Self> {
+        let len = codec::read_variable_byte_integer(&mut stream).await? as u64;
+        let reader = stream.take(len);
         Ok(PropertiesDecoder {
-            reader: reader.take(len),
+            reader,
             marked: HashSet::new(),
         })
+    }
+
+    pub fn into_inner(self) -> R {
+        self.reader.into_inner()
     }
 
     pub fn has_properties(&self) -> bool {
         self.reader.limit() > 0
     }
 
-    pub fn read(&mut self) -> SageResult<Property> {
+    pub async fn read(&mut self) -> SageResult<Property> {
         let reader = &mut self.reader;
-        let property_id = read_property_id(reader)?;
+        let property_id = read_property_id(reader).await?;
 
         // Filter by authorized properties and unicity requirements
         if (property_id != PropertyId::UserProperty
@@ -139,34 +143,36 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
         {
             return Err(Error::ProtocolError);
         }
-        self.read_property_value(property_id)
+        self.read_property_value(property_id).await
     }
 
-    fn read_property_value(&mut self, id: PropertyId) -> SageResult<Property> {
+    async fn read_property_value(&mut self, id: PropertyId) -> SageResult<Property> {
         let reader = &mut self.reader;
         match id {
-            PropertyId::PayloadFormatIndicator => match codec::read_byte(reader)? {
+            PropertyId::PayloadFormatIndicator => match codec::read_byte(reader).await? {
                 0x00 => Ok(Property::PayloadFormatIndicator(false)),
                 0x01 => Ok(Property::PayloadFormatIndicator(true)),
                 _ => Err(Error::ProtocolError),
             },
             PropertyId::MessageExpiryInterval => Ok(Property::MessageExpiryInterval(
-                codec::read_four_byte_integer(reader)?,
+                codec::read_four_byte_integer(reader).await?,
             )),
-            PropertyId::ContentType => Ok(Property::ContentType(codec::read_utf8_string(reader)?)),
+            PropertyId::ContentType => Ok(Property::ContentType(
+                codec::read_utf8_string(reader).await?,
+            )),
             PropertyId::ResponseTopic => {
-                let topic = codec::read_utf8_string(reader)?;
+                let topic = codec::read_utf8_string(reader).await?;
                 if topic.is_empty() {
                     Err(Error::ProtocolError)
                 } else {
                     Ok(Property::ResponseTopic(topic))
                 }
             }
-            PropertyId::CorrelationData => {
-                Ok(Property::CorrelationData(codec::read_binary_data(reader)?))
-            }
+            PropertyId::CorrelationData => Ok(Property::CorrelationData(
+                codec::read_binary_data(reader).await?,
+            )),
             PropertyId::SubscriptionIdentifier => {
-                let v = codec::read_variable_byte_integer(reader)?;
+                let v = codec::read_variable_byte_integer(reader).await?;
                 if v == 0 {
                     Err(Error::ProtocolError)
                 } else {
@@ -175,156 +181,163 @@ impl<'a, R: Read> PropertiesDecoder<'a, R> {
             }
 
             PropertyId::SessionExpiryInterval => Ok(Property::SessionExpiryInterval(
-                codec::read_four_byte_integer(reader)?,
+                codec::read_four_byte_integer(reader).await?,
             )),
             PropertyId::AssignedClientIdentifier => Ok(Property::AssignedClientIdentifier(
-                codec::read_utf8_string(reader)?,
+                codec::read_utf8_string(reader).await?,
             )),
             PropertyId::ServerKeepAlive => Ok(Property::ServerKeepAlive(
-                codec::read_two_byte_integer(reader)?,
+                codec::read_two_byte_integer(reader).await?,
             )),
             PropertyId::AuthenticationMethod => Ok(Property::AuthenticationMethod(
-                codec::read_utf8_string(reader)?,
+                codec::read_utf8_string(reader).await?,
             )),
             PropertyId::AuthenticationData => Ok(Property::AuthenticationData(
-                codec::read_binary_data(reader)?,
+                codec::read_binary_data(reader).await?,
             )),
-            PropertyId::RequestProblemInformation => match codec::read_byte(reader)? {
+            PropertyId::RequestProblemInformation => match codec::read_byte(reader).await? {
                 0x00 => Ok(Property::RequestProblemInformation(false)),
                 0x01 => Ok(Property::RequestProblemInformation(true)),
                 _ => Err(Error::ProtocolError),
             },
             PropertyId::WillDelayInterval => Ok(Property::WillDelayInterval(
-                codec::read_four_byte_integer(reader)?,
+                codec::read_four_byte_integer(reader).await?,
             )),
-            PropertyId::RequestResponseInformation => match codec::read_byte(reader)? {
+            PropertyId::RequestResponseInformation => match codec::read_byte(reader).await? {
                 0x00 => Ok(Property::RequestResponseInformation(false)),
                 0x01 => Ok(Property::RequestResponseInformation(true)),
                 _ => Err(Error::ProtocolError),
             },
             PropertyId::ResponseInformation => Ok(Property::ResponseInformation(
-                codec::read_utf8_string(reader)?,
+                codec::read_utf8_string(reader).await?,
             )),
-            PropertyId::ServerReference => {
-                Ok(Property::ServerReference(codec::read_utf8_string(reader)?))
-            }
-            PropertyId::ReasonString => {
-                Ok(Property::ReasonString(codec::read_utf8_string(reader)?))
-            }
-            PropertyId::ReceiveMaximum => match codec::read_two_byte_integer(reader)? {
+            PropertyId::ServerReference => Ok(Property::ServerReference(
+                codec::read_utf8_string(reader).await?,
+            )),
+            PropertyId::ReasonString => Ok(Property::ReasonString(
+                codec::read_utf8_string(reader).await?,
+            )),
+            PropertyId::ReceiveMaximum => match codec::read_two_byte_integer(reader).await? {
                 0 => Err(Error::MalformedPacket),
                 v => Ok(Property::ReceiveMaximum(v)),
             },
             PropertyId::TopicAliasMaximum => Ok(Property::TopicAliasMaximum(
-                codec::read_two_byte_integer(reader)?,
+                codec::read_two_byte_integer(reader).await?,
             )),
-            PropertyId::TopicAlias => {
-                Ok(Property::TopicAlias(codec::read_two_byte_integer(reader)?))
-            }
+            PropertyId::TopicAlias => Ok(Property::TopicAlias(
+                codec::read_two_byte_integer(reader).await?,
+            )),
             PropertyId::MaximumQoS => {
-                let qos = codec::read_qos(reader)?;
+                let qos = codec::read_qos(reader).await?;
                 if qos == QoS::ExactlyOnce {
                     Err(Error::ProtocolError)
                 } else {
                     Ok(Property::MaximumQoS(qos))
                 }
             }
-            PropertyId::RetainAvailable => Ok(Property::RetainAvailable(codec::read_bool(reader)?)),
+            PropertyId::RetainAvailable => {
+                Ok(Property::RetainAvailable(codec::read_bool(reader).await?))
+            }
             PropertyId::UserProperty => Ok(Property::UserProperty(
-                codec::read_utf8_string(reader)?,
-                codec::read_utf8_string(reader)?,
+                codec::read_utf8_string(reader).await?,
+                codec::read_utf8_string(reader).await?,
             )),
             PropertyId::MaximumPacketSize => Ok(Property::MaximumPacketSize(
-                codec::read_four_byte_integer(reader)?,
+                codec::read_four_byte_integer(reader).await?,
             )),
             PropertyId::WildcardSubscriptionAvailable => Ok(
-                Property::WildcardSubscriptionAvailable(codec::read_bool(reader)?),
+                Property::WildcardSubscriptionAvailable(codec::read_bool(reader).await?),
             ),
             PropertyId::SubscriptionIdentifiersAvailable => Ok(
-                Property::SubscriptionIdentifiersAvailable(codec::read_bool(reader)?),
+                Property::SubscriptionIdentifiersAvailable(codec::read_bool(reader).await?),
             ),
             PropertyId::SharedSubscriptionAvailable => Ok(Property::SharedSubscriptionAvailable(
-                codec::read_bool(reader)?,
+                codec::read_bool(reader).await?,
             )),
         }
     }
 }
 
 impl Property {
-    pub fn encode<W: Write>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn encode<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         match self {
             Property::PayloadFormatIndicator(v) => {
                 if v != DEFAULT_PAYLOAD_FORMAT_INDICATOR {
-                    let n_bytes = write_property_id(PropertyId::PayloadFormatIndicator, writer)?;
-                    Ok(n_bytes + codec::write_bool(v, writer)?)
+                    let n_bytes =
+                        write_property_id(PropertyId::PayloadFormatIndicator, writer).await?;
+                    Ok(n_bytes + codec::write_bool(v, writer).await?)
                 } else {
                     Ok(0)
                 }
             }
             Property::MessageExpiryInterval(v) => {
-                let n_bytes = write_property_id(PropertyId::MessageExpiryInterval, writer)?;
-                Ok(n_bytes + codec::write_four_byte_integer(v, writer)?)
+                let n_bytes = write_property_id(PropertyId::MessageExpiryInterval, writer).await?;
+                Ok(n_bytes + codec::write_four_byte_integer(v, writer).await?)
             }
             Property::ContentType(v) => {
-                let n_bytes = write_property_id(PropertyId::ContentType, writer)?;
-                Ok(n_bytes + codec::write_utf8_string(&v, writer)?)
+                let n_bytes = write_property_id(PropertyId::ContentType, writer).await?;
+                Ok(n_bytes + codec::write_utf8_string(&v, writer).await?)
             }
             Property::ResponseTopic(v) => {
                 if v.is_empty() {
                     Err(Error::ProtocolError)
                 } else {
-                    let n_bytes = write_property_id(PropertyId::ResponseTopic, writer)?;
-                    Ok(n_bytes + codec::write_utf8_string(&v, writer)?)
+                    let n_bytes = write_property_id(PropertyId::ResponseTopic, writer).await?;
+                    Ok(n_bytes + codec::write_utf8_string(&v, writer).await?)
                 }
             }
             Property::CorrelationData(v) => {
-                let n_bytes = write_property_id(PropertyId::CorrelationData, writer)?;
-                Ok(n_bytes + codec::write_binary_data(&v, writer)?)
+                let n_bytes = write_property_id(PropertyId::CorrelationData, writer).await?;
+                Ok(n_bytes + codec::write_binary_data(&v, writer).await?)
             }
             Property::SubscriptionIdentifier(v) => {
                 if v == 0 {
                     Err(Error::ProtocolError)
                 } else {
-                    let n_bytes = write_property_id(PropertyId::SubscriptionIdentifier, writer)?;
-                    Ok(n_bytes + codec::write_variable_byte_integer(v, writer)?)
+                    let n_bytes =
+                        write_property_id(PropertyId::SubscriptionIdentifier, writer).await?;
+                    Ok(n_bytes + codec::write_variable_byte_integer(v, writer).await?)
                 }
             }
             Property::SessionExpiryInterval(v) => {
                 if v != DEFAULT_SESSION_EXPIRY_INTERVAL {
-                    let n_bytes = write_property_id(PropertyId::SessionExpiryInterval, writer)?;
-                    Ok(n_bytes + codec::write_four_byte_integer(v, writer)?)
+                    let n_bytes =
+                        write_property_id(PropertyId::SessionExpiryInterval, writer).await?;
+                    Ok(n_bytes + codec::write_four_byte_integer(v, writer).await?)
                 } else {
                     Ok(0)
                 }
             }
             Property::AssignedClientIdentifier(v) => {
-                let n_bytes = write_property_id(PropertyId::AssignedClientIdentifier, writer)?;
-                Ok(n_bytes + codec::write_utf8_string(&v, writer)?)
+                let n_bytes =
+                    write_property_id(PropertyId::AssignedClientIdentifier, writer).await?;
+                Ok(n_bytes + codec::write_utf8_string(&v, writer).await?)
             }
             Property::ServerKeepAlive(v) => {
-                let n_bytes = write_property_id(PropertyId::ServerKeepAlive, writer)?;
-                Ok(n_bytes + codec::write_two_byte_integer(v, writer)?)
+                let n_bytes = write_property_id(PropertyId::ServerKeepAlive, writer).await?;
+                Ok(n_bytes + codec::write_two_byte_integer(v, writer).await?)
             }
             Property::AuthenticationMethod(v) => {
-                let n_bytes = write_property_id(PropertyId::AuthenticationMethod, writer)?;
-                Ok(n_bytes + codec::write_utf8_string(&v, writer)?)
+                let n_bytes = write_property_id(PropertyId::AuthenticationMethod, writer).await?;
+                Ok(n_bytes + codec::write_utf8_string(&v, writer).await?)
             }
             Property::AuthenticationData(v) => {
-                let n_bytes = write_property_id(PropertyId::AuthenticationData, writer)?;
-                Ok(n_bytes + codec::write_binary_data(&v, writer)?)
+                let n_bytes = write_property_id(PropertyId::AuthenticationData, writer).await?;
+                Ok(n_bytes + codec::write_binary_data(&v, writer).await?)
             }
             Property::RequestProblemInformation(v) => {
                 if v != DEFAULT_REQUEST_PROBLEM_INFORMATION {
-                    let n_bytes = write_property_id(PropertyId::RequestProblemInformation, writer)?;
-                    Ok(n_bytes + codec::write_bool(v, writer)?)
+                    let n_bytes =
+                        write_property_id(PropertyId::RequestProblemInformation, writer).await?;
+                    Ok(n_bytes + codec::write_bool(v, writer).await?)
                 } else {
                     Ok(0)
                 }
             }
             Property::WillDelayInterval(v) => {
                 if v != DEFAULT_WILL_DELAY_INTERVAL {
-                    let n_bytes = write_property_id(PropertyId::WillDelayInterval, writer)?;
-                    Ok(n_bytes + codec::write_four_byte_integer(v, writer)?)
+                    let n_bytes = write_property_id(PropertyId::WillDelayInterval, writer).await?;
+                    Ok(n_bytes + codec::write_four_byte_integer(v, writer).await?)
                 } else {
                     Ok(0)
                 }
@@ -332,87 +345,88 @@ impl Property {
             Property::RequestResponseInformation(v) => {
                 if v != DEFAULT_REQUEST_RESPONSE_INFORMATION {
                     let n_bytes =
-                        write_property_id(PropertyId::RequestResponseInformation, writer)?;
-                    Ok(n_bytes + codec::write_bool(v, writer)?)
+                        write_property_id(PropertyId::RequestResponseInformation, writer).await?;
+                    Ok(n_bytes + codec::write_bool(v, writer).await?)
                 } else {
                     Ok(0)
                 }
             }
             Property::ResponseInformation(v) => {
-                let n_bytes = write_property_id(PropertyId::ResponseInformation, writer)?;
-                Ok(n_bytes + codec::write_utf8_string(&v, writer)?)
+                let n_bytes = write_property_id(PropertyId::ResponseInformation, writer).await?;
+                Ok(n_bytes + codec::write_utf8_string(&v, writer).await?)
             }
             Property::ServerReference(v) => {
-                let n_bytes = write_property_id(PropertyId::ServerReference, writer)?;
-                Ok(n_bytes + codec::write_utf8_string(&v, writer)?)
+                let n_bytes = write_property_id(PropertyId::ServerReference, writer).await?;
+                Ok(n_bytes + codec::write_utf8_string(&v, writer).await?)
             }
             Property::ReasonString(v) => {
-                let n_bytes = write_property_id(PropertyId::ReasonString, writer)?;
-                Ok(n_bytes + codec::write_utf8_string(&v, writer)?)
+                let n_bytes = write_property_id(PropertyId::ReasonString, writer).await?;
+                Ok(n_bytes + codec::write_utf8_string(&v, writer).await?)
             }
             Property::ReceiveMaximum(v) => match v {
                 0 => Err(Error::MalformedPacket),
                 DEFAULT_RECEIVE_MAXIMUM => Ok(0),
                 _ => {
-                    let n_bytes = write_property_id(PropertyId::ReceiveMaximum, writer)?;
-                    Ok(n_bytes + codec::write_two_byte_integer(v, writer)?)
+                    let n_bytes = write_property_id(PropertyId::ReceiveMaximum, writer).await?;
+                    Ok(n_bytes + codec::write_two_byte_integer(v, writer).await?)
                 }
             },
             Property::TopicAliasMaximum(v) => {
                 if v != DEFAULT_TOPIC_ALIAS_MAXIMUM {
-                    let n_bytes = write_property_id(PropertyId::TopicAliasMaximum, writer)?;
-                    Ok(n_bytes + codec::write_two_byte_integer(v, writer)?)
+                    let n_bytes = write_property_id(PropertyId::TopicAliasMaximum, writer).await?;
+                    Ok(n_bytes + codec::write_two_byte_integer(v, writer).await?)
                 } else {
                     Ok(0)
                 }
             }
             Property::TopicAlias(v) => {
-                let n_bytes = write_property_id(PropertyId::TopicAlias, writer)?;
-                Ok(n_bytes + codec::write_two_byte_integer(v, writer)?)
+                let n_bytes = write_property_id(PropertyId::TopicAlias, writer).await?;
+                Ok(n_bytes + codec::write_two_byte_integer(v, writer).await?)
             }
             Property::MaximumQoS(v) => match v {
                 DEFAULT_MAXIMUM_QOS => Ok(0),
                 _ => {
-                    let n_bytes = write_property_id(PropertyId::MaximumQoS, writer)?;
-                    Ok(n_bytes + codec::write_qos(v, writer)?)
+                    let n_bytes = write_property_id(PropertyId::MaximumQoS, writer).await?;
+                    Ok(n_bytes + codec::write_qos(v, writer).await?)
                 }
             },
             Property::RetainAvailable(v) => {
                 if v != DEFAULT_RETAIN_AVAILABLE {
-                    let n_bytes = write_property_id(PropertyId::RetainAvailable, writer)?;
-                    Ok(n_bytes + codec::write_bool(v, writer)?)
+                    let n_bytes = write_property_id(PropertyId::RetainAvailable, writer).await?;
+                    Ok(n_bytes + codec::write_bool(v, writer).await?)
                 } else {
                     Ok(0)
                 }
             }
             Property::UserProperty(k, v) => {
-                let mut n_bytes = write_property_id(PropertyId::UserProperty, writer)?;
-                n_bytes += codec::write_utf8_string(&k, writer)?;
-                Ok(n_bytes + (codec::write_utf8_string(&v, writer)?))
+                let mut n_bytes = write_property_id(PropertyId::UserProperty, writer).await?;
+                n_bytes += codec::write_utf8_string(&k, writer).await?;
+                Ok(n_bytes + (codec::write_utf8_string(&v, writer).await?))
             }
             Property::MaximumPacketSize(v) => {
-                let n_bytes = write_property_id(PropertyId::MaximumPacketSize, writer)?;
-                Ok(n_bytes + codec::write_four_byte_integer(v, writer)?)
+                let n_bytes = write_property_id(PropertyId::MaximumPacketSize, writer).await?;
+                Ok(n_bytes + codec::write_four_byte_integer(v, writer).await?)
             }
             Property::WildcardSubscriptionAvailable(v) => {
                 if v != DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE {
                     let n_bytes =
-                        write_property_id(PropertyId::WildcardSubscriptionAvailable, writer)?;
-                    Ok(n_bytes + codec::write_bool(v, writer)?)
+                        write_property_id(PropertyId::WildcardSubscriptionAvailable, writer)
+                            .await?;
+                    Ok(n_bytes + codec::write_bool(v, writer).await?)
                 } else {
                     Ok(0)
                 }
             }
             Property::SubscriptionIdentifiersAvailable(v) => {
                 let n_bytes =
-                    write_property_id(PropertyId::SubscriptionIdentifiersAvailable, writer)?;
-                Ok(n_bytes + codec::write_bool(v, writer)?)
+                    write_property_id(PropertyId::SubscriptionIdentifiersAvailable, writer).await?;
+                Ok(n_bytes + codec::write_bool(v, writer).await?)
             }
             Property::SharedSubscriptionAvailable(v) => {
                 if v != DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE {
                     let n_bytes =
-                        write_property_id(PropertyId::SharedSubscriptionAvailable, writer)?;
-                    Ok(n_bytes + codec::write_bool(v, writer)?)
+                        write_property_id(PropertyId::SharedSubscriptionAvailable, writer).await?;
+                    Ok(n_bytes + codec::write_bool(v, writer).await?)
                 } else {
                     Ok(0)
                 }

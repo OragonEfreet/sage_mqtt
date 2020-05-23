@@ -1,7 +1,7 @@
+use async_std::io::Error as AsyncIOError;
 use std::{
     error::Error as StdError,
     fmt::{Display, Formatter, Result as FmtResult},
-    io::Error as IOError,
     result::Result as StdResult,
 };
 
@@ -12,7 +12,7 @@ pub type Result<T> = StdResult<T, Error>;
 #[derive(Debug)]
 pub enum Error {
     /// Standard Rust IO Error
-    Io(IOError),
+    Io(AsyncIOError),
 
     /// 0x81: Malformed Packet
     MalformedPacket,
@@ -74,8 +74,8 @@ impl StdError for Error {
     }
 }
 
-impl From<IOError> for Error {
-    fn from(err: IOError) -> Self {
+impl From<AsyncIOError> for Error {
+    fn from(err: AsyncIOError) -> Self {
         Error::Io(err)
     }
 }

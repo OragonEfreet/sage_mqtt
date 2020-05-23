@@ -1,3 +1,12 @@
+/// This module lists all the encode/decode functions used to read the
+/// fundamental types specified within MQTT5:
+/// - byte and boolean values
+/// - UTF8 String
+/// - 2, 4 and variable byte integers
+/// - Binary Data
+/// - Quality of service
+/// - Reason Codes
+
 mod auth;
 mod authentication;
 mod connack;
@@ -37,7 +46,7 @@ pub use defaults::{
 };
 pub use disconnect::Disconnect;
 pub use fixed_header::FixedHeader;
-pub use property::{PropertiesDecoder, Property, PropertyId};
+pub use property::{PropertiesDecoder, Property};
 pub use puback::PubAck;
 pub use pubcomp::PubComp;
 pub use publish::Publish;

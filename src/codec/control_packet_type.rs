@@ -1,10 +1,11 @@
 use crate::{codec, ControlPacketType, Error, Result as SageResult};
-use std::{
-    convert::TryInto,
-    io::{Read, Write},
-};
+use async_std::io::{Read, Write};
+use std::{convert::TryInto, marker::Unpin};
 
-pub fn write_control_packet_type<W: Write>(
+/// Writes the given `ControlPacketType` in one byte according to
+/// MQTT5 specifications.
+/// In case of success, returns `1`.
+pub async fn write_control_packet_type<W: Write + Unpin>(
     cpt: ControlPacketType,
     writer: &mut W,
 ) -> SageResult<usize> {
@@ -33,10 +34,15 @@ pub fn write_control_packet_type<W: Write>(
         },
         writer,
     )
+    .await
 }
 
-pub fn read_control_packet_type<R: Read>(reader: &mut R) -> SageResult<ControlPacketType> {
-    let packet_type = codec::read_byte(reader)?;
+/// Reads the given `reader` for a `ControlPacketType`.
+/// In case of success, returns a `ControlPacketType` instance.
+pub async fn read_control_packet_type<R: Read + Unpin>(
+    reader: &mut R,
+) -> SageResult<ControlPacketType> {
+    let packet_type = codec::read_byte(reader).await?;
     let packet_type = match (packet_type >> 4, packet_type & 0b0000_1111) {
         (0b0000, 0b0000) => ControlPacketType::RESERVED,
         (0b0001, 0b0000) => ControlPacketType::CONNECT,
@@ -66,12 +72,12 @@ pub fn read_control_packet_type<R: Read>(reader: &mut R) -> SageResult<ControlPa
 #[cfg(test)]
 mod unit {
 
-    use std::io::Cursor;
+    use async_std::io::Cursor;
 
     use super::*;
 
-    #[test]
-    fn mqtt_2_1_3_1() {
+    #[async_std::test]
+    async fn mqtt_2_1_3_1() {
         let reserved_flags_per_type = [
             (0b0001, 0b0000),
             (0b0010, 0b0000),
@@ -97,7 +103,7 @@ mod unit {
                 let buffer = [*packet_type, *flags, 0x00];
                 let mut test_stream = Cursor::new(buffer);
                 assert_matches!(
-                    read_control_packet_type(&mut test_stream),
+                    read_control_packet_type(&mut test_stream).await,
                     Err(Error::MalformedPacket)
                 );
             }

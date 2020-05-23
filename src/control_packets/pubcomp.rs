@@ -1,7 +1,8 @@
 use crate::{
     codec, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
 };
-use std::io::{Read, Write};
+use async_std::io::{prelude::*, Read, Write};
+use std::marker::Unpin;
 
 /// The `PubComp` packet is sent during an `ExactlyOnce` quality of service
 /// publish.
@@ -42,30 +43,33 @@ impl Default for PubComp {
 }
 
 impl PubComp {
-    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer)?;
+        /// Write the `PubComp` body of a packet, returning the written size in bytes
+    /// in case of success.
+pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
 
         let mut properties = Vec::new();
 
         if let Some(v) = self.reason_string {
-            n_bytes += Property::ReasonString(v).encode(&mut properties)?;
+            n_bytes += Property::ReasonString(v).encode(&mut properties).await?;
         }
         for (k, v) in self.user_properties {
-            n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
+            n_bytes += Property::UserProperty(k, v).encode(&mut properties).await?;
         }
 
         if n_bytes == 2 && self.reason_code != ReasonCode::Success {
             Ok(2)
         } else {
-            n_bytes += codec::write_reason_code(self.reason_code, writer)?;
-            n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
-            writer.write_all(&properties)?;
+            n_bytes += codec::write_reason_code(self.reason_code, writer).await?;
+            n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
+            writer.write_all(&properties).await?;
             Ok(n_bytes)
         }
     }
 
-    pub(crate) fn read<R: Read>(reader: &mut R, shortened: bool) -> SageResult<Self> {
-        let packet_identifier = codec::read_two_byte_integer(reader)?;
+        /// Read the `PubComp` body from `reader`, retuning it in case of success.
+pub async fn read<R: Read + Unpin>(reader: &mut R, shortened: bool) -> SageResult<Self> {
+        let packet_identifier = codec::read_two_byte_integer(reader).await?;
 
         let mut pubcomp = PubComp {
             packet_identifier,
@@ -76,11 +80,11 @@ impl PubComp {
             pubcomp.reason_code = ReasonCode::Success;
         } else {
             pubcomp.reason_code =
-                ReasonCode::try_parse(codec::read_byte(reader)?, ControlPacketType::PUBCOMP)?;
+                ReasonCode::try_parse(codec::read_byte(reader).await?, ControlPacketType::PUBCOMP)?;
 
-            let mut properties = PropertiesDecoder::take(reader)?;
+            let mut properties = PropertiesDecoder::take(reader).await?;
             while properties.has_properties() {
-                match properties.read()? {
+                match properties.read().await? {
                     Property::ReasonString(v) => pubcomp.reason_string = Some(v),
                     Property::UserProperty(k, v) => pubcomp.user_properties.push((k, v)),
                     _ => return Err(Error::ProtocolError),
@@ -96,12 +100,12 @@ impl PubComp {
 mod unit {
 
     use super::*;
-    use std::io::Cursor;
+    use async_std::io::Cursor;
 
     fn encoded() -> Vec<u8> {
         vec![
-            5, 57, 146, 29, 31, 0, 11, 66, 108, 97, 99, 107, 32, 66, 101, 116, 116, 121, 38, 0, 7,
-            77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116,
+            5, 57, 146, 28, 31, 0, 11, 66, 108, 97, 99, 107, 32, 66, 101, 116, 116, 121, 38, 0, 6,
+            72, 195, 166, 114, 121, 97, 0, 3, 67, 97, 116,
         ]
     }
 
@@ -110,23 +114,23 @@ mod unit {
             packet_identifier: 1337,
             reason_code: ReasonCode::PacketIdentifierNotFound,
             reason_string: Some("Black Betty".into()),
-            user_properties: vec![("Mogwaï".into(), "Cat".into())],
+            user_properties: vec![("Hærya".into(), "Cat".into())],
         }
     }
 
-    #[test]
-    fn encode() {
+    #[async_std::test]
+    async fn encode() {
         let test_data = decoded();
         let mut tested_result = Vec::new();
-        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        let n_bytes = test_data.write(&mut tested_result).await.unwrap();
         assert_eq!(tested_result, encoded());
-        assert_eq!(n_bytes, 33);
+        assert_eq!(n_bytes, 32);
     }
 
-    #[test]
-    fn decode() {
+    #[async_std::test]
+    async fn decode() {
         let mut test_data = Cursor::new(encoded());
-        let tested_result = PubComp::read(&mut test_data, false).unwrap();
+        let tested_result = PubComp::read(&mut test_data, false).await.unwrap();
         assert_eq!(tested_result, decoded());
     }
 }

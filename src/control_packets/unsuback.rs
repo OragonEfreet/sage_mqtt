@@ -1,7 +1,8 @@
 use crate::{
     codec, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
 };
-use std::io::{Read, Write};
+use async_std::io::{prelude::*, Read, Write};
+use std::marker::Unpin;
 
 /// An `UnSubAck` is sent by the server to acknowledge an unsubscribe request.
 #[derive(Debug, PartialEq, Clone)]
@@ -34,37 +35,42 @@ impl Default for UnSubAck {
 }
 
 impl UnSubAck {
-    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer)?;
+        /// Write the `UnSubAck` body of a packet, returning the written size in bytes
+    /// in case of success.
+pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
 
         let mut properties = Vec::new();
 
         if let Some(reason_string) = self.reason_string {
-            n_bytes += Property::ReasonString(reason_string).encode(&mut properties)?;
+            n_bytes += Property::ReasonString(reason_string)
+                .encode(&mut properties)
+                .await?;
         }
         for (k, v) in self.user_properties {
-            n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
+            n_bytes += Property::UserProperty(k, v).encode(&mut properties).await?;
         }
 
-        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
-        writer.write_all(&properties)?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
+        writer.write_all(&properties).await?;
 
         for reason_code in self.reason_codes {
-            n_bytes += codec::write_reason_code(reason_code, writer)?;
+            n_bytes += codec::write_reason_code(reason_code, writer).await?;
         }
 
         Ok(n_bytes)
     }
 
-    pub(crate) fn read<R: Read>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
+        /// Read the `UnSubAck` body from `reader`, retuning it in case of success.
+pub async fn read<R: Read + Unpin>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size as u64);
 
-        let packet_identifier = codec::read_two_byte_integer(&mut reader)?;
+        let packet_identifier = codec::read_two_byte_integer(&mut reader).await?;
         let mut user_properties = Vec::new();
-        let mut properties = PropertiesDecoder::take(&mut reader)?;
+        let mut properties = PropertiesDecoder::take(&mut reader).await?;
         let mut reason_string = None;
         while properties.has_properties() {
-            match properties.read()? {
+            match properties.read().await? {
                 Property::ReasonString(v) => reason_string = Some(v),
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
                 _ => return Err(Error::ProtocolError),
@@ -75,7 +81,7 @@ impl UnSubAck {
 
         while reader.limit() > 0 {
             reason_codes.push(ReasonCode::try_parse(
-                codec::read_byte(&mut reader)?,
+                codec::read_byte(&mut reader).await?,
                 ControlPacketType::SUBACK,
             )?);
         }
@@ -92,7 +98,7 @@ impl UnSubAck {
 #[cfg(test)]
 mod unit {
     use super::*;
-    use std::io::Cursor;
+    use async_std::io::Cursor;
 
     fn encoded() -> Vec<u8> {
         vec![
@@ -114,19 +120,19 @@ mod unit {
         }
     }
 
-    #[test]
-    fn encode() {
+    #[async_std::test]
+    async fn encode() {
         let test_data = decoded();
         let mut tested_result = Vec::new();
-        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        let n_bytes = test_data.write(&mut tested_result).await.unwrap();
         assert_eq!(tested_result, encoded());
         assert_eq!(n_bytes, 41);
     }
 
-    #[test]
-    fn decode() {
+    #[async_std::test]
+    async fn decode() {
         let mut test_data = Cursor::new(encoded());
-        let tested_result = UnSubAck::read(&mut test_data, 41).unwrap();
+        let tested_result = UnSubAck::read(&mut test_data, 41).await.unwrap();
         assert_eq!(tested_result, decoded());
     }
 }

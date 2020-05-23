@@ -1,13 +1,20 @@
 use crate::{Error, Result as SageResult};
-use std::io::{Read, Write};
+use async_std::io::{prelude::*, Read, Write};
+use std::marker::Unpin;
 
-pub fn write_four_byte_integer<W: Write>(data: u32, writer: &mut W) -> SageResult<usize> {
-    Ok(writer.write(&data.to_be_bytes())?)
+/// Writes the given `u32` according to MQTT5 Four Byte Integer specifications.
+/// In case of success, returns `4`.
+pub async fn write_four_byte_integer<W: Write + Unpin>(
+    data: u32,
+    writer: &mut W,
+) -> SageResult<usize> {
+    Ok(writer.write(&data.to_be_bytes()).await?)
 }
 
-pub fn read_four_byte_integer<R: Read>(reader: &mut R) -> SageResult<u32> {
+/// Reads the given `reader` for an `u32`, returning it in case of success.
+pub async fn read_four_byte_integer<R: Read + Unpin>(reader: &mut R) -> SageResult<u32> {
     let mut buf = [0_u8; 4];
-    if reader.read_exact(&mut buf).is_ok() {
+    if reader.read_exact(&mut buf).await.is_ok() {
         Ok(((buf[0] as u32) << 24)
             | ((buf[1] as u32) << 16)
             | ((buf[2] as u32) << 8)
@@ -20,34 +27,35 @@ pub fn read_four_byte_integer<R: Read>(reader: &mut R) -> SageResult<u32> {
 #[cfg(test)]
 mod unit {
 
-    use std::io::Cursor;
-
     use super::*;
+    use async_std::io::Cursor;
 
-    #[test]
-    fn encode() {
+    #[async_std::test]
+    async fn encode() {
         let mut result = Vec::new();
         assert_eq!(
-            write_four_byte_integer(220_000_u32, &mut result).unwrap(),
+            write_four_byte_integer(220_000_u32, &mut result)
+                .await
+                .unwrap(),
             4
         );
         assert_eq!(result, vec![0x00, 0x03, 0x5B, 0x60]);
     }
 
-    #[test]
-    fn decode() {
+    #[async_std::test]
+    async fn decode() {
         let mut test_stream = Cursor::new([0x00, 0x03, 0x5B, 0x60]);
         assert_eq!(
-            read_four_byte_integer(&mut test_stream).unwrap(),
+            read_four_byte_integer(&mut test_stream).await.unwrap(),
             220_000_u32
         );
     }
 
-    #[test]
-    fn decode_eof() {
+    #[async_std::test]
+    async fn decode_eof() {
         let mut test_stream = Cursor::new([0x07]);
         assert_matches!(
-            read_four_byte_integer(&mut test_stream),
+            read_four_byte_integer(&mut test_stream).await,
             Err(Error::MalformedPacket)
         );
     }

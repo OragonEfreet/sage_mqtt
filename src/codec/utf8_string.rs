@@ -1,26 +1,36 @@
 use crate::{codec, Error, Result as SageResult};
-use std::io::{Cursor, Read, Write};
+use async_std::io::{prelude::*, Read, Write};
+use std::io::Cursor;
+use std::marker::Unpin;
 use unicode_reader::CodePoints;
 
-pub fn write_utf8_string<W: Write>(data: &str, writer: &mut W) -> SageResult<usize> {
+/// Writes the given string into `writer` according to UTF8 String type MQTT5 specifications
+/// which consists in a two bytes integer representing the string in bytes followed with
+/// the string as bytes.
+/// In case of success returns the written size in bytes.
+pub async fn write_utf8_string<W: Write + Unpin>(data: &str, writer: &mut W) -> SageResult<usize> {
     let len = data.len();
     if len > i16::max_value() as usize {
         return Err(Error::MalformedPacket);
     }
-    writer.write_all(&(len as u16).to_be_bytes())?;
-    writer.write_all(data.as_bytes())?;
+    writer.write_all(&(len as u16).to_be_bytes()).await?;
+    writer.write_all(data.as_bytes()).await?;
     Ok(2 + len)
 }
 
-pub fn read_utf8_string<R: Read>(reader: &mut R) -> SageResult<String> {
+/// Reads from the given reader for binary dataset according to Binary Data type
+/// MQTT5 specifications which consists in an two bytes integer representing 
+/// the data size in bytes followed with the data as bytes.
+/// In case of success, returns a `Vec<u8>`
+pub async fn read_utf8_string<R: Read + Unpin>(reader: &mut R) -> SageResult<String> {
     let mut chunk = reader.take(2);
-    let size = codec::read_two_byte_integer(&mut chunk)?;
+    let size = codec::read_two_byte_integer(&mut chunk).await?;
     let size = size as usize;
 
     let mut data_buffer: Vec<u8> = Vec::with_capacity(size);
     if size > 0 {
         let mut chunk = reader.take(size as u64);
-        match chunk.read_to_end(&mut data_buffer) {
+        match chunk.read_to_end(&mut data_buffer).await {
             Ok(n) if n == size => {
                 let mut codepoints = CodePoints::from(Cursor::new(&data_buffer));
                 if codepoints.all(|x| match x {
@@ -47,47 +57,47 @@ pub fn read_utf8_string<R: Read>(reader: &mut R) -> SageResult<String> {
 #[cfg(test)]
 mod unit {
 
-    use std::io::Cursor;
+    use async_std::io::Cursor as AsyncCursor;
 
     use super::*;
 
-    #[test]
-    fn encode() {
+    #[async_std::test]
+    async fn encode() {
         let mut result = Vec::new();
-        assert_eq!(write_utf8_string("A𪛔", &mut result).unwrap(), 7);
+        assert_eq!(write_utf8_string("A𪛔", &mut result).await.unwrap(), 7);
         assert_eq!(result, vec![0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
     }
 
-    #[test]
-    fn encode_empty() {
+    #[async_std::test]
+    async fn encode_empty() {
         let mut result = Vec::new();
-        assert_eq!(write_utf8_string("", &mut result).unwrap(), 2);
+        assert_eq!(write_utf8_string("", &mut result).await.unwrap(), 2);
         assert_eq!(result, vec![0x00, 0x00]);
     }
 
-    #[test]
-    fn decode_empty() {
-        let mut test_stream = Cursor::new([0x00, 0x00]);
+    #[async_std::test]
+    async fn decode_empty() {
+        let mut test_stream = AsyncCursor::new([0x00, 0x00]);
         assert_eq!(
-            read_utf8_string(&mut test_stream).unwrap(),
+            read_utf8_string(&mut test_stream).await.unwrap(),
             String::default()
         );
     }
 
-    #[test]
-    fn decode() {
-        let mut test_stream = Cursor::new([0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
+    #[async_std::test]
+    async fn decode() {
+        let mut test_stream = AsyncCursor::new([0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
         assert_eq!(
-            read_utf8_string(&mut test_stream).unwrap(),
+            read_utf8_string(&mut test_stream).await.unwrap(),
             String::from("A𪛔")
         );
     }
 
-    #[test]
-    fn decode_eof() {
-        let mut test_stream = Cursor::new([0x00, 0x05, 0x41]);
+    #[async_std::test]
+    async fn decode_eof() {
+        let mut test_stream = AsyncCursor::new([0x00, 0x05, 0x41]);
         assert_matches!(
-            read_utf8_string(&mut test_stream),
+            read_utf8_string(&mut test_stream).await,
             Err(Error::MalformedPacket)
         );
     }

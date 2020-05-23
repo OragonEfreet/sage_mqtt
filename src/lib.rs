@@ -12,12 +12,14 @@ macro_rules! assert_matches {
     }
 }
 
-pub(crate) mod codec;
+/// encode/decode MQTT fundamental types
+pub mod codec;
+
 mod control_packets;
 mod error;
 mod quality_of_service;
 mod reason_code;
-
+pub use control_packets::*;
 pub use control_packets::{
     Auth, Authentication, ClientID, ConnAck, Connect, ControlPacket, Disconnect, PubAck, PubComp,
     PubRec, PubRel, Publish, RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck,

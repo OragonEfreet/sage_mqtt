@@ -1,6 +1,7 @@
 use sage_mqtt::*;
 
-fn main() {
+#[async_std::main]
+async fn main() {
     let mut encoded = Vec::new();
 
     ControlPacket::ConnAck(ConnAck {
@@ -27,6 +28,7 @@ fn main() {
         }),
     })
     .encode(&mut encoded)
+    .await
     .unwrap();
 
     println!("{:?}", encoded);

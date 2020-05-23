@@ -1,5 +1,6 @@
 use crate::{codec, Error, PropertiesDecoder, Property, Result as SageResult};
-use std::io::{Read, Write};
+use async_std::io::{prelude::*, Read, Write};
+use std::marker::Unpin;
 
 /// An `Unsubscribe` packet is sent from the client to unsubsribe to a topic.
 #[derive(Debug, PartialEq, Clone)]
@@ -26,33 +27,36 @@ impl Default for UnSubscribe {
 }
 
 impl UnSubscribe {
-    pub(crate) fn write<W: Write>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer)?;
+        /// Write the `UnSubscribe` body of a packet, returning the written size in bytes
+    /// in case of success.
+pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
 
         let mut properties = Vec::new();
         for (k, v) in self.user_properties {
-            n_bytes += Property::UserProperty(k, v).encode(&mut properties)?;
+            n_bytes += Property::UserProperty(k, v).encode(&mut properties).await?;
         }
-        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer)?;
-        writer.write_all(&properties)?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
+        writer.write_all(&properties).await?;
 
         for option in self.subscriptions {
-            n_bytes += codec::write_utf8_string(&option, writer)?;
+            n_bytes += codec::write_utf8_string(&option, writer).await?;
         }
 
         Ok(n_bytes)
     }
 
-    pub(crate) fn read<R: Read>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
+        /// Read the `UnSubscribe` body from `reader`, retuning it in case of success.
+pub async fn read<R: Read + Unpin>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size as u64);
 
-        let packet_identifier = codec::read_two_byte_integer(&mut reader)?;
+        let packet_identifier = codec::read_two_byte_integer(&mut reader).await?;
 
         let mut user_properties = Vec::new();
 
-        let mut properties = PropertiesDecoder::take(&mut reader)?;
+        let mut properties = PropertiesDecoder::take(&mut reader).await?;
         while properties.has_properties() {
-            match properties.read()? {
+            match properties.read().await? {
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
                 _ => return Err(Error::ProtocolError),
             }
@@ -61,7 +65,7 @@ impl UnSubscribe {
         let mut subscriptions = Vec::new();
 
         while reader.limit() > 0 {
-            subscriptions.push(codec::read_utf8_string(&mut reader)?);
+            subscriptions.push(codec::read_utf8_string(&mut reader).await?);
         }
 
         if subscriptions.is_empty() {
@@ -79,7 +83,7 @@ impl UnSubscribe {
 #[cfg(test)]
 mod unit {
     use super::*;
-    use std::io::Cursor;
+    use async_std::io::Cursor;
 
     fn encoded() -> Vec<u8> {
         vec![
@@ -102,19 +106,19 @@ mod unit {
         }
     }
 
-    #[test]
-    fn encode() {
+    #[async_std::test]
+    async fn encode() {
         let test_data = decoded();
         let mut tested_result = Vec::new();
-        let n_bytes = test_data.write(&mut tested_result).unwrap();
+        let n_bytes = test_data.write(&mut tested_result).await.unwrap();
         assert_eq!(tested_result, encoded());
         assert_eq!(n_bytes, 52);
     }
 
-    #[test]
-    fn decode() {
+    #[async_std::test]
+    async fn decode() {
         let mut test_data = Cursor::new(encoded());
-        let tested_result = UnSubscribe::read(&mut test_data, 52).unwrap();
+        let tested_result = UnSubscribe::read(&mut test_data, 52).await.unwrap();
         assert_eq!(tested_result, decoded());
     }
 }
