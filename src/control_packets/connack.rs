@@ -123,7 +123,7 @@ impl Default for ConnAck {
 }
 
 impl ConnAck {
-    /// AsyncWrite the `Connack` body of a packet, returning the written size in bytes
+    ///Write the `Connack` body of a packet, returning the written size in bytes
     /// in case of success.
     pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_bool(self.session_present, writer).await?;
@@ -196,7 +196,7 @@ impl ConnAck {
         Ok(n_bytes)
     }
 
-    /// AsyncRead the `Connack` body from `reader`, retuning it in case of success.
+    ///Read the `Connack` body from `reader`, retuning it in case of success.
     pub async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
         let session_present = codec::read_bool(reader).await?;
 

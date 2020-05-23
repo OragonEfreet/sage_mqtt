@@ -73,7 +73,7 @@ impl Default for Disconnect {
 }
 
 impl Disconnect {
-    /// AsyncWrite the `Disconnect` body of a packet, returning the written size in bytes
+    ///Write the `Disconnect` body of a packet, returning the written size in bytes
     /// in case of success.
     pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_reason_code(self.reason_code, writer).await?;
@@ -101,7 +101,7 @@ impl Disconnect {
         Ok(n_bytes)
     }
 
-    /// AsyncRead the `Disconnect` body from `reader`, retuning it in case of success.
+    ///Read the `Disconnect` body from `reader`, retuning it in case of success.
     pub async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
         let reason_code = ReasonCode::try_parse(
             codec::read_byte(reader).await?,

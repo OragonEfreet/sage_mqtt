@@ -2,7 +2,7 @@ use crate::{codec, ReasonCode, Result as SageResult};
 use futures::io::AsyncWrite;
 use std::marker::Unpin;
 
-/// AsyncWrite the given `ReasonCode`in one byte, returning `1` in case of success.
+///Write the given `ReasonCode`in one byte, returning `1` in case of success.
 pub async fn write_reason_code<W: AsyncWrite + Unpin>(
     code: ReasonCode,
     writer: &mut W,

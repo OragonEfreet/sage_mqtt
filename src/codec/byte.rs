@@ -2,13 +2,13 @@ use crate::{Error, Result as SageResult};
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 
-/// Writes the given byte into `writer`.
+/// Write the given byte into `writer`.
 /// In case of success, returns `1`
 pub async fn write_byte<W: AsyncWrite + Unpin>(byte: u8, writer: &mut W) -> SageResult<usize> {
     Ok(writer.write(&[byte]).await?)
 }
 
-/// Writes the given bool into `writer` in a single byte value.
+/// Write the given bool into `writer` in a single byte value.
 /// MQTT5 specifications do not define an actual boolean type but expresses it
 /// with a byte being `0x00` for `false` or `0x01` for `false`. Other values are
 /// considered incorrect.
@@ -17,7 +17,7 @@ pub async fn write_bool<W: AsyncWrite + Unpin>(data: bool, writer: &mut W) -> Sa
     Ok(writer.write(&[data as u8]).await?)
 }
 
-/// Reads the given `reader` for a byte value.
+/// Read the given `reader` for a byte value.
 /// In case of success, returns an `u8`
 pub async fn read_byte<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<u8> {
     let mut buf = [0u8; 1];
@@ -28,7 +28,7 @@ pub async fn read_byte<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<u8> {
     }
 }
 
-/// Reads the given `reader` for a boolean value.
+/// Read the given `reader` for a boolean value.
 /// MQTT5 specifications do not define an actual boolean type but expresses it
 /// with a byte being `0x00` for `false` or `0x01` for `false`. Other values are
 /// considered incorrect.

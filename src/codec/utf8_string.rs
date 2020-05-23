@@ -4,7 +4,7 @@ use std::io::Cursor;
 use std::marker::Unpin;
 use unicode_reader::CodePoints;
 
-/// Writes the given string into `writer` according to UTF8 String type MQTT5 specifications
+/// Write the given string into `writer` according to UTF8 String type MQTT5 specifications
 /// which consists in a two bytes integer representing the string in bytes followed with
 /// the string as bytes.
 /// In case of success returns the written size in bytes.
@@ -21,7 +21,7 @@ pub async fn write_utf8_string<W: AsyncWrite + Unpin>(
     Ok(2 + len)
 }
 
-/// Reads from the given reader for binary dataset according to Binary Data type
+/// Read from the given reader for binary dataset according to Binary Data type
 /// MQTT5 specifications which consists in an two bytes integer representing
 /// the data size in bytes followed with the data as bytes.
 /// In case of success, returns a `Vec<u8>`

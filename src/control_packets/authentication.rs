@@ -29,7 +29,7 @@ pub struct Authentication {
 }
 
 impl Authentication {
-    /// AsyncWrite authentication data into `writer`, returning the written size
+    ///Write authentication data into `writer`, returning the written size
     /// in case of success.
     pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = Property::AuthenticationMethod(self.method)

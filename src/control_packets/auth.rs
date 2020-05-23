@@ -41,7 +41,7 @@ impl Default for Auth {
 }
 
 impl Auth {
-    /// AsyncWrite the `Auth` body of a packet, returning the written size in bytes
+    ///Write the `Auth` body of a packet, returning the written size in bytes
     /// in case of success.
     pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_reason_code(self.reason_code, writer).await?;
@@ -61,7 +61,7 @@ impl Auth {
         Ok(n_bytes)
     }
 
-    /// AsyncRead the `Auth` body from `reader`, retuning it in case of success.
+    ///Read the `Auth` body from `reader`, retuning it in case of success.
     pub async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
         let reason_code =
             ReasonCode::try_parse(codec::read_byte(reader).await?, ControlPacketType::AUTH)?;

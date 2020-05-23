@@ -2,13 +2,13 @@ use crate::{codec, Error as SageError, QoS, Result as SageResult};
 use futures::io::{AsyncRead, AsyncWrite};
 use std::marker::Unpin;
 
-/// Writes the given `QoS` instance in one byte.
+/// Write the given `QoS` instance in one byte.
 /// In case of success, returns `1`.
 pub async fn write_qos<W: AsyncWrite + Unpin>(qos: QoS, writer: &mut W) -> SageResult<usize> {
     codec::write_byte(qos as u8, writer).await
 }
 
-/// AsyncRead the given reader for a `QoS`, returning it in case of success.
+///Read the given reader for a `QoS`, returning it in case of success.
 pub async fn read_qos<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<QoS> {
     match codec::read_byte(reader).await? {
         0x00 => Ok(QoS::AtMostOnce),

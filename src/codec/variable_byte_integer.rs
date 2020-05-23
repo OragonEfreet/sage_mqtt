@@ -2,7 +2,7 @@ use crate::{Error, Result as SageResult};
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 
-/// AsyncWrite the given `u32` into `writer` according to MQTT5 Variable Byte Integer
+///Write the given `u32` into `writer` according to MQTT5 Variable Byte Integer
 /// specifications, returning the number of bytes written (`1`, `2`, `3` or `4`)
 /// in case of success.
 pub async fn write_variable_byte_integer<W: AsyncWrite + Unpin>(
@@ -25,7 +25,7 @@ pub async fn write_variable_byte_integer<W: AsyncWrite + Unpin>(
     Ok(n_encoded_bytes)
 }
 
-/// AsyncRead the given stream for a `u32` encoded as Variable Byte Integer.
+///Read the given stream for a `u32` encoded as Variable Byte Integer.
 /// Returns the read value in case of success.
 pub async fn read_variable_byte_integer<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<u32> {
     let mut multiplier = 1_u32;

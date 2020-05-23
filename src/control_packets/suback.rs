@@ -32,7 +32,7 @@ impl Default for SubAck {
 }
 
 impl SubAck {
-    /// AsyncWrite the `SubAck` body of a packet, returning the written size in bytes
+    ///Write the `SubAck` body of a packet, returning the written size in bytes
     /// in case of success.
     pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
@@ -53,7 +53,7 @@ impl SubAck {
         Ok(n_bytes)
     }
 
-    /// AsyncRead the `SubAck` body from `reader`, retuning it in case of success.
+    ///Read the `SubAck` body from `reader`, retuning it in case of success.
     pub async fn read<R: AsyncRead + Unpin>(
         reader: &mut R,
         remaining_size: usize,

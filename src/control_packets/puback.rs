@@ -43,7 +43,7 @@ impl Default for PubAck {
 }
 
 impl PubAck {
-    /// AsyncWrite the `PubAck` body of a packet, returning the written size in bytes
+    ///Write the `PubAck` body of a packet, returning the written size in bytes
     /// in case of success.
     pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
@@ -67,7 +67,7 @@ impl PubAck {
         }
     }
 
-    /// AsyncRead the `PubAck` body from `reader`, retuning it in case of success.
+    ///Read the `PubAck` body from `reader`, retuning it in case of success.
     pub async fn read<R: AsyncRead + Unpin>(reader: &mut R, shortened: bool) -> SageResult<Self> {
         let packet_identifier = codec::read_two_byte_integer(reader).await?;
 

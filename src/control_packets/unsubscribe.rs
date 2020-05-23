@@ -27,7 +27,7 @@ impl Default for UnSubscribe {
 }
 
 impl UnSubscribe {
-    /// AsyncWrite the `UnSubscribe` body of a packet, returning the written size in bytes
+    ///Write the `UnSubscribe` body of a packet, returning the written size in bytes
     /// in case of success.
     pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
@@ -46,7 +46,7 @@ impl UnSubscribe {
         Ok(n_bytes)
     }
 
-    /// AsyncRead the `UnSubscribe` body from `reader`, retuning it in case of success.
+    ///Read the `UnSubscribe` body from `reader`, retuning it in case of success.
     pub async fn read<R: AsyncRead + Unpin>(
         reader: &mut R,
         remaining_size: usize,

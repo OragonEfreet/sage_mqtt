@@ -2,7 +2,7 @@ use crate::{Error, Result as SageResult};
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 
-/// Writes the given `u16` according to MQTT5 Two Byte Integer specifications.
+/// Write the given `u16` according to MQTT5 Two Byte Integer specifications.
 /// In case of success, returns `2`.
 pub async fn write_two_byte_integer<W: AsyncWrite + Unpin>(
     data: u16,
@@ -11,7 +11,7 @@ pub async fn write_two_byte_integer<W: AsyncWrite + Unpin>(
     Ok(writer.write(&data.to_be_bytes()).await?)
 }
 
-/// Reads the given `reader` for an `u16`, returning it in case of success.
+/// Read the given `reader` for an `u16`, returning it in case of success.
 pub async fn read_two_byte_integer<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<u16> {
     let mut buf = [0_u8; 2];
     if reader.read_exact(&mut buf).await.is_ok() {

@@ -55,7 +55,7 @@ pub enum ControlPacket {
 }
 
 impl ControlPacket {
-    /// Writes the entire `ControlPacket` to `writer`, returning the number of
+    /// Write the entire `ControlPacket` to `writer`, returning the number of
     /// bytes written.
     /// In case of failure, the operation will return any MQTT-related error, or
     /// `std::io::Error`.
@@ -138,7 +138,7 @@ impl ControlPacket {
         Ok(fixed_size)
     }
 
-    /// Reads a control packet from `reader`, returning a new `ControlPacket`.
+    /// Read a control packet from `reader`, returning a new `ControlPacket`.
     /// In case of failure, the operation will return any MQTT-related error, or
     /// `std::io::Error`.
     pub async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {

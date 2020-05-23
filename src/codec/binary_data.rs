@@ -4,7 +4,7 @@ use futures::io::{
 };
 use std::marker::Unpin;
 
-/// Writes the given `data` into `writer` according to Binary Data type MQTT5 specifications
+/// Write the given `data` into `writer` according to Binary Data type MQTT5 specifications
 /// which consists in a two bytes integer representing the data size in bytes followed with
 /// the data as bytes.
 /// In case of success returns the written size in bytes.
@@ -21,7 +21,7 @@ pub async fn write_binary_data<W: AsyncWrite + Unpin>(
     Ok(2 + len)
 }
 
-/// Reads from the given reader for binary dataset according to Binary Data type
+/// Read from the given reader for binary dataset according to Binary Data type
 /// MQTT5 specifications which consists in an two bytes integer representing
 /// the data size in bytes followed with the data as bytes.
 /// In case of success, returns a `Vec<u8>`

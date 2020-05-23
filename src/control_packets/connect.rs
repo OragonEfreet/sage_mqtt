@@ -344,7 +344,7 @@ impl Connect {
         Ok(n_bytes)
     }
 
-    /// Reads the variable header and payload part of a connect packet from `reader`
+    /// Read the variable header and payload part of a connect packet from `reader`
     /// and returns a `Connect` in case of success.
     /// This function does not read the fixed header part of the packet, which
     /// is read using `ControlPacket`.

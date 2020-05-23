@@ -87,7 +87,7 @@ impl Default for Publish {
 }
 
 impl Publish {
-    /// AsyncWrite the `Publish` body of a packet, returning the written size in bytes
+    ///Write the `Publish` body of a packet, returning the written size in bytes
     /// in case of success.
     pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_utf8_string(&self.topic_name, writer).await?;
@@ -144,7 +144,7 @@ impl Publish {
         Ok(n_bytes)
     }
 
-    /// AsyncRead the `Publish` body from `reader`, retuning it in case of success.
+    ///Read the `Publish` body from `reader`, retuning it in case of success.
     pub async fn read<R: AsyncRead + Unpin>(
         reader: &mut R,
         duplicate: bool,
