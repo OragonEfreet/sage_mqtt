@@ -1,12 +1,14 @@
 use crate::{codec, Error, Result as SageResult};
-use async_std::io::{prelude::*, Error as IOError, ErrorKind, Read, Write};
+use futures::io::{
+    AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, Error as IOError, ErrorKind,
+};
 use std::marker::Unpin;
 
 /// Writes the given `data` into `writer` according to Binary Data type MQTT5 specifications
 /// which consists in a two bytes integer representing the data size in bytes followed with
 /// the data as bytes.
 /// In case of success returns the written size in bytes.
-pub async fn write_binary_data<W: Write + Unpin>(
+pub async fn write_binary_data<W: AsyncWrite + Unpin>(
     data: &Vec<u8>,
     writer: &mut W,
 ) -> SageResult<usize> {
@@ -23,7 +25,7 @@ pub async fn write_binary_data<W: Write + Unpin>(
 /// MQTT5 specifications which consists in an two bytes integer representing
 /// the data size in bytes followed with the data as bytes.
 /// In case of success, returns a `Vec<u8>`
-pub async fn read_binary_data<R: Read + Unpin>(reader: &mut R) -> SageResult<Vec<u8>> {
+pub async fn read_binary_data<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Vec<u8>> {
     let mut chunk = reader.take(2);
     let size = codec::read_two_byte_integer(&mut chunk).await? as usize;
 

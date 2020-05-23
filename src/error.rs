@@ -1,4 +1,4 @@
-use async_std::io::Error as AsyncIOError;
+use futures::io::Error as AsyncIOError;
 use std::{
     error::Error as StdError,
     fmt::{Display, Formatter, Result as FmtResult},

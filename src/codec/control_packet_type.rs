@@ -1,11 +1,11 @@
 use crate::{codec, ControlPacketType, Error, Result as SageResult};
-use async_std::io::{Read, Write};
+use futures::io::{AsyncRead, AsyncWrite};
 use std::{convert::TryInto, marker::Unpin};
 
 /// Writes the given `ControlPacketType` in one byte according to
 /// MQTT5 specifications.
 /// In case of success, returns `1`.
-pub async fn write_control_packet_type<W: Write + Unpin>(
+pub async fn write_control_packet_type<W: AsyncWrite + Unpin>(
     cpt: ControlPacketType,
     writer: &mut W,
 ) -> SageResult<usize> {
@@ -39,7 +39,7 @@ pub async fn write_control_packet_type<W: Write + Unpin>(
 
 /// Reads the given `reader` for a `ControlPacketType`.
 /// In case of success, returns a `ControlPacketType` instance.
-pub async fn read_control_packet_type<R: Read + Unpin>(
+pub async fn read_control_packet_type<R: AsyncRead + Unpin>(
     reader: &mut R,
 ) -> SageResult<ControlPacketType> {
     let packet_type = codec::read_byte(reader).await?;

@@ -1,10 +1,7 @@
 use crate::{
     codec, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
 };
-use async_std::io::{
-    prelude::{ReadExt, WriteExt},
-    Read, Write,
-};
+use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 
 /// An `UnSubAck` is sent by the server to acknowledge an unsubscribe request.
@@ -38,9 +35,9 @@ impl Default for UnSubAck {
 }
 
 impl UnSubAck {
-    /// Write the `UnSubAck` body of a packet, returning the written size in bytes
+    /// AsyncWrite the `UnSubAck` body of a packet, returning the written size in bytes
     /// in case of success.
-    pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
 
         let mut properties = Vec::new();
@@ -64,8 +61,11 @@ impl UnSubAck {
         Ok(n_bytes)
     }
 
-    /// Read the `UnSubAck` body from `reader`, retuning it in case of success.
-    pub async fn read<R: Read + Unpin>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
+    /// AsyncRead the `UnSubAck` body from `reader`, retuning it in case of success.
+    pub async fn read<R: AsyncRead + Unpin>(
+        reader: &mut R,
+        remaining_size: usize,
+    ) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size as u64);
 
         let packet_identifier = codec::read_two_byte_integer(&mut reader).await?;

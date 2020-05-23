@@ -1,10 +1,7 @@
 use crate::{
     codec, Error, PropertiesDecoder, Property, QoS, Result as SageResult, DEFAULT_MAXIMUM_QOS,
 };
-use async_std::io::{
-    prelude::{ReadExt, WriteExt},
-    Read, Write,
-};
+use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::{
     convert::{TryFrom, TryInto},
     marker::Unpin,
@@ -67,7 +64,7 @@ impl Default for SubscriptionOptions {
 }
 
 impl SubscriptionOptions {
-    async fn encode<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    async fn encode<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let byte: u8 = self.qos as u8
             | (self.no_local as u8) << 2
             | (self.retain_as_published as u8) << 3
@@ -75,7 +72,7 @@ impl SubscriptionOptions {
         codec::write_byte(byte, writer).await
     }
 
-    async fn decode<R: Read + Unpin>(reader: &mut R) -> SageResult<Self> {
+    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
         let flags = codec::read_byte(reader).await?;
         if flags & 0b1100_0000 > 0 {
             Err(Error::ProtocolError)
@@ -122,9 +119,9 @@ impl Default for Subscribe {
 }
 
 impl Subscribe {
-    /// Write the `Subscribe` body of a packet, returning the written size in bytes
+    /// AsyncWrite the `Subscribe` body of a packet, returning the written size in bytes
     /// in case of success.
-    pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
 
         let mut properties = Vec::new();
@@ -149,8 +146,11 @@ impl Subscribe {
         Ok(n_bytes)
     }
 
-    /// Read the `Subscribe` body from `reader`, retuning it in case of success.
-    pub async fn read<R: Read + Unpin>(reader: &mut R, remaining_size: usize) -> SageResult<Self> {
+    /// AsyncRead the `Subscribe` body from `reader`, retuning it in case of success.
+    pub async fn read<R: AsyncRead + Unpin>(
+        reader: &mut R,
+        remaining_size: usize,
+    ) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size as u64);
         let packet_identifier = codec::read_two_byte_integer(&mut reader).await?;
 

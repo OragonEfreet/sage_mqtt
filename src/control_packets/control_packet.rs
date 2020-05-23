@@ -2,10 +2,10 @@ use crate::{
     Auth, ConnAck, Connect, ControlPacketType, Disconnect, Error, FixedHeader, PubAck, PubComp,
     PubRec, PubRel, Publish, Result as SageResult, SubAck, Subscribe, UnSubAck, UnSubscribe,
 };
-use async_std::io::{prelude::WriteExt, Read, Write};
+use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 
-/// The standard type to manipulate a Read/Write-able MQTT packet. Each packet
+/// The standard type to manipulate a AsyncRead/AsyncWrite-able MQTT packet. Each packet
 /// is an enum value with its own type.
 #[derive(Debug, Clone)]
 pub enum ControlPacket {
@@ -59,7 +59,7 @@ impl ControlPacket {
     /// bytes written.
     /// In case of failure, the operation will return any MQTT-related error, or
     /// `std::io::Error`.
-    pub async fn encode<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn encode<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut variable_and_payload = Vec::new();
         let (packet_type, remaining_size) = match self {
             ControlPacket::Connect(packet) => (
@@ -141,7 +141,7 @@ impl ControlPacket {
     /// Reads a control packet from `reader`, returning a new `ControlPacket`.
     /// In case of failure, the operation will return any MQTT-related error, or
     /// `std::io::Error`.
-    pub async fn decode<R: Read + Unpin>(reader: &mut R) -> SageResult<Self> {
+    pub async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
         let fixed_header = FixedHeader::decode(reader).await?;
 
         let packet = match fixed_header.packet_type {

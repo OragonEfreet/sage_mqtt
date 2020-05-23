@@ -1,5 +1,5 @@
 use crate::{Property, Result as SageResult};
-use async_std::io::Write;
+use futures::io::AsyncWrite;
 use std::marker::Unpin;
 
 /// By default, `Connect` packets provide optional `user_name` and `password`
@@ -29,9 +29,9 @@ pub struct Authentication {
 }
 
 impl Authentication {
-    /// Write authentication data into `writer`, returning the written size
+    /// AsyncWrite authentication data into `writer`, returning the written size
     /// in case of success.
-    pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = Property::AuthenticationMethod(self.method)
             .encode(writer)
             .await?;

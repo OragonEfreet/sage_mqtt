@@ -4,7 +4,7 @@ use crate::{
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
 };
-use async_std::io::{prelude::WriteExt, Read, Write};
+use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::convert::TryInto;
 use std::marker::Unpin;
 
@@ -224,7 +224,7 @@ impl Connect {
     /// In case of failure, the underlying system can raise a `std::io::Error`.
     /// If the data are not valid according to MQTT 5 specifications, the
     /// function will return a `ProtocolError`.
-    pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         // Variable Header (into content)
         let mut n_bytes = codec::write_utf8_string("MQTT", writer).await?;
         n_bytes += codec::write_byte(0x05, writer).await?;
@@ -351,7 +351,7 @@ impl Connect {
     ///
     /// The function can send a `ProtocolError` in case of invalid data or
     /// any `std::io::Error` returned by the underlying system.
-    pub async fn read<R: Read + Unpin>(reader: &mut R) -> SageResult<Self> {
+    pub async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
         let protocol_name = codec::read_utf8_string(reader).await?;
         if protocol_name != "MQTT" {
             return Err(Error::MalformedPacket);
@@ -480,7 +480,7 @@ impl Connect {
 }
 
 impl ConnectFlags {
-    pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let bits = ((self.user_name as u8) << 7)
             | ((self.password as u8) << 6)
             | ((self.will_retain as u8) << 5)
@@ -490,7 +490,7 @@ impl ConnectFlags {
         codec::write_byte(bits, writer).await
     }
 
-    pub async fn read<R: Read + Unpin>(reader: &mut R) -> SageResult<Self> {
+    pub async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
         let bits = codec::read_byte(reader).await?;
 
         if bits & 0x01 != 0 {

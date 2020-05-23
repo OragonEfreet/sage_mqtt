@@ -1,5 +1,5 @@
 use crate::{codec, Error, Result as SageResult};
-use async_std::io::{prelude::*, Read, Write};
+use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::io::Cursor;
 use std::marker::Unpin;
 use unicode_reader::CodePoints;
@@ -8,7 +8,10 @@ use unicode_reader::CodePoints;
 /// which consists in a two bytes integer representing the string in bytes followed with
 /// the string as bytes.
 /// In case of success returns the written size in bytes.
-pub async fn write_utf8_string<W: Write + Unpin>(data: &str, writer: &mut W) -> SageResult<usize> {
+pub async fn write_utf8_string<W: AsyncWrite + Unpin>(
+    data: &str,
+    writer: &mut W,
+) -> SageResult<usize> {
     let len = data.len();
     if len > i16::max_value() as usize {
         return Err(Error::MalformedPacket);
@@ -22,7 +25,7 @@ pub async fn write_utf8_string<W: Write + Unpin>(data: &str, writer: &mut W) -> 
 /// MQTT5 specifications which consists in an two bytes integer representing
 /// the data size in bytes followed with the data as bytes.
 /// In case of success, returns a `Vec<u8>`
-pub async fn read_utf8_string<R: Read + Unpin>(reader: &mut R) -> SageResult<String> {
+pub async fn read_utf8_string<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<String> {
     let mut chunk = reader.take(2);
     let size = codec::read_two_byte_integer(&mut chunk).await?;
     let size = size as usize;
@@ -57,7 +60,7 @@ pub async fn read_utf8_string<R: Read + Unpin>(reader: &mut R) -> SageResult<Str
 #[cfg(test)]
 mod unit {
 
-    use async_std::io::Cursor as AsyncCursor;
+    use futures::io::Cursor as AsyncCursor;
 
     use super::*;
 

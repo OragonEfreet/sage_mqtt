@@ -6,7 +6,7 @@ use crate::{
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
     DEFAULT_WILL_DELAY_INTERVAL,
 };
-use async_std::io::{prelude::ReadExt, Read, Take, Write};
+use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, Take};
 use std::collections::HashSet;
 use std::marker::Unpin;
 
@@ -41,11 +41,14 @@ pub(crate) enum PropertyId {
     SharedSubscriptionAvailable = 0x2A,
 }
 
-async fn write_property_id<W: Write + Unpin>(id: PropertyId, writer: &mut W) -> SageResult<usize> {
+async fn write_property_id<W: AsyncWrite + Unpin>(
+    id: PropertyId,
+    writer: &mut W,
+) -> SageResult<usize> {
     codec::write_variable_byte_integer(id as u32, writer).await
 }
 
-async fn read_property_id<R: Read + Unpin>(reader: &mut R) -> SageResult<PropertyId> {
+async fn read_property_id<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<PropertyId> {
     match codec::read_variable_byte_integer(reader).await? {
         0x01 => Ok(PropertyId::PayloadFormatIndicator),
         0x02 => Ok(PropertyId::MessageExpiryInterval),
@@ -109,12 +112,12 @@ pub enum Property {
     SharedSubscriptionAvailable(bool),
 }
 
-pub struct PropertiesDecoder<R: Read + Unpin> {
+pub struct PropertiesDecoder<R: AsyncRead + Unpin> {
     reader: Take<R>,
     marked: HashSet<PropertyId>,
 }
 
-impl<'a, R: Read + Unpin> PropertiesDecoder<R> {
+impl<'a, R: AsyncRead + Unpin> PropertiesDecoder<R> {
     pub async fn take(mut stream: R) -> SageResult<Self> {
         let len = codec::read_variable_byte_integer(&mut stream).await? as u64;
         let reader = stream.take(len);
@@ -259,7 +262,7 @@ impl<'a, R: Read + Unpin> PropertiesDecoder<R> {
 }
 
 impl Property {
-    pub async fn encode<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn encode<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         match self {
             Property::PayloadFormatIndicator(v) => {
                 if v != DEFAULT_PAYLOAD_FORMAT_INDICATOR {

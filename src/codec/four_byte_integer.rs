@@ -1,10 +1,10 @@
 use crate::{Error, Result as SageResult};
-use async_std::io::{prelude::*, Read, Write};
+use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 
 /// Writes the given `u32` according to MQTT5 Four Byte Integer specifications.
 /// In case of success, returns `4`.
-pub async fn write_four_byte_integer<W: Write + Unpin>(
+pub async fn write_four_byte_integer<W: AsyncWrite + Unpin>(
     data: u32,
     writer: &mut W,
 ) -> SageResult<usize> {
@@ -12,7 +12,7 @@ pub async fn write_four_byte_integer<W: Write + Unpin>(
 }
 
 /// Reads the given `reader` for an `u32`, returning it in case of success.
-pub async fn read_four_byte_integer<R: Read + Unpin>(reader: &mut R) -> SageResult<u32> {
+pub async fn read_four_byte_integer<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<u32> {
     let mut buf = [0_u8; 4];
     if reader.read_exact(&mut buf).await.is_ok() {
         Ok(((buf[0] as u32) << 24)

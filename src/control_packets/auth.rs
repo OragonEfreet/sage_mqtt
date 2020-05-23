@@ -2,7 +2,7 @@ use crate::{
     codec, Authentication, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode,
     Result as SageResult,
 };
-use async_std::io::{prelude::WriteExt, Read, Write};
+use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 
 /// The `Auth` packet is used for enhanced authentication upon connection.
@@ -41,9 +41,9 @@ impl Default for Auth {
 }
 
 impl Auth {
-    /// Write the `Auth` body of a packet, returning the written size in bytes
+    /// AsyncWrite the `Auth` body of a packet, returning the written size in bytes
     /// in case of success.
-    pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_reason_code(self.reason_code, writer).await?;
         let mut properties = Vec::new();
 
@@ -61,8 +61,8 @@ impl Auth {
         Ok(n_bytes)
     }
 
-    /// Read the `Auth` body from `reader`, retuning it in case of success.
-    pub async fn read<R: Read + Unpin>(reader: &mut R) -> SageResult<Self> {
+    /// AsyncRead the `Auth` body from `reader`, retuning it in case of success.
+    pub async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
         let reason_code =
             ReasonCode::try_parse(codec::read_byte(reader).await?, ControlPacketType::AUTH)?;
 
