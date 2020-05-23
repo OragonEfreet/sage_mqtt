@@ -5,7 +5,7 @@ use crate::{
     DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
     DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
 };
-use async_std::io::{prelude::*, Read, Write};
+use async_std::io::{prelude::WriteExt, Read, Write};
 use std::marker::Unpin;
 
 /// The `Connack` message is sent from the server to the client to acknowledge
@@ -123,10 +123,9 @@ impl Default for ConnAck {
 }
 
 impl ConnAck {
-
-        /// Write the `Connack` body of a packet, returning the written size in bytes
+    /// Write the `Connack` body of a packet, returning the written size in bytes
     /// in case of success.
-pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_bool(self.session_present, writer).await?;
         n_bytes += codec::write_reason_code(self.reason_code, writer).await?;
 
@@ -197,8 +196,8 @@ pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> 
         Ok(n_bytes)
     }
 
-        /// Read the `Connack` body from `reader`, retuning it in case of success.
-pub async fn read<R: Read + Unpin>(reader: &mut R) -> SageResult<Self> {
+    /// Read the `Connack` body from `reader`, retuning it in case of success.
+    pub async fn read<R: Read + Unpin>(reader: &mut R) -> SageResult<Self> {
         let session_present = codec::read_bool(reader).await?;
 
         let reason_code =

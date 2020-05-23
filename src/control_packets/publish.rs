@@ -3,7 +3,10 @@ use crate::{
     DEFAULT_PAYLOAD_FORMAT_INDICATOR,
 };
 
-use async_std::io::{prelude::*, Read, Write};
+use async_std::io::{
+    prelude::{ReadExt, WriteExt},
+    Read, Write,
+};
 use std::marker::Unpin;
 
 /// The `Publish` packet is used to send an application message to a given
@@ -87,9 +90,9 @@ impl Default for Publish {
 }
 
 impl Publish {
-        /// Write the `Publish` body of a packet, returning the written size in bytes
+    /// Write the `Publish` body of a packet, returning the written size in bytes
     /// in case of success.
-pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_utf8_string(&self.topic_name, writer).await?;
 
         if self.qos != QoS::AtMostOnce {
@@ -144,8 +147,8 @@ pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> 
         Ok(n_bytes)
     }
 
-        /// Read the `Publish` body from `reader`, retuning it in case of success.
-pub async fn read<R: Read + Unpin>(
+    /// Read the `Publish` body from `reader`, retuning it in case of success.
+    pub async fn read<R: Read + Unpin>(
         reader: &mut R,
         duplicate: bool,
         qos: QoS,

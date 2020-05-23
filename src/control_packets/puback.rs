@@ -1,7 +1,7 @@
 use crate::{
     codec, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
 };
-use async_std::io::{prelude::*, Read, Write};
+use async_std::io::{prelude::WriteExt, Read, Write};
 use std::marker::Unpin;
 
 /// A `PubAck` is the response for a `Publish` message with `AtLeastOnce` as
@@ -43,9 +43,9 @@ impl Default for PubAck {
 }
 
 impl PubAck {
-        /// Write the `PubAck` body of a packet, returning the written size in bytes
+    /// Write the `PubAck` body of a packet, returning the written size in bytes
     /// in case of success.
-pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
 
         let mut properties = Vec::new();
@@ -67,8 +67,8 @@ pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> 
         }
     }
 
-        /// Read the `PubAck` body from `reader`, retuning it in case of success.
-pub async fn read<R: Read + Unpin>(reader: &mut R, shortened: bool) -> SageResult<Self> {
+    /// Read the `PubAck` body from `reader`, retuning it in case of success.
+    pub async fn read<R: Read + Unpin>(reader: &mut R, shortened: bool) -> SageResult<Self> {
         let packet_identifier = codec::read_two_byte_integer(reader).await?;
 
         let mut puback = PubAck {

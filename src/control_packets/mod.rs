@@ -6,7 +6,6 @@
 /// - Binary Data
 /// - Quality of service
 /// - Reason Codes
-
 mod auth;
 mod authentication;
 mod connack;

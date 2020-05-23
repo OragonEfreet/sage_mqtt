@@ -2,7 +2,7 @@ use crate::{
     Auth, ConnAck, Connect, ControlPacketType, Disconnect, Error, FixedHeader, PubAck, PubComp,
     PubRec, PubRel, Publish, Result as SageResult, SubAck, Subscribe, UnSubAck, UnSubscribe,
 };
-use async_std::io::{prelude::*, Read, Write};
+use async_std::io::{prelude::WriteExt, Read, Write};
 use std::marker::Unpin;
 
 /// The standard type to manipulate a Read/Write-able MQTT packet. Each packet

@@ -4,7 +4,7 @@ use crate::{
     DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
 };
-use async_std::io::{prelude::*, Read, Write};
+use async_std::io::{prelude::WriteExt, Read, Write};
 use std::convert::TryInto;
 use std::marker::Unpin;
 

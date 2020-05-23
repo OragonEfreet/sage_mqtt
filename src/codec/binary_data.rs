@@ -20,7 +20,7 @@ pub async fn write_binary_data<W: Write + Unpin>(
 }
 
 /// Reads from the given reader for binary dataset according to Binary Data type
-/// MQTT5 specifications which consists in an two bytes integer representing 
+/// MQTT5 specifications which consists in an two bytes integer representing
 /// the data size in bytes followed with the data as bytes.
 /// In case of success, returns a `Vec<u8>`
 pub async fn read_binary_data<R: Read + Unpin>(reader: &mut R) -> SageResult<Vec<u8>> {

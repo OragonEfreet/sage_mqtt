@@ -19,7 +19,7 @@ pub async fn write_utf8_string<W: Write + Unpin>(data: &str, writer: &mut W) -> 
 }
 
 /// Reads from the given reader for binary dataset according to Binary Data type
-/// MQTT5 specifications which consists in an two bytes integer representing 
+/// MQTT5 specifications which consists in an two bytes integer representing
 /// the data size in bytes followed with the data as bytes.
 /// In case of success, returns a `Vec<u8>`
 pub async fn read_utf8_string<R: Read + Unpin>(reader: &mut R) -> SageResult<String> {

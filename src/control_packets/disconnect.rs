@@ -1,7 +1,7 @@
 use crate::{
     codec, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
 };
-use async_std::io::{prelude::*, Read, Write};
+use async_std::io::{prelude::WriteExt, Read, Write};
 use std::marker::Unpin;
 
 /// A `Disconnect` packet can be sent by the client or the server to gracefully
@@ -73,9 +73,9 @@ impl Default for Disconnect {
 }
 
 impl Disconnect {
-        /// Write the `Disconnect` body of a packet, returning the written size in bytes
+    /// Write the `Disconnect` body of a packet, returning the written size in bytes
     /// in case of success.
-pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_reason_code(self.reason_code, writer).await?;
 
         let mut properties = Vec::new();
@@ -101,8 +101,8 @@ pub async fn write<W: Write + Unpin>(self, writer: &mut W) -> SageResult<usize> 
         Ok(n_bytes)
     }
 
-        /// Read the `Disconnect` body from `reader`, retuning it in case of success.
-pub async fn read<R: Read + Unpin>(reader: &mut R) -> SageResult<Self> {
+    /// Read the `Disconnect` body from `reader`, retuning it in case of success.
+    pub async fn read<R: Read + Unpin>(reader: &mut R) -> SageResult<Self> {
         let reason_code = ReasonCode::try_parse(
             codec::read_byte(reader).await?,
             ControlPacketType::DISCONNECT,

@@ -6,7 +6,7 @@ use crate::{
     DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
     DEFAULT_WILL_DELAY_INTERVAL,
 };
-use async_std::io::{prelude::*, Read, Take, Write};
+use async_std::io::{prelude::ReadExt, Read, Take, Write};
 use std::collections::HashSet;
 use std::marker::Unpin;
 

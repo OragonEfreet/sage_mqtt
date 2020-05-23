@@ -2,7 +2,7 @@ use crate::{
     codec, Authentication, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode,
     Result as SageResult,
 };
-use async_std::io::{prelude::*, Read, Write};
+use async_std::io::{prelude::WriteExt, Read, Write};
 use std::marker::Unpin;
 
 /// The `Auth` packet is used for enhanced authentication upon connection.
