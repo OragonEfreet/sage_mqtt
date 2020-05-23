@@ -12,9 +12,9 @@ dependencies = [
 
 [[package]]
 name = "async-std"
-version = "1.6.0-beta.2"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3bca717ee7c0abd18e11ba8bc12170e7eee097f96597a021129686bfcfd4978"
+checksum = "a45cee2749d880d7066e328a7e161c7470ced883b2fd000ca4643e9f1dd5083a"
 dependencies = [
  "async-attributes",
  "async-task",
@@ -143,27 +143,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "futures"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e05b85ec287aac0dc34db7d4a569323df697f9c55b99b15d6b4ef8cde49f613"
-dependencies = [
- "futures-channel",
- "futures-core",
- "futures-io",
- "futures-sink",
- "futures-task",
- "futures-util",
-]
-
-[[package]]
 name = "futures-channel"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f366ad74c28cca6ba456d95e6422883cfb4b252a83bed929c83abfdbbf2967d5"
 dependencies = [
  "futures-core",
- "futures-sink",
 ]
 
 [[package]]
@@ -209,10 +194,8 @@ version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8764574ff08b701a084482c3c7031349104b07ac897393010494beaa18ce32c6"
 dependencies = [
- "futures-channel",
  "futures-core",
  "futures-io",
- "futures-sink",
  "futures-task",
  "memchr",
  "pin-project",
@@ -365,19 +348,21 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "piper"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6d62a6ea407d82215154475927b288219b79c8670e3371166210328e758ebaa"
+checksum = "6b0deb65f46e873ba8aa7c6a8dbe3f23cb1bf59c339a81a1d56361dde4d66ac8"
 dependencies = [
  "crossbeam-utils",
- "futures",
+ "futures-io",
+ "futures-sink",
+ "futures-util",
 ]
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.13"
+version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53f5ffe53a6b28e37c9c1ce74893477864d64f74778a93a4beb43c8fa167f639"
+checksum = "70a50b9351bfa8d65a7d93ce712dc63d2fd15ddbf2c36990fc7cac344859c04f"
 dependencies = [
  "unicode-xid",
 ]
@@ -399,7 +384,7 @@ checksum = "2439c63f3f6139d1b57529d16bc3b8bb855230c8efcc5d3a896c8bea7c3b1e84"
 
 [[package]]
 name = "sage_mqtt"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "async-std",
  "unicode_reader",
@@ -440,9 +425,9 @@ dependencies = [
 
 [[package]]
 name = "smol"
-version = "0.1.8"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b1014c048f35c553bfd0155079a62ab9a0e220f9e39f49244c1d58f825ab84a"
+checksum = "686c634ad1873fffef6aed20f180eede424fbf3bb31802394c90fd7335a661b7"
 dependencies = [
  "async-task",
  "crossbeam",
@@ -586,9 +571,9 @@ dependencies = [
 
 [[package]]
 name = "wepoll-binding"
-version = "2.0.1"
+version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7511014d92edaa2cba607fd6dc62974915bebc3e16f91f911a4bb240b4a3a68c"
+checksum = "374fff4ff9701ff8b6ad0d14bacd3156c44063632d8c136186ff5967d48999a7"
 dependencies = [
  "bitflags",
  "wepoll-sys",
