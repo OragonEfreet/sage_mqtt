@@ -4,10 +4,10 @@ use sage_mqtt::*;
 async fn main() {
     let mut encoded = Vec::new();
 
-    ControlPacket::Connect(Default::default())
-    .encode(&mut encoded)
-    .await
-    .unwrap();
+    ControlPacket::Publish(Default::default())
+        .encode(&mut encoded)
+        .await
+        .unwrap();
 
     //println!("{:?}", encoded);
     //     let mut reader = Cursor::new(encoded);

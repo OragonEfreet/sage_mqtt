@@ -69,7 +69,7 @@ impl Default for Publish {
     fn default() -> Self {
         Publish {
             duplicate: false,
-            qos: QoS::ExactlyOnce,
+            qos: QoS::AtMostOnce,
             retain: false,
             topic_name: Default::default(),
             packet_identifier: None,

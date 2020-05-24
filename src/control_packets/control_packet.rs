@@ -133,7 +133,7 @@ impl ControlPacket {
 
         writer.write_all(&fixed_header_buffer).await?;
         writer.write_all(&variable_and_payload).await?;
-        Ok(fixed_size+remaining_size)
+        Ok(fixed_size + remaining_size)
     }
 
     /// Read a control packet from `reader`, returning a new `ControlPacket`.
