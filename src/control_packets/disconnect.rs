@@ -63,7 +63,7 @@ pub struct Disconnect {
 impl Default for Disconnect {
     fn default() -> Self {
         Disconnect {
-            reason_code: ReasonCode::Success,
+            reason_code: ReasonCode::NormalDisconnection,
             reason_string: None,
             session_expiry_interval: None,
             user_properties: Default::default(),

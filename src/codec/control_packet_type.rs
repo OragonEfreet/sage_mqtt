@@ -47,7 +47,7 @@ pub async fn read_control_packet_type<R: AsyncRead + Unpin>(
         (0b0000, 0b0000) => ControlPacketType::RESERVED,
         (0b0001, 0b0000) => ControlPacketType::CONNECT,
         (0b0010, 0b0000) => ControlPacketType::CONNACK,
-        (0b0010, flags) => ControlPacketType::PUBLISH {
+        (0b0011, flags) => ControlPacketType::PUBLISH {
             duplicate: (flags & 0b0111) > 0,
             qos: ((flags & 0b0110) >> 1).try_into()?,
             retain: (flags & 0b0001) > 0,

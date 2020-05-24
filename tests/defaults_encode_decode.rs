@@ -1,7 +1,7 @@
 use async_std::io::Cursor;
 use sage_mqtt::{
-    Auth, ConnAck, Connect, ControlPacket, Disconnect, PubAck, PubComp, PubRec, PubRel, Publish,
-    SubAck, Subscribe, UnSubAck, UnSubscribe,
+    Auth, ConnAck, Connect, ControlPacket, Disconnect, Error, PubAck, PubComp, PubRec, PubRel,
+    Publish, SubAck, UnSubAck,
 };
 
 #[async_std::test]
@@ -162,14 +162,8 @@ async fn default_subscribe() {
     assert!(send_size > 0);
 
     let mut cursor = Cursor::new(encoded);
-    let receive_result = ControlPacket::decode(&mut cursor)
-        .await
-        .expect("Cannot decode Subscribe");
-    if let ControlPacket::Subscribe(receive_packet) = receive_result {
-        assert_eq!(receive_packet, Subscribe::default());
-    } else {
-        panic!("Incorrect packet type");
-    }
+    let receive_result = ControlPacket::decode(&mut cursor).await;
+    assert!(matches!(receive_result, Err(Error::ProtocolError)));
 }
 
 #[async_std::test]
@@ -204,14 +198,8 @@ async fn default_unsubscribe() {
     assert!(send_size > 0);
 
     let mut cursor = Cursor::new(encoded);
-    let receive_result = ControlPacket::decode(&mut cursor)
-        .await
-        .expect("Cannot decode UnSubscribe");
-    if let ControlPacket::UnSubscribe(receive_packet) = receive_result {
-        assert_eq!(receive_packet, UnSubscribe::default());
-    } else {
-        panic!("Incorrect packet type");
-    }
+    let receive_result = ControlPacket::decode(&mut cursor).await;
+    assert!(matches!(receive_result, Err(Error::ProtocolError)));
 }
 
 #[async_std::test]

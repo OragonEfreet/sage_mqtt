@@ -9,7 +9,6 @@ async fn main() {
         .await
         .unwrap();
 
-    //println!("{:?}", encoded);
     //     let mut reader = Cursor::new(encoded);
 
     //     let _ = ControlPacket::decode(&mut reader).unwrap();
