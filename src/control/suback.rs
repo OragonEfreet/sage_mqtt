@@ -1,52 +1,42 @@
 use crate::{
-    codec, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
+    codec, Error, PacketType, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 
-/// An `UnSubAck` is sent by the server to acknowledge an unsubscribe request.
+/// The `SubAck` packet is sent by a server to confirm a `Subscribe` has been
+/// received and processed.
 #[derive(Debug, PartialEq, Clone)]
-pub struct UnSubAck {
+pub struct SubAck {
     /// The packet identifier is used to identify the message throughout the
-    /// communication
+    /// communication.
     pub packet_identifier: u16,
 
-    /// An optional description of the acknowledgement.
-    pub reason_string: Option<String>,
-
-    /// General purpose user-defined properties
+    /// User defined properties
     pub user_properties: Vec<(String, String)>,
 
-    /// A list of reason codes ackowledging the unsubscribtion.
-    /// Each `ReasonCode` at a given index correspond to a unsubscribe request
-    /// from the `Unsubscribe` packet at the same index.
+    /// The reason codes. The array contains one `ReasonCode` per subscription.
+    /// The indices in this array match the incides in the `Subscribe`'s
+    /// subscriptions array.
     pub reason_codes: Vec<ReasonCode>,
 }
 
-impl Default for UnSubAck {
+impl Default for SubAck {
     fn default() -> Self {
-        UnSubAck {
+        SubAck {
             packet_identifier: 0,
-            reason_string: None,
             user_properties: Default::default(),
             reason_codes: Default::default(),
         }
     }
 }
 
-impl UnSubAck {
-    ///Write the `UnSubAck` body of a packet, returning the written size in bytes
-    /// in case of success.
-    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+impl SubAck {
+    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
 
         let mut properties = Vec::new();
 
-        if let Some(reason_string) = self.reason_string {
-            n_bytes += Property::ReasonString(reason_string)
-                .encode(&mut properties)
-                .await?;
-        }
         for (k, v) in self.user_properties {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties).await?;
         }
@@ -61,8 +51,7 @@ impl UnSubAck {
         Ok(n_bytes)
     }
 
-    ///Read the `UnSubAck` body from `reader`, retuning it in case of success.
-    pub async fn read<R: AsyncRead + Unpin>(
+    pub(crate) async fn read<R: AsyncRead + Unpin>(
         reader: &mut R,
         remaining_size: usize,
     ) -> SageResult<Self> {
@@ -71,10 +60,8 @@ impl UnSubAck {
         let packet_identifier = codec::read_two_byte_integer(&mut reader).await?;
         let mut user_properties = Vec::new();
         let mut properties = PropertiesDecoder::take(&mut reader).await?;
-        let mut reason_string = None;
         while properties.has_properties() {
             match properties.read().await? {
-                Property::ReasonString(v) => reason_string = Some(v),
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
                 _ => return Err(Error::ProtocolError),
             }
@@ -85,14 +72,13 @@ impl UnSubAck {
         while reader.limit() > 0 {
             reason_codes.push(ReasonCode::try_parse(
                 codec::read_byte(&mut reader).await?,
-                ControlPacketType::SUBACK,
+                PacketType::SUBACK,
             )?);
         }
 
-        Ok(UnSubAck {
+        Ok(SubAck {
             packet_identifier,
             user_properties,
-            reason_string,
             reason_codes,
         })
     }
@@ -105,16 +91,13 @@ mod unit {
 
     fn encoded() -> Vec<u8> {
         vec![
-            5, 57, 36, 31, 0, 18, 71, 105, 111, 114, 103, 105, 111, 32, 98, 121, 32, 77, 111, 114,
-            111, 100, 101, 114, 38, 0, 7, 77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116, 145,
-            143,
+            5, 57, 15, 38, 0, 7, 77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116, 145, 143,
         ]
     }
 
-    fn decoded() -> UnSubAck {
-        UnSubAck {
+    fn decoded() -> SubAck {
+        SubAck {
             packet_identifier: 1337,
-            reason_string: Some("Giorgio by Moroder".into()),
             user_properties: vec![("Mogwaï".into(), "Cat".into())],
             reason_codes: vec![
                 ReasonCode::PacketIdentifierInUse,
@@ -129,13 +112,13 @@ mod unit {
         let mut tested_result = Vec::new();
         let n_bytes = test_data.write(&mut tested_result).await.unwrap();
         assert_eq!(tested_result, encoded());
-        assert_eq!(n_bytes, 41);
+        assert_eq!(n_bytes, 20);
     }
 
     #[async_std::test]
     async fn decode() {
         let mut test_data = Cursor::new(encoded());
-        let tested_result = UnSubAck::read(&mut test_data, 41).await.unwrap();
+        let tested_result = SubAck::read(&mut test_data, 20).await.unwrap();
         assert_eq!(tested_result, decoded());
     }
 }

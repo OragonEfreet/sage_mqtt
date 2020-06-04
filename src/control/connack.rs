@@ -1,9 +1,12 @@
 use crate::{
-    codec, Authentication, ClientID, ControlPacketType, Error, PropertiesDecoder, Property, QoS,
-    ReasonCode, Result as SageResult, DEFAULT_MAXIMUM_QOS, DEFAULT_RECEIVE_MAXIMUM,
-    DEFAULT_RETAIN_AVAILABLE, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
-    DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
+    codec,
+    defaults::{
+        DEFAULT_MAXIMUM_QOS, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_RETAIN_AVAILABLE,
+        DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE,
+        DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
+    },
+    Authentication, ClientID, Error, PacketType, PropertiesDecoder, Property, QoS, ReasonCode,
+    Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
@@ -123,9 +126,7 @@ impl Default for ConnAck {
 }
 
 impl ConnAck {
-    ///Write the `Connack` body of a packet, returning the written size in bytes
-    /// in case of success.
-    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_bool(self.session_present, writer).await?;
         n_bytes += codec::write_reason_code(self.reason_code, writer).await?;
 
@@ -196,12 +197,11 @@ impl ConnAck {
         Ok(n_bytes)
     }
 
-    ///Read the `Connack` body from `reader`, retuning it in case of success.
-    pub async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
+    pub(crate) async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
         let session_present = codec::read_bool(reader).await?;
 
         let reason_code =
-            ReasonCode::try_parse(codec::read_byte(reader).await?, ControlPacketType::CONNACK)?;
+            ReasonCode::try_parse(codec::read_byte(reader).await?, PacketType::CONNACK)?;
 
         let mut session_expiry_interval = None;
         let mut receive_maximum = DEFAULT_RECEIVE_MAXIMUM;

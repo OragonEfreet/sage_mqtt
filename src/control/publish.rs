@@ -1,6 +1,6 @@
 use crate::{
-    codec, Error, PropertiesDecoder, Property, QoS, Result as SageResult,
-    DEFAULT_PAYLOAD_FORMAT_INDICATOR,
+    codec, defaults::DEFAULT_PAYLOAD_FORMAT_INDICATOR, Error, PropertiesDecoder, Property, QoS,
+    Result as SageResult,
 };
 
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
@@ -87,9 +87,7 @@ impl Default for Publish {
 }
 
 impl Publish {
-    ///Write the `Publish` body of a packet, returning the written size in bytes
-    /// in case of success.
-    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_utf8_string(&self.topic_name, writer).await?;
 
         if self.qos != QoS::AtMostOnce {
@@ -144,8 +142,7 @@ impl Publish {
         Ok(n_bytes)
     }
 
-    ///Read the `Publish` body from `reader`, retuning it in case of success.
-    pub async fn read<R: AsyncRead + Unpin>(
+    pub(crate) async fn read<R: AsyncRead + Unpin>(
         reader: &mut R,
         duplicate: bool,
         qos: QoS,

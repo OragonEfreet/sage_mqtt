@@ -1,5 +1,5 @@
 use crate::{
-    codec, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
+    codec, Error, PacketType, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
@@ -43,9 +43,7 @@ impl Default for PubComp {
 }
 
 impl PubComp {
-    ///Write the `PubComp` body of a packet, returning the written size in bytes
-    /// in case of success.
-    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
 
         let mut properties = Vec::new();
@@ -67,8 +65,10 @@ impl PubComp {
         }
     }
 
-    ///Read the `PubComp` body from `reader`, retuning it in case of success.
-    pub async fn read<R: AsyncRead + Unpin>(reader: &mut R, shortened: bool) -> SageResult<Self> {
+    pub(crate) async fn read<R: AsyncRead + Unpin>(
+        reader: &mut R,
+        shortened: bool,
+    ) -> SageResult<Self> {
         let packet_identifier = codec::read_two_byte_integer(reader).await?;
 
         let mut pubcomp = PubComp {
@@ -80,7 +80,7 @@ impl PubComp {
             pubcomp.reason_code = ReasonCode::Success;
         } else {
             pubcomp.reason_code =
-                ReasonCode::try_parse(codec::read_byte(reader).await?, ControlPacketType::PUBCOMP)?;
+                ReasonCode::try_parse(codec::read_byte(reader).await?, PacketType::PUBCOMP)?;
 
             let mut properties = PropertiesDecoder::take(reader).await?;
             while properties.has_properties() {

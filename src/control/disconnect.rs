@@ -1,5 +1,5 @@
 use crate::{
-    codec, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
+    codec, Error, PacketType, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
@@ -73,9 +73,7 @@ impl Default for Disconnect {
 }
 
 impl Disconnect {
-    ///Write the `Disconnect` body of a packet, returning the written size in bytes
-    /// in case of success.
-    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_reason_code(self.reason_code, writer).await?;
 
         let mut properties = Vec::new();
@@ -101,12 +99,9 @@ impl Disconnect {
         Ok(n_bytes)
     }
 
-    ///Read the `Disconnect` body from `reader`, retuning it in case of success.
-    pub async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
-        let reason_code = ReasonCode::try_parse(
-            codec::read_byte(reader).await?,
-            ControlPacketType::DISCONNECT,
-        )?;
+    pub(crate) async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
+        let reason_code =
+            ReasonCode::try_parse(codec::read_byte(reader).await?, PacketType::DISCONNECT)?;
         let mut user_properties = Vec::new();
         let mut properties = PropertiesDecoder::take(reader).await?;
         let mut session_expiry_interval = None;

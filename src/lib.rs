@@ -12,27 +12,27 @@ macro_rules! assert_matches {
     }
 }
 
+mod authentication;
 /// encode/decode MQTT fundamental types
 pub mod codec;
-
-mod control_packets;
+mod control;
+mod defaults;
 mod error;
+mod packet;
+mod packet_type;
+mod property;
 mod quality_of_service;
 mod reason_code;
-pub use control_packets::*;
-pub use control_packets::{
-    Auth, Authentication, ClientID, ConnAck, Connect, ControlPacket, Disconnect, PubAck, PubComp,
-    PubRec, PubRel, Publish, RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck,
-    UnSubscribe, Will,
-};
-use control_packets::{
-    ControlPacketType, FixedHeader, PropertiesDecoder, Property, DEFAULT_MAXIMUM_QOS,
-    DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
-    DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_RETAIN_AVAILABLE,
-    DEFAULT_SESSION_EXPIRY_INTERVAL, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
-    DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
-    DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_WILL_DELAY_INTERVAL,
+mod will;
+pub use authentication::Authentication;
+pub use control::{
+    Auth, ClientID, ConnAck, Connect, Disconnect, PingReq, PingResp, PubAck, PubComp, PubRec,
+    PubRel, Publish, RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck, UnSubscribe,
 };
 pub use error::{Error, Result};
+pub use packet::Packet;
+use packet_type::PacketType;
+use property::{PropertiesDecoder, Property};
 pub use quality_of_service::QoS;
 pub use reason_code::ReasonCode;
+pub use will::Will;

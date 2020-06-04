@@ -5,7 +5,7 @@ use crate::QoS;
 /// significant bits represent the type of the paquet and the 4 least are flags
 /// where values depend on the type.
 #[derive(Debug, Clone, Copy)]
-pub enum ControlPacketType {
+pub enum PacketType {
     RESERVED,
     CONNECT,
     CONNACK,
@@ -34,15 +34,15 @@ enum PayloadRequirements {
     Optional,
 }
 
-impl From<ControlPacketType> for PayloadRequirements {
-    fn from(value: ControlPacketType) -> Self {
+impl From<PacketType> for PayloadRequirements {
+    fn from(value: PacketType) -> Self {
         match value {
-            ControlPacketType::PUBLISH { .. } => PayloadRequirements::Optional,
-            ControlPacketType::CONNECT
-            | ControlPacketType::SUBSCRIBE
-            | ControlPacketType::SUBACK
-            | ControlPacketType::UNSUBSCRIBE
-            | ControlPacketType::UNSUBACK => PayloadRequirements::Required,
+            PacketType::PUBLISH { .. } => PayloadRequirements::Optional,
+            PacketType::CONNECT
+            | PacketType::SUBSCRIBE
+            | PacketType::SUBACK
+            | PacketType::UNSUBSCRIBE
+            | PacketType::UNSUBACK => PayloadRequirements::Required,
             _ => PayloadRequirements::None,
         }
     }

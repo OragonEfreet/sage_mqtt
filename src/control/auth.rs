@@ -1,5 +1,5 @@
 use crate::{
-    codec, Authentication, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode,
+    codec, Authentication, Error, PacketType, PropertiesDecoder, Property, ReasonCode,
     Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
@@ -41,9 +41,7 @@ impl Default for Auth {
 }
 
 impl Auth {
-    ///Write the `Auth` body of a packet, returning the written size in bytes
-    /// in case of success.
-    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_reason_code(self.reason_code, writer).await?;
         let mut properties = Vec::new();
 
@@ -61,10 +59,8 @@ impl Auth {
         Ok(n_bytes)
     }
 
-    ///Read the `Auth` body from `reader`, retuning it in case of success.
-    pub async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
-        let reason_code =
-            ReasonCode::try_parse(codec::read_byte(reader).await?, ControlPacketType::AUTH)?;
+    pub(crate) async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
+        let reason_code = ReasonCode::try_parse(codec::read_byte(reader).await?, PacketType::AUTH)?;
 
         let mut user_properties = Vec::new();
         let mut properties = PropertiesDecoder::take(reader).await?;

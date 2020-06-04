@@ -4,14 +4,14 @@ use sage_mqtt::*;
 async fn main() {
     let mut encoded = Vec::new();
 
-    ControlPacket::Publish(Default::default())
+    Packet::Publish(Default::default())
         .encode(&mut encoded)
         .await
         .unwrap();
 
     //     let mut reader = Cursor::new(encoded);
 
-    //     let _ = ControlPacket::decode(&mut reader).unwrap();
+    //     let _ = Packet::decode(&mut reader).unwrap();
 
     //     // stream.write(&encoded)?;
 } // the stream is closed here

@@ -1,13 +1,13 @@
 use crate::{
-    codec, ControlPacketType, Error, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
+    codec, Error, PacketType, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 
-/// The `PubRel` packet is sent during an `ExactlyOnce` quality of service
-/// publish.
+/// A `PubAck` is the response for a `Publish` message with `AtLeastOnce` as
+/// quality of service.
 #[derive(Debug, PartialEq, Clone)]
-pub struct PubRel {
+pub struct PubAck {
     /// The packet identifier is used to identify the message throughout the
     /// communication.
     pub packet_identifier: u16,
@@ -31,9 +31,9 @@ pub struct PubRel {
     pub user_properties: Vec<(String, String)>,
 }
 
-impl Default for PubRel {
+impl Default for PubAck {
     fn default() -> Self {
-        PubRel {
+        PubAck {
             packet_identifier: 0,
             reason_code: ReasonCode::Success,
             reason_string: None,
@@ -42,10 +42,8 @@ impl Default for PubRel {
     }
 }
 
-impl PubRel {
-    ///Write the `PubRel` body of a packet, returning the written size in bytes
-    /// in case of success.
-    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+impl PubAck {
+    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
 
         let mut properties = Vec::new();
@@ -67,51 +65,54 @@ impl PubRel {
         }
     }
 
-    ///Read the `PubRel` body from `reader`, retuning it in case of success.
-    pub async fn read<R: AsyncRead + Unpin>(reader: &mut R, shortened: bool) -> SageResult<Self> {
+    pub(crate) async fn read<R: AsyncRead + Unpin>(
+        reader: &mut R,
+        shortened: bool,
+    ) -> SageResult<Self> {
         let packet_identifier = codec::read_two_byte_integer(reader).await?;
 
-        let mut pubrel = PubRel {
+        let mut puback = PubAck {
             packet_identifier,
             ..Default::default()
         };
 
         if shortened {
-            pubrel.reason_code = ReasonCode::Success;
+            puback.reason_code = ReasonCode::Success;
         } else {
-            pubrel.reason_code =
-                ReasonCode::try_parse(codec::read_byte(reader).await?, ControlPacketType::PUBREL)?;
+            puback.reason_code =
+                ReasonCode::try_parse(codec::read_byte(reader).await?, PacketType::PUBACK)?;
 
             let mut properties = PropertiesDecoder::take(reader).await?;
             while properties.has_properties() {
                 match properties.read().await? {
-                    Property::ReasonString(v) => pubrel.reason_string = Some(v),
-                    Property::UserProperty(k, v) => pubrel.user_properties.push((k, v)),
+                    Property::ReasonString(v) => puback.reason_string = Some(v),
+                    Property::UserProperty(k, v) => puback.user_properties.push((k, v)),
                     _ => return Err(Error::ProtocolError),
                 }
             }
         }
 
-        Ok(pubrel)
+        Ok(puback)
     }
 }
 
 #[cfg(test)]
 mod unit {
+
     use super::*;
     use async_std::io::Cursor;
 
     fn encoded() -> Vec<u8> {
         vec![
-            5, 57, 146, 29, 31, 0, 11, 66, 108, 97, 99, 107, 32, 66, 101, 116, 116, 121, 38, 0, 7,
+            5, 57, 151, 29, 31, 0, 11, 66, 108, 97, 99, 107, 32, 66, 101, 116, 116, 121, 38, 0, 7,
             77, 111, 103, 119, 97, 195, 175, 0, 3, 67, 97, 116,
         ]
     }
 
-    fn decoded() -> PubRel {
-        PubRel {
+    fn decoded() -> PubAck {
+        PubAck {
             packet_identifier: 1337,
-            reason_code: ReasonCode::PacketIdentifierNotFound,
+            reason_code: ReasonCode::QuotaExceeded,
             reason_string: Some("Black Betty".into()),
             user_properties: vec![("Mogwaï".into(), "Cat".into())],
         }
@@ -129,7 +130,7 @@ mod unit {
     #[async_std::test]
     async fn decode() {
         let mut test_data = Cursor::new(encoded());
-        let tested_result = PubRel::read(&mut test_data, false).await.unwrap();
+        let tested_result = PubAck::read(&mut test_data, false).await.unwrap();
         assert_eq!(tested_result, decoded());
     }
 }

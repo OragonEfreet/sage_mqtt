@@ -1,5 +1,6 @@
 use crate::{
-    codec, Error, PropertiesDecoder, Property, QoS, Result as SageResult, DEFAULT_MAXIMUM_QOS,
+    codec, defaults::DEFAULT_MAXIMUM_QOS, Error, PropertiesDecoder, Property, QoS,
+    Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::{
@@ -119,9 +120,7 @@ impl Default for Subscribe {
 }
 
 impl Subscribe {
-    ///Write the `Subscribe` body of a packet, returning the written size in bytes
-    /// in case of success.
-    pub async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
         let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
 
         let mut properties = Vec::new();
@@ -146,8 +145,7 @@ impl Subscribe {
         Ok(n_bytes)
     }
 
-    ///Read the `Subscribe` body from `reader`, retuning it in case of success.
-    pub async fn read<R: AsyncRead + Unpin>(
+    pub(crate) async fn read<R: AsyncRead + Unpin>(
         reader: &mut R,
         remaining_size: usize,
     ) -> SageResult<Self> {
