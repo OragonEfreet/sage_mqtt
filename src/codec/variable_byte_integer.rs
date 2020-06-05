@@ -33,18 +33,15 @@ pub async fn read_variable_byte_integer<R: AsyncRead + Unpin>(reader: &mut R) ->
 
     loop {
         let mut buffer = vec![0u8; 1];
-        if reader.read_exact(&mut buffer).await.is_ok() {
-            let encoded_byte = buffer[0];
-            value += ((encoded_byte & 127u8) as u32) * multiplier;
-            if multiplier > 2_097_152 {
-                return Err(Error::MalformedPacket);
-            }
-            multiplier *= 128;
-            if encoded_byte & 128u8 == 0 {
-                break;
-            }
-        } else {
+        reader.read_exact(&mut buffer).await?;
+        let encoded_byte = buffer[0];
+        value += ((encoded_byte & 127u8) as u32) * multiplier;
+        if multiplier > 2_097_152 {
             return Err(Error::MalformedPacket);
+        }
+        multiplier *= 128;
+        if encoded_byte & 128u8 == 0 {
+            break;
         }
     }
 
@@ -56,6 +53,7 @@ mod unit {
 
     use super::*;
     use async_std::io::Cursor;
+    use futures::io::ErrorKind;
 
     // The encoded value MUST use the minimum number of bytes necessary to
     // represent the value
@@ -261,9 +259,11 @@ mod unit {
     #[async_std::test]
     async fn decode_eof() {
         let mut test_stream: Cursor<[u8; 0]> = Default::default();
-        assert_matches!(
-            read_variable_byte_integer(&mut test_stream).await,
-            Err(Error::MalformedPacket)
-        );
+        let result = read_variable_byte_integer(&mut test_stream).await;
+        if let Some(Error::Io(err)) = result.err() {
+            assert_matches!(err.kind(), ErrorKind::UnexpectedEof);
+        } else {
+            panic!("Should be IO Error");
+        }
     }
 }

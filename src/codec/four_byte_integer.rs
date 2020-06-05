@@ -1,4 +1,4 @@
-use crate::{Error, Result as SageResult};
+use crate::Result as SageResult;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 
@@ -14,21 +14,22 @@ pub async fn write_four_byte_integer<W: AsyncWrite + Unpin>(
 /// Read the given `reader` for an `u32`, returning it in case of success.
 pub async fn read_four_byte_integer<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<u32> {
     let mut buf = [0_u8; 4];
-    if reader.read_exact(&mut buf).await.is_ok() {
-        Ok(((buf[0] as u32) << 24)
+    reader.read_exact(&mut buf).await?;
+    Ok(
+        ((buf[0] as u32) << 24)
             | ((buf[1] as u32) << 16)
             | ((buf[2] as u32) << 8)
-            | (buf[3] as u32))
-    } else {
-        Err(Error::MalformedPacket)
-    }
+            | (buf[3] as u32),
+    )
 }
 
 #[cfg(test)]
 mod unit {
 
     use super::*;
+    use crate::Error;
     use async_std::io::Cursor;
+    use futures::io::ErrorKind;
 
     #[async_std::test]
     async fn encode() {
@@ -54,9 +55,11 @@ mod unit {
     #[async_std::test]
     async fn decode_eof() {
         let mut test_stream = Cursor::new([0x07]);
-        assert_matches!(
-            read_four_byte_integer(&mut test_stream).await,
-            Err(Error::MalformedPacket)
-        );
+        let result = read_four_byte_integer(&mut test_stream).await;
+        if let Some(Error::Io(err)) = result.err() {
+            assert_matches!(err.kind(), ErrorKind::UnexpectedEof);
+        } else {
+            panic!("Should be IO Error");
+        }
     }
 }

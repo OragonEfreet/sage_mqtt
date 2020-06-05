@@ -21,11 +21,8 @@ pub async fn write_bool<W: AsyncWrite + Unpin>(data: bool, writer: &mut W) -> Sa
 /// In case of success, returns an `u8`
 pub async fn read_byte<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<u8> {
     let mut buf = [0u8; 1];
-    if reader.read_exact(&mut buf).await.is_ok() {
-        Ok(buf[0])
-    } else {
-        Err(Error::MalformedPacket)
-    }
+    reader.read_exact(&mut buf).await?;
+    Ok(buf[0])
 }
 
 /// Read the given `reader` for a boolean value.
@@ -47,6 +44,7 @@ mod unit {
 
     use super::*;
     use async_std::io::Cursor;
+    use futures::io::ErrorKind;
 
     #[async_std::test]
     async fn encode() {
@@ -67,7 +65,11 @@ mod unit {
     async fn decode_eof() {
         let mut test_stream: Cursor<[u8; 0]> = Default::default();
         let result = read_byte(&mut test_stream).await;
-        assert_matches!(result, Err(Error::MalformedPacket));
+        if let Some(Error::Io(err)) = result.err() {
+            assert_matches!(err.kind(), ErrorKind::UnexpectedEof);
+        } else {
+            panic!("Should be IO Error");
+        }
     }
 
     #[async_std::test]
