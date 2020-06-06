@@ -9,7 +9,7 @@ use std::marker::Unpin;
 /// the data as bytes.
 /// In case of success returns the written size in bytes.
 pub async fn write_binary_data<W: AsyncWrite + Unpin>(
-    data: &Vec<u8>,
+    data: &[u8],
     writer: &mut W,
 ) -> SageResult<usize> {
     let len = data.len();

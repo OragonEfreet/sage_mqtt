@@ -4,6 +4,7 @@
 //! types.
 #![warn(missing_docs)]
 #![warn(missing_doc_code_examples)]
+#![allow(clippy::large_enum_variant)]
 
 #[allow(unused_macros)]
 macro_rules! assert_matches {
