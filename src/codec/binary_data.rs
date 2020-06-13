@@ -1,4 +1,4 @@
-use crate::{codec, Error, Result as SageResult};
+use crate::{codec, ReasonCode::MalformedPacket, Result as SageResult};
 use futures::io::{
     AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, Error as IOError, ErrorKind,
 };
@@ -34,7 +34,7 @@ pub async fn read_binary_data<R: AsyncRead + Unpin>(reader: &mut R) -> SageResul
         let mut chunk = reader.take(size as u64);
         match chunk.read_to_end(&mut data_buffer).await {
             Ok(n) if n == size => Ok(data_buffer),
-            _ => Err(Error::MalformedPacket),
+            _ => Err(MalformedPacket.into()),
         }
     } else {
         Ok(Default::default())
@@ -45,6 +45,7 @@ pub async fn read_binary_data<R: AsyncRead + Unpin>(reader: &mut R) -> SageResul
 mod unit {
 
     use super::*;
+    use crate::{Error, ReasonCode};
     use async_std::io::Cursor;
 
     #[async_std::test]
@@ -88,7 +89,7 @@ mod unit {
         let mut test_stream = Cursor::new([0x00, 0x05, 0x41]);
         assert_matches!(
             read_binary_data(&mut test_stream).await,
-            Err(Error::MalformedPacket)
+            Err(Error::Reason(ReasonCode::MalformedPacket))
         );
     }
 }

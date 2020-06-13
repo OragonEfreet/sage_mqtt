@@ -5,11 +5,12 @@ use crate::{
         DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE,
         DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
     },
-    Authentication, ClientID, Error, PacketType, PropertiesDecoder, Property, QoS, ReasonCode,
+    Authentication, ClientID, PropertiesDecoder, Property, QoS,
+    ReasonCode::{self, ProtocolError},
     Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
-use std::marker::Unpin;
+use std::{convert::TryInto, marker::Unpin};
 
 /// The `Connack` message is sent from the server to the client to acknowledge
 /// the connection request. This can be the direct response to a `Connect`
@@ -200,8 +201,7 @@ impl ConnAck {
     pub(crate) async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
         let session_present = codec::read_bool(reader).await?;
 
-        let reason_code =
-            ReasonCode::try_parse(codec::read_byte(reader).await?, PacketType::CONNACK)?;
+        let reason_code = codec::read_byte(reader).await?.try_into()?;
 
         let mut session_expiry_interval = None;
         let mut receive_maximum = DEFAULT_RECEIVE_MAXIMUM;
@@ -243,7 +243,7 @@ impl ConnAck {
                 Property::ServerReference(v) => reference = Some(v),
                 Property::AuthenticationMethod(v) => authentication_method = Some(v),
                 Property::AuthenticationData(v) => authentication_data = v,
-                _ => return Err(Error::ProtocolError),
+                _ => return Err(ProtocolError.into()),
             }
         }
 
@@ -254,7 +254,7 @@ impl ConnAck {
             })
         } else {
             if !authentication_data.is_empty() {
-                return Err(Error::ProtocolError);
+                return Err(ProtocolError.into());
             }
             None
         };

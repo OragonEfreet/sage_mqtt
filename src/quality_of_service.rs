@@ -1,4 +1,4 @@
-use crate::Error as SageError;
+use crate::{Error as SageError, ReasonCode::MalformedPacket};
 use std::convert::TryFrom;
 
 /// Description the quality of service used in message publishing.
@@ -31,7 +31,7 @@ impl TryFrom<u8> for QoS {
             0x00 => Ok(QoS::AtMostOnce),
             0x01 => Ok(QoS::AtLeastOnce),
             0x02 => Ok(QoS::ExactlyOnce),
-            _ => Err(Self::Error::MalformedPacket),
+            _ => Err(MalformedPacket.into()),
         }
     }
 }

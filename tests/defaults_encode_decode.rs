@@ -1,7 +1,7 @@
 use async_std::io::Cursor;
 use sage_mqtt::{
     Auth, ConnAck, Connect, Disconnect, Error, Packet, PubAck, PubComp, PubRec, PubRel, Publish,
-    SubAck, Subscribe, UnSubAck, UnSubscribe,
+    ReasonCode, SubAck, Subscribe, UnSubAck, UnSubscribe,
 };
 
 #[async_std::test]
@@ -163,7 +163,10 @@ async fn default_subscribe() {
 
     let mut cursor = Cursor::new(encoded);
     let receive_result = Packet::decode(&mut cursor).await;
-    assert!(matches!(receive_result, Err(Error::ProtocolError)));
+    assert!(matches!(
+        receive_result,
+        Err(Error::Reason(ReasonCode::ProtocolError))
+    ));
 }
 
 #[async_std::test]
@@ -199,7 +202,10 @@ async fn default_unsubscribe() {
 
     let mut cursor = Cursor::new(encoded);
     let receive_result = Packet::decode(&mut cursor).await;
-    assert!(matches!(receive_result, Err(Error::ProtocolError)));
+    assert!(matches!(
+        receive_result,
+        Err(Error::Reason(ReasonCode::ProtocolError))
+    ));
 }
 
 #[async_std::test]

@@ -1,4 +1,4 @@
-use crate::{Error, Result as SageResult};
+use crate::{ReasonCode::ProtocolError, Result as SageResult};
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 
@@ -35,7 +35,7 @@ pub async fn read_bool<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<bool>
     match byte {
         0 => Ok(false),
         1 => Ok(true),
-        _ => Err(Error::ProtocolError),
+        _ => Err(ProtocolError.into()),
     }
 }
 
@@ -43,6 +43,7 @@ pub async fn read_bool<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<bool>
 mod unit {
 
     use super::*;
+    use crate::Error;
     use async_std::io::Cursor;
     use futures::io::ErrorKind;
 

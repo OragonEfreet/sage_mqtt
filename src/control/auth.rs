@@ -1,9 +1,10 @@
 use crate::{
-    codec, Authentication, Error, PacketType, PropertiesDecoder, Property, ReasonCode,
+    codec, Authentication, PropertiesDecoder, Property,
+    ReasonCode::{self, ProtocolError},
     Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
-use std::marker::Unpin;
+use std::{convert::TryFrom, marker::Unpin};
 
 /// The `Auth` packet is used for enhanced authentication upon connection.
 /// When a client connects to a server, it can initiates an authentication using
@@ -60,7 +61,7 @@ impl Auth {
     }
 
     pub(crate) async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
-        let reason_code = ReasonCode::try_parse(codec::read_byte(reader).await?, PacketType::AUTH)?;
+        let reason_code = ReasonCode::try_from(codec::read_byte(reader).await?)?;
 
         let mut user_properties = Vec::new();
         let mut properties = PropertiesDecoder::take(reader).await?;
@@ -74,7 +75,7 @@ impl Auth {
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
                 Property::AuthenticationMethod(v) => authentication_method = Some(v),
                 Property::AuthenticationData(v) => authentication_data = v,
-                _ => return Err(Error::ProtocolError),
+                _ => return Err(ProtocolError.into()),
             }
         }
 
@@ -91,7 +92,7 @@ impl Auth {
                 user_properties,
             })
         } else {
-            Err(Error::ProtocolError)
+            Err(ProtocolError.into())
         }
     }
 }

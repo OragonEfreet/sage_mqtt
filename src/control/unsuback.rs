@@ -1,8 +1,10 @@
 use crate::{
-    codec, Error, PacketType, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
+    codec, PropertiesDecoder, Property,
+    ReasonCode::{self, ProtocolError},
+    Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-use std::marker::Unpin;
+use std::{convert::TryInto, marker::Unpin};
 
 /// An `UnSubAck` is sent by the server to acknowledge an unsubscribe request.
 #[derive(Debug, PartialEq, Clone)]
@@ -73,17 +75,14 @@ impl UnSubAck {
             match properties.read().await? {
                 Property::ReasonString(v) => reason_string = Some(v),
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
-                _ => return Err(Error::ProtocolError),
+                _ => return Err(ProtocolError.into()),
             }
         }
 
         let mut reason_codes = Vec::new();
 
         while reader.limit() > 0 {
-            reason_codes.push(ReasonCode::try_parse(
-                codec::read_byte(&mut reader).await?,
-                PacketType::SUBACK,
-            )?);
+            reason_codes.push(codec::read_byte(&mut reader).await?.try_into()?);
         }
 
         Ok(UnSubAck {

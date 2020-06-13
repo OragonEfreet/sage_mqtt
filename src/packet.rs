@@ -1,7 +1,7 @@
 use crate::{
-    codec, Auth, ConnAck, Connect, Disconnect, Error, PacketType, PingReq, PingResp, PubAck,
-    PubComp, PubRec, PubRel, Publish, Result as SageResult, SubAck, Subscribe, UnSubAck,
-    UnSubscribe,
+    codec, Auth, ConnAck, Connect, Disconnect, PacketType, PingReq, PingResp, PubAck, PubComp,
+    PubRec, PubRel, Publish, ReasonCode::ProtocolError, Result as SageResult, SubAck, Subscribe,
+    UnSubAck, UnSubscribe,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
@@ -291,7 +291,7 @@ impl Packet {
                 )
                 .await?,
             ),
-            _ => return Err(Error::ProtocolError),
+            _ => return Err(ProtocolError.into()),
         };
 
         Ok(packet)

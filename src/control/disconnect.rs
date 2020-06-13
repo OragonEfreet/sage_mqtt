@@ -1,8 +1,10 @@
 use crate::{
-    codec, Error, PacketType, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
+    codec, PropertiesDecoder, Property,
+    ReasonCode::{self, ProtocolError},
+    Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
-use std::marker::Unpin;
+use std::{convert::TryInto, marker::Unpin};
 
 /// A `Disconnect` packet can be sent by the client or the server to gracefully
 /// disconnect.
@@ -63,7 +65,7 @@ pub struct Disconnect {
 impl Default for Disconnect {
     fn default() -> Self {
         Disconnect {
-            reason_code: ReasonCode::NormalDisconnection,
+            reason_code: ReasonCode::Success,
             reason_string: None,
             session_expiry_interval: None,
             user_properties: Default::default(),
@@ -100,8 +102,8 @@ impl Disconnect {
     }
 
     pub(crate) async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
-        let reason_code =
-            ReasonCode::try_parse(codec::read_byte(reader).await?, PacketType::DISCONNECT)?;
+        let reason_code = codec::read_byte(reader).await?.try_into()?;
+
         let mut user_properties = Vec::new();
         let mut properties = PropertiesDecoder::take(reader).await?;
         let mut session_expiry_interval = None;
@@ -114,7 +116,7 @@ impl Disconnect {
                 Property::ReasonString(v) => reason_string = Some(v),
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
                 Property::ServerReference(v) => reference = Some(v),
-                _ => return Err(Error::ProtocolError),
+                _ => return Err(ProtocolError.into()),
             }
         }
 

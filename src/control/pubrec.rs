@@ -1,8 +1,10 @@
 use crate::{
-    codec, Error, PacketType, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
+    codec, PropertiesDecoder, Property,
+    ReasonCode::{self, ProtocolError},
+    Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
-use std::marker::Unpin;
+use std::{convert::TryInto, marker::Unpin};
 
 /// The `PubRec` packet is sent during an `ExactlyOnce` quality of service
 /// publish.
@@ -79,15 +81,14 @@ impl PubRec {
         if shortened {
             pubrec.reason_code = ReasonCode::Success;
         } else {
-            pubrec.reason_code =
-                ReasonCode::try_parse(codec::read_byte(reader).await?, PacketType::PUBREC)?;
+            pubrec.reason_code = codec::read_byte(reader).await?.try_into()?;
 
             let mut properties = PropertiesDecoder::take(reader).await?;
             while properties.has_properties() {
                 match properties.read().await? {
                     Property::ReasonString(v) => pubrec.reason_string = Some(v),
                     Property::UserProperty(k, v) => pubrec.user_properties.push((k, v)),
-                    _ => return Err(Error::ProtocolError),
+                    _ => return Err(ProtocolError.into()),
                 }
             }
         }
