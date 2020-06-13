@@ -1,4 +1,4 @@
-use crate::{Error, Result as SageResult};
+use crate::{Error, ReasonCode, Result as SageResult};
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 
@@ -37,7 +37,7 @@ pub async fn read_variable_byte_integer<R: AsyncRead + Unpin>(reader: &mut R) ->
         let encoded_byte = buffer[0];
         value += ((encoded_byte & 127u8) as u32) * multiplier;
         if multiplier > 2_097_152 {
-            return Err(Error::MalformedPacket);
+            return Err(Error::Reason(ReasonCode::MalformedPacket));
         }
         multiplier *= 128;
         if encoded_byte & 128u8 == 0 {

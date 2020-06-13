@@ -114,7 +114,7 @@ impl Disconnect {
                 Property::ReasonString(v) => reason_string = Some(v),
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
                 Property::ServerReference(v) => reference = Some(v),
-                _ => return Err(Error::ProtocolError),
+                _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
             }
         }
 

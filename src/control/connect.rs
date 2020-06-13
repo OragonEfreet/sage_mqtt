@@ -5,7 +5,8 @@ use crate::{
         DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
         DEFAULT_TOPIC_ALIAS_MAXIMUM,
     },
-    Authentication, ClientID, Error, PropertiesDecoder, Property, QoS, Result as SageResult, Will,
+    Authentication, ClientID, Error, PropertiesDecoder, Property, QoS, ReasonCode,
+    Result as SageResult, Will,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::convert::TryInto;
@@ -215,7 +216,7 @@ impl Connect {
         // Payload
         if let Some(client_id) = self.client_id {
             if client_id.len() > 23 || client_id.chars().any(|c| c < '0' || c > 'z') {
-                return Err(Error::MalformedPacket);
+                return Err(Error::Reason(ReasonCode::MalformedPacket));
             }
             n_bytes += codec::write_utf8_string(&client_id, writer).await?;
         } else {
@@ -256,7 +257,7 @@ impl Connect {
             writer.write_all(&properties).await?;
 
             if w.topic.is_empty() {
-                return Err(Error::ProtocolError);
+                return Err(Error::Reason(ReasonCode::ProtocolError));
             }
             n_bytes += codec::write_utf8_string(&w.topic, writer).await?;
             n_bytes += codec::write_binary_data(&w.message, writer).await?;
@@ -276,12 +277,12 @@ impl Connect {
     pub(crate) async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
         let protocol_name = codec::read_utf8_string(reader).await?;
         if protocol_name != "MQTT" {
-            return Err(Error::MalformedPacket);
+            return Err(Error::Reason(ReasonCode::MalformedPacket));
         }
 
         let protocol_version = codec::read_byte(reader).await?;
         if protocol_version != 0x05 {
-            return Err(Error::MalformedPacket);
+            return Err(Error::Reason(ReasonCode::MalformedPacket));
         }
 
         let flags = ConnectFlags::read(reader).await?;
@@ -313,7 +314,7 @@ impl Connect {
                 Property::AuthenticationMethod(v) => authentication_method = Some(v),
                 Property::AuthenticationData(v) => authentication_data = v,
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
-                _ => return Err(Error::ProtocolError),
+                _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
             };
         }
         let reader = decoder.into_inner();
@@ -325,7 +326,7 @@ impl Connect {
             })
         } else {
             if !authentication_data.is_empty() {
-                return Err(Error::ProtocolError);
+                return Err(Error::Reason(ReasonCode::ProtocolError));
             }
             None
         };
@@ -337,7 +338,7 @@ impl Connect {
                 None
             } else {
                 if client_id.len() > 23 || client_id.chars().any(|c| c < '0' || c > 'z') {
-                    return Err(Error::MalformedPacket);
+                    return Err(Error::Reason(ReasonCode::MalformedPacket));
                 }
                 Some(client_id)
             }
@@ -356,13 +357,13 @@ impl Connect {
                     Property::ResponseTopic(v) => w.response_topic = Some(v),
                     Property::CorrelationData(v) => w.correlation_data = Some(v),
                     Property::UserProperty(k, v) => w.user_properties.push((k, v)),
-                    _ => return Err(Error::ProtocolError),
+                    _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
                 }
             }
             let reader = decoder.into_inner();
             w.topic = codec::read_utf8_string(reader).await?;
             if w.topic.is_empty() {
-                return Err(Error::ProtocolError);
+                return Err(Error::Reason(ReasonCode::ProtocolError));
             }
             w.message = codec::read_binary_data(reader).await?;
             (reader, Some(w))
@@ -416,7 +417,7 @@ impl ConnectFlags {
         let bits = codec::read_byte(reader).await?;
 
         if bits & 0x01 != 0 {
-            Err(Error::MalformedPacket)
+            Err(Error::Reason(ReasonCode::MalformedPacket))
         } else {
             Ok(ConnectFlags {
                 user_name: (bits & 0b1000_0000) >> 7 > 0,

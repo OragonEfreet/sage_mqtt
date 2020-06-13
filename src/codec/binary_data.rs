@@ -1,4 +1,4 @@
-use crate::{codec, Error, Result as SageResult};
+use crate::{codec, Error, ReasonCode, Result as SageResult};
 use futures::io::{
     AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, Error as IOError, ErrorKind,
 };
@@ -9,7 +9,7 @@ use std::marker::Unpin;
 /// the data as bytes.
 /// In case of success returns the written size in bytes.
 pub async fn write_binary_data<W: AsyncWrite + Unpin>(
-    data: &Vec<u8>,
+    data: &[u8],
     writer: &mut W,
 ) -> SageResult<usize> {
     let len = data.len();
@@ -34,7 +34,7 @@ pub async fn read_binary_data<R: AsyncRead + Unpin>(reader: &mut R) -> SageResul
         let mut chunk = reader.take(size as u64);
         match chunk.read_to_end(&mut data_buffer).await {
             Ok(n) if n == size => Ok(data_buffer),
-            _ => Err(Error::MalformedPacket),
+            _ => Err(Error::Reason(ReasonCode::MalformedPacket)),
         }
     } else {
         Ok(Default::default())
@@ -88,7 +88,7 @@ mod unit {
         let mut test_stream = Cursor::new([0x00, 0x05, 0x41]);
         assert_matches!(
             read_binary_data(&mut test_stream).await,
-            Err(Error::MalformedPacket)
+            Err(Error::Reason(ReasonCode::MalformedPacket))
         );
     }
 }

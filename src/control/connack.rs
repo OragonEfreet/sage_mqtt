@@ -243,7 +243,7 @@ impl ConnAck {
                 Property::ServerReference(v) => reference = Some(v),
                 Property::AuthenticationMethod(v) => authentication_method = Some(v),
                 Property::AuthenticationData(v) => authentication_data = v,
-                _ => return Err(Error::ProtocolError),
+                _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
             }
         }
 
@@ -254,7 +254,7 @@ impl ConnAck {
             })
         } else {
             if !authentication_data.is_empty() {
-                return Err(Error::ProtocolError);
+                return Err(Error::Reason(ReasonCode::ProtocolError));
             }
             None
         };

@@ -1,6 +1,6 @@
 use crate::{
     codec, defaults::DEFAULT_PAYLOAD_FORMAT_INDICATOR, Error, PropertiesDecoder, Property, QoS,
-    Result as SageResult,
+    ReasonCode, Result as SageResult,
 };
 
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
@@ -94,7 +94,7 @@ impl Publish {
             if let Some(packet_identifier) = self.packet_identifier {
                 n_bytes += codec::write_two_byte_integer(packet_identifier, writer).await?;
             } else {
-                return Err(Error::ProtocolError);
+                return Err(Error::Reason(ReasonCode::ProtocolError));
             }
         }
 
@@ -178,7 +178,7 @@ impl Publish {
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
                 Property::SubscriptionIdentifier(v) => subscription_identifiers.push(v),
                 Property::ContentType(v) => content_type = v,
-                _ => return Err(Error::ProtocolError),
+                _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
             }
         }
 

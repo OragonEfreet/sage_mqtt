@@ -87,7 +87,7 @@ impl PubRec {
                 match properties.read().await? {
                     Property::ReasonString(v) => pubrec.reason_string = Some(v),
                     Property::UserProperty(k, v) => pubrec.user_properties.push((k, v)),
-                    _ => return Err(Error::ProtocolError),
+                    _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
                 }
             }
         }

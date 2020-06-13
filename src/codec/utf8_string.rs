@@ -1,4 +1,4 @@
-use crate::{codec, Error, Result as SageResult};
+use crate::{codec, Error, ReasonCode, Result as SageResult};
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::io::Cursor;
 use std::marker::Unpin;
@@ -14,7 +14,7 @@ pub async fn write_utf8_string<W: AsyncWrite + Unpin>(
 ) -> SageResult<usize> {
     let len = data.len();
     if len > i16::max_value() as usize {
-        return Err(Error::MalformedPacket);
+        return Err(Error::Reason(ReasonCode::MalformedPacket));
     }
     writer.write_all(&(len as u16).to_be_bytes()).await?;
     writer.write_all(data.as_bytes()).await?;
@@ -44,13 +44,13 @@ pub async fn read_utf8_string<R: AsyncRead + Unpin>(reader: &mut R) -> SageResul
                     if let Ok(string) = String::from_utf8(data_buffer) {
                         Ok(string)
                     } else {
-                        Err(Error::MalformedPacket)
+                        Err(Error::Reason(ReasonCode::MalformedPacket))
                     }
                 } else {
-                    Err(Error::MalformedPacket)
+                    Err(Error::Reason(ReasonCode::MalformedPacket))
                 }
             }
-            _ => Err(Error::MalformedPacket),
+            _ => Err(Error::Reason(ReasonCode::MalformedPacket)),
         }
     } else {
         Ok(Default::default())
@@ -101,7 +101,7 @@ mod unit {
         let mut test_stream = AsyncCursor::new([0x00, 0x05, 0x41]);
         assert_matches!(
             read_utf8_string(&mut test_stream).await,
-            Err(Error::MalformedPacket)
+            Err(Error::Reason(ReasonCode::MalformedPacket))
         );
     }
 }

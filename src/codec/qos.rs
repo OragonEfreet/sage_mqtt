@@ -1,4 +1,4 @@
-use crate::{codec, Error as SageError, QoS, Result as SageResult};
+use crate::{codec, Error as SageError, QoS, ReasonCode, Result as SageResult};
 use futures::io::{AsyncRead, AsyncWrite};
 use std::marker::Unpin;
 
@@ -14,7 +14,7 @@ pub async fn read_qos<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<QoS> {
         0x00 => Ok(QoS::AtMostOnce),
         0x01 => Ok(QoS::AtLeastOnce),
         0x02 => Ok(QoS::ExactlyOnce),
-        _ => Err(SageError::ProtocolError),
+        _ => Err(SageError::Reason(ReasonCode::ProtocolError)),
     }
 }
 

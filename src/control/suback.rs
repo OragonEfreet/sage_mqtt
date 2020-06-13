@@ -63,7 +63,7 @@ impl SubAck {
         while properties.has_properties() {
             match properties.read().await? {
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
-                _ => return Err(Error::ProtocolError),
+                _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
             }
         }
 

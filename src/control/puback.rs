@@ -87,7 +87,7 @@ impl PubAck {
                 match properties.read().await? {
                     Property::ReasonString(v) => puback.reason_string = Some(v),
                     Property::UserProperty(k, v) => puback.user_properties.push((k, v)),
-                    _ => return Err(Error::ProtocolError),
+                    _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
                 }
             }
         }

@@ -74,7 +74,7 @@ impl Auth {
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
                 Property::AuthenticationMethod(v) => authentication_method = Some(v),
                 Property::AuthenticationData(v) => authentication_data = v,
-                _ => return Err(Error::ProtocolError),
+                _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
             }
         }
 
@@ -91,7 +91,7 @@ impl Auth {
                 user_properties,
             })
         } else {
-            Err(Error::ProtocolError)
+            Err(Error::Reason(ReasonCode::ProtocolError))
         }
     }
 }

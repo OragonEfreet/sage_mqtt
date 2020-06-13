@@ -1,4 +1,5 @@
 use crate::{Error, PacketType, Result as SageResult};
+use futures::io::ErrorKind;
 
 /// A `ReasonCode` is an identifier describing a response in any ackowledgement
 /// packet (such as `Connack` or `SubAck`)
@@ -149,6 +150,18 @@ pub enum ReasonCode {
     WildcardSubscriptionsNotSupported,
 }
 
+impl From<Error> for ReasonCode {
+    fn from(e: Error) -> Self {
+        match e {
+            Error::Reason(rc) => rc,
+            Error::Io(e) => match e.kind() {
+                ErrorKind::UnexpectedEof => ReasonCode::ProtocolError,
+                _ => ReasonCode::MalformedPacket,
+            },
+        }
+    }
+}
+
 impl ReasonCode {
     pub(crate) fn try_parse(code: u8, packet_type: PacketType) -> SageResult<Self> {
         match (code, packet_type) {
@@ -249,7 +262,7 @@ impl ReasonCode {
             (0xA1, PacketType::DISCONNECT) => Ok(ReasonCode::SubscriptionIdentifiersNotSupported),
             (0xA2, PacketType::SUBACK) => Ok(ReasonCode::WildcardSubscriptionsNotSupported),
             (0xA2, PacketType::DISCONNECT) => Ok(ReasonCode::WildcardSubscriptionsNotSupported),
-            _ => Err(Error::ProtocolError),
+            _ => Err(Error::Reason(ReasonCode::ProtocolError)),
         }
     }
 }

@@ -73,7 +73,7 @@ impl UnSubAck {
             match properties.read().await? {
                 Property::ReasonString(v) => reason_string = Some(v),
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
-                _ => return Err(Error::ProtocolError),
+                _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
             }
         }
 

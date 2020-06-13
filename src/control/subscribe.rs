@@ -1,5 +1,5 @@
 use crate::{
-    codec, defaults::DEFAULT_MAXIMUM_QOS, Error, PropertiesDecoder, Property, QoS,
+    codec, defaults::DEFAULT_MAXIMUM_QOS, Error, PropertiesDecoder, Property, QoS, ReasonCode,
     Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
@@ -29,7 +29,7 @@ impl TryFrom<u8> for RetainHandling {
             0x00 => Ok(RetainHandling::OnSubscribe),
             0x01 => Ok(RetainHandling::OnFirstSubscribe),
             0x02 => Ok(RetainHandling::DontSend),
-            _ => Err(Self::Error::MalformedPacket),
+            _ => Err(Error::Reason(ReasonCode::MalformedPacket)),
         }
     }
 }
@@ -76,7 +76,7 @@ impl SubscriptionOptions {
     async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
         let flags = codec::read_byte(reader).await?;
         if flags & 0b1100_0000 > 0 {
-            Err(Error::ProtocolError)
+            Err(Error::Reason(ReasonCode::ProtocolError))
         } else {
             Ok(SubscriptionOptions {
                 qos: (flags & 0b0000_0011).try_into()?,
@@ -160,7 +160,7 @@ impl Subscribe {
             match properties.read().await? {
                 Property::SubscriptionIdentifier(v) => subscription_identifier = Some(v),
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
-                _ => return Err(Error::ProtocolError),
+                _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
             }
         }
 
@@ -174,7 +174,7 @@ impl Subscribe {
         }
 
         if subscriptions.is_empty() {
-            Err(Error::ProtocolError)
+            Err(Error::Reason(ReasonCode::ProtocolError))
         } else {
             Ok(Subscribe {
                 packet_identifier,
