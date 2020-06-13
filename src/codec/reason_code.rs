@@ -9,7 +9,7 @@ pub async fn write_reason_code<W: AsyncWrite + Unpin>(
 ) -> SageResult<usize> {
     codec::write_byte(
         match code {
-            ReasonCode::Success | ReasonCode::NormalDisconnection | ReasonCode::GrantedQoS0 => 0x00,
+            ReasonCode::Success => 0x00,
             ReasonCode::GrantedQoS1 => 0x01,
             ReasonCode::GrantedQoS2 => 0x02,
             ReasonCode::DisconnectWithWillMessage => 0x04,
@@ -67,8 +67,6 @@ mod unit {
     async fn encode() {
         for (reason_code, byte) in vec![
             (ReasonCode::Success, 0x00_u8),
-            (ReasonCode::NormalDisconnection, 0x00_u8),
-            (ReasonCode::GrantedQoS0, 0x00_u8),
             (ReasonCode::GrantedQoS1, 0x01_u8),
             (ReasonCode::GrantedQoS2, 0x02_u8),
             (ReasonCode::DisconnectWithWillMessage, 0x04_u8),

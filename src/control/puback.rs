@@ -1,10 +1,10 @@
 use crate::{
-    codec, PacketType, PropertiesDecoder, Property,
+    codec, PropertiesDecoder, Property,
     ReasonCode::{self, ProtocolError},
     Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
-use std::marker::Unpin;
+use std::{convert::TryInto, marker::Unpin};
 
 /// A `PubAck` is the response for a `Publish` message with `AtLeastOnce` as
 /// quality of service.
@@ -81,8 +81,7 @@ impl PubAck {
         if shortened {
             puback.reason_code = ReasonCode::Success;
         } else {
-            puback.reason_code =
-                ReasonCode::try_parse(codec::read_byte(reader).await?, PacketType::PUBACK)?;
+            puback.reason_code = codec::read_byte(reader).await?.try_into()?;
 
             let mut properties = PropertiesDecoder::take(reader).await?;
             while properties.has_properties() {
