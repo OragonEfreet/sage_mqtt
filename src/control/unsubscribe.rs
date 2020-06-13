@@ -1,4 +1,4 @@
-use crate::{codec, Error, PropertiesDecoder, Property, ReasonCode, Result as SageResult};
+use crate::{codec, PropertiesDecoder, Property, ReasonCode::ProtocolError, Result as SageResult};
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 
@@ -58,7 +58,7 @@ impl UnSubscribe {
         while properties.has_properties() {
             match properties.read().await? {
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
-                _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
+                _ => return Err(ProtocolError.into()),
             }
         }
 
@@ -69,7 +69,7 @@ impl UnSubscribe {
         }
 
         if subscriptions.is_empty() {
-            Err(Error::Reason(ReasonCode::ProtocolError))
+            Err(ProtocolError.into())
         } else {
             Ok(UnSubscribe {
                 packet_identifier,

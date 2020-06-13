@@ -7,7 +7,9 @@ use crate::{
         DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
         DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_WILL_DELAY_INTERVAL,
     },
-    Error, QoS, ReasonCode, Result as SageResult,
+    QoS,
+    ReasonCode::{MalformedPacket, ProtocolError},
+    Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, Take};
 use std::collections::HashSet;
@@ -80,7 +82,7 @@ async fn read_property_id<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Pr
         0x28 => Ok(PropertyId::WildcardSubscriptionAvailable),
         0x29 => Ok(PropertyId::SubscriptionIdentifiersAvailable),
         0x2A => Ok(PropertyId::SharedSubscriptionAvailable),
-        _ => Err(Error::Reason(ReasonCode::ProtocolError)),
+        _ => Err(ProtocolError.into()),
     }
 }
 
@@ -147,7 +149,7 @@ impl<'a, R: AsyncRead + Unpin> PropertiesDecoder<R> {
             && property_id != PropertyId::SubscriptionIdentifier)
             && !self.marked.insert(property_id)
         {
-            return Err(Error::Reason(ReasonCode::ProtocolError));
+            return Err(ProtocolError.into());
         }
         self.read_property_value(property_id).await
     }
@@ -158,7 +160,7 @@ impl<'a, R: AsyncRead + Unpin> PropertiesDecoder<R> {
             PropertyId::PayloadFormatIndicator => match codec::read_byte(reader).await? {
                 0x00 => Ok(Property::PayloadFormatIndicator(false)),
                 0x01 => Ok(Property::PayloadFormatIndicator(true)),
-                _ => Err(Error::Reason(ReasonCode::ProtocolError)),
+                _ => Err(ProtocolError.into()),
             },
             PropertyId::MessageExpiryInterval => Ok(Property::MessageExpiryInterval(
                 codec::read_four_byte_integer(reader).await?,
@@ -169,7 +171,7 @@ impl<'a, R: AsyncRead + Unpin> PropertiesDecoder<R> {
             PropertyId::ResponseTopic => {
                 let topic = codec::read_utf8_string(reader).await?;
                 if topic.is_empty() {
-                    Err(Error::Reason(ReasonCode::ProtocolError))
+                    Err(ProtocolError.into())
                 } else {
                     Ok(Property::ResponseTopic(topic))
                 }
@@ -180,7 +182,7 @@ impl<'a, R: AsyncRead + Unpin> PropertiesDecoder<R> {
             PropertyId::SubscriptionIdentifier => {
                 let v = codec::read_variable_byte_integer(reader).await?;
                 if v == 0 {
-                    Err(Error::Reason(ReasonCode::ProtocolError))
+                    Err(ProtocolError.into())
                 } else {
                     Ok(Property::SubscriptionIdentifier(v))
                 }
@@ -204,7 +206,7 @@ impl<'a, R: AsyncRead + Unpin> PropertiesDecoder<R> {
             PropertyId::RequestProblemInformation => match codec::read_byte(reader).await? {
                 0x00 => Ok(Property::RequestProblemInformation(false)),
                 0x01 => Ok(Property::RequestProblemInformation(true)),
-                _ => Err(Error::Reason(ReasonCode::ProtocolError)),
+                _ => Err(ProtocolError.into()),
             },
             PropertyId::WillDelayInterval => Ok(Property::WillDelayInterval(
                 codec::read_four_byte_integer(reader).await?,
@@ -212,7 +214,7 @@ impl<'a, R: AsyncRead + Unpin> PropertiesDecoder<R> {
             PropertyId::RequestResponseInformation => match codec::read_byte(reader).await? {
                 0x00 => Ok(Property::RequestResponseInformation(false)),
                 0x01 => Ok(Property::RequestResponseInformation(true)),
-                _ => Err(Error::Reason(ReasonCode::ProtocolError)),
+                _ => Err(ProtocolError.into()),
             },
             PropertyId::ResponseInformation => Ok(Property::ResponseInformation(
                 codec::read_utf8_string(reader).await?,
@@ -224,7 +226,7 @@ impl<'a, R: AsyncRead + Unpin> PropertiesDecoder<R> {
                 codec::read_utf8_string(reader).await?,
             )),
             PropertyId::ReceiveMaximum => match codec::read_two_byte_integer(reader).await? {
-                0 => Err(Error::Reason(ReasonCode::MalformedPacket)),
+                0 => Err(MalformedPacket.into()),
                 v => Ok(Property::ReceiveMaximum(v)),
             },
             PropertyId::TopicAliasMaximum => Ok(Property::TopicAliasMaximum(
@@ -236,7 +238,7 @@ impl<'a, R: AsyncRead + Unpin> PropertiesDecoder<R> {
             PropertyId::MaximumQoS => {
                 let qos = codec::read_qos(reader).await?;
                 if qos == QoS::ExactlyOnce {
-                    Err(Error::Reason(ReasonCode::ProtocolError))
+                    Err(ProtocolError.into())
                 } else {
                     Ok(Property::MaximumQoS(qos))
                 }
@@ -286,7 +288,7 @@ impl Property {
             }
             Property::ResponseTopic(v) => {
                 if v.is_empty() {
-                    Err(Error::Reason(ReasonCode::ProtocolError))
+                    Err(ProtocolError.into())
                 } else {
                     let n_bytes = write_property_id(PropertyId::ResponseTopic, writer).await?;
                     Ok(n_bytes + codec::write_utf8_string(&v, writer).await?)
@@ -298,7 +300,7 @@ impl Property {
             }
             Property::SubscriptionIdentifier(v) => {
                 if v == 0 {
-                    Err(Error::Reason(ReasonCode::ProtocolError))
+                    Err(ProtocolError.into())
                 } else {
                     let n_bytes =
                         write_property_id(PropertyId::SubscriptionIdentifier, writer).await?;
@@ -370,7 +372,7 @@ impl Property {
                 Ok(n_bytes + codec::write_utf8_string(&v, writer).await?)
             }
             Property::ReceiveMaximum(v) => match v {
-                0 => Err(Error::Reason(ReasonCode::MalformedPacket)),
+                0 => Err(MalformedPacket.into()),
                 DEFAULT_RECEIVE_MAXIMUM => Ok(0),
                 _ => {
                     let n_bytes = write_property_id(PropertyId::ReceiveMaximum, writer).await?;

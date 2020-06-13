@@ -1,6 +1,6 @@
 use crate::{
-    codec, Auth, ConnAck, Connect, Disconnect, Error, PacketType, PingReq, PingResp, PubAck,
-    PubComp, PubRec, PubRel, Publish, ReasonCode, Result as SageResult, SubAck, Subscribe,
+    codec, Auth, ConnAck, Connect, Disconnect, PacketType, PingReq, PingResp, PubAck, PubComp,
+    PubRec, PubRel, Publish, ReasonCode::ProtocolError, Result as SageResult, SubAck, Subscribe,
     UnSubAck, UnSubscribe,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
@@ -291,7 +291,7 @@ impl Packet {
                 )
                 .await?,
             ),
-            _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
+            _ => return Err(ProtocolError.into()),
         };
 
         Ok(packet)

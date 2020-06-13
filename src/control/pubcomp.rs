@@ -1,5 +1,7 @@
 use crate::{
-    codec, Error, PacketType, PropertiesDecoder, Property, ReasonCode, Result as SageResult,
+    codec, PacketType, PropertiesDecoder, Property,
+    ReasonCode::{self, ProtocolError},
+    Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
@@ -87,7 +89,7 @@ impl PubComp {
                 match properties.read().await? {
                     Property::ReasonString(v) => pubcomp.reason_string = Some(v),
                     Property::UserProperty(k, v) => pubcomp.user_properties.push((k, v)),
-                    _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
+                    _ => return Err(ProtocolError.into()),
                 }
             }
         }

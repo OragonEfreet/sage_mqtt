@@ -5,7 +5,8 @@ use crate::{
         DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE,
         DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
     },
-    Authentication, ClientID, Error, PacketType, PropertiesDecoder, Property, QoS, ReasonCode,
+    Authentication, ClientID, PacketType, PropertiesDecoder, Property, QoS,
+    ReasonCode::{self, ProtocolError},
     Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
@@ -243,7 +244,7 @@ impl ConnAck {
                 Property::ServerReference(v) => reference = Some(v),
                 Property::AuthenticationMethod(v) => authentication_method = Some(v),
                 Property::AuthenticationData(v) => authentication_data = v,
-                _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
+                _ => return Err(ProtocolError.into()),
             }
         }
 
@@ -254,7 +255,7 @@ impl ConnAck {
             })
         } else {
             if !authentication_data.is_empty() {
-                return Err(Error::Reason(ReasonCode::ProtocolError));
+                return Err(ProtocolError.into());
             }
             None
         };

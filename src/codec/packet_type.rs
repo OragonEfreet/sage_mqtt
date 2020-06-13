@@ -1,4 +1,4 @@
-use crate::{codec, Error, PacketType, ReasonCode, Result as SageResult};
+use crate::{codec, PacketType, ReasonCode::MalformedPacket, Result as SageResult};
 use futures::io::{AsyncRead, AsyncWrite};
 use std::{convert::TryInto, marker::Unpin};
 
@@ -64,7 +64,7 @@ pub async fn read_control_packet_type<R: AsyncRead + Unpin>(
         (0b1101, 0b0000) => PacketType::PINGRESP,
         (0b1110, 0b0000) => PacketType::DISCONNECT,
         (0b1111, 0b0000) => PacketType::AUTH,
-        _ => return Err(Error::Reason(ReasonCode::MalformedPacket)),
+        _ => return Err(MalformedPacket.into()),
     };
     Ok(packet_type)
 }
@@ -72,6 +72,7 @@ pub async fn read_control_packet_type<R: AsyncRead + Unpin>(
 #[cfg(test)]
 mod unit {
 
+    use crate::{Error, ReasonCode};
     use async_std::io::Cursor;
 
     use super::*;

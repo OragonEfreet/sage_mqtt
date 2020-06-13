@@ -1,5 +1,6 @@
 use crate::{
-    codec, Authentication, Error, PacketType, PropertiesDecoder, Property, ReasonCode,
+    codec, Authentication, PacketType, PropertiesDecoder, Property,
+    ReasonCode::{self, ProtocolError},
     Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
@@ -74,7 +75,7 @@ impl Auth {
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
                 Property::AuthenticationMethod(v) => authentication_method = Some(v),
                 Property::AuthenticationData(v) => authentication_data = v,
-                _ => return Err(Error::Reason(ReasonCode::ProtocolError)),
+                _ => return Err(ProtocolError.into()),
             }
         }
 
@@ -91,7 +92,7 @@ impl Auth {
                 user_properties,
             })
         } else {
-            Err(Error::Reason(ReasonCode::ProtocolError))
+            Err(ProtocolError.into())
         }
     }
 }
