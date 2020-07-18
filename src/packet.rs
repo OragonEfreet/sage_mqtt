@@ -4,7 +4,7 @@ use crate::{
     UnSubAck, UnSubscribe,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
-use std::marker::Unpin;
+use std::{marker::Unpin, fmt};
 
 #[derive(Debug)]
 struct FixedHeader {
@@ -77,6 +77,28 @@ pub enum Packet {
 
     /// AUTH MQTT packet. Performs authentication exchanges between clients and server.
     Auth(Auth),
+}
+
+impl fmt::Display for Packet {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Packet::Connect(_) => write!(f, "Connect"),
+            Packet::ConnAck(_) => write!(f, "ConnAck"),
+            Packet::Publish(_) => write!(f, "Publish"),
+            Packet::PubAck(_) => write!(f, "PubAck"),
+            Packet::PubRec(_) => write!(f, "PubRec"),
+            Packet::PubRel(_) => write!(f, "PubRel"),
+            Packet::PubComp(_) => write!(f, "PubComp"),
+            Packet::Subscribe(_) => write!(f, "Subscribe"),
+            Packet::SubAck(_) => write!(f, "SubAck"),
+            Packet::UnSubscribe(_) => write!(f, "UnSubscribe"),
+            Packet::UnSubAck(_) => write!(f, "UnSubAck"),
+            Packet::PingReq => write!(f, "PingReq"),
+            Packet::PingResp => write!(f, "PingResp"),
+            Packet::Disconnect(_) => write!(f, "Disconnect"),
+            Packet::Auth(_) => write!(f, "Auth"),
+        }
+    }
 }
 
 impl From<Connect> for Packet {
