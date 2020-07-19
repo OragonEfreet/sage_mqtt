@@ -3,9 +3,9 @@ use crate::{
     defaults::{
         DEFAULT_MAXIMUM_QOS, DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
         DEFAULT_REQUEST_PROBLEM_INFORMATION, DEFAULT_REQUEST_RESPONSE_INFORMATION,
-        DEFAULT_RETAIN_AVAILABLE, DEFAULT_SESSION_EXPIRY_INTERVAL,
-        DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_TOPIC_ALIAS_MAXIMUM,
-        DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE, DEFAULT_WILL_DELAY_INTERVAL,
+        DEFAULT_RETAIN_AVAILABLE, DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE,
+        DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
+        DEFAULT_WILL_DELAY_INTERVAL,
     },
     QoS,
     ReasonCode::{MalformedPacket, ProtocolError},
@@ -308,7 +308,7 @@ impl Property {
                 }
             }
             Property::SessionExpiryInterval(v) => {
-                if v != DEFAULT_SESSION_EXPIRY_INTERVAL {
+                if v != 0 {
                     let n_bytes =
                         write_property_id(PropertyId::SessionExpiryInterval, writer).await?;
                     Ok(n_bytes + codec::write_four_byte_integer(v, writer).await?)

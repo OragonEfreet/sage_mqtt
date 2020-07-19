@@ -2,8 +2,7 @@ use crate::{
     codec,
     defaults::{
         DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
-        DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_SESSION_EXPIRY_INTERVAL,
-        DEFAULT_TOPIC_ALIAS_MAXIMUM,
+        DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_TOPIC_ALIAS_MAXIMUM,
     },
     Authentication, ClientID, PropertiesDecoder, Property, QoS,
     ReasonCode::{MalformedPacket, ProtocolError},
@@ -60,7 +59,7 @@ pub struct Connect {
     /// - If the value is `0xFFFFFFFF` the session never expires.
     /// The client can override the session expiry interval within the
     /// DISCONNECT packet.
-    pub session_expiry_interval: u32,
+    pub session_expiry_interval: Option<u32>,
 
     /// This value sets the maximum number of _AtLeastOnce_ and _ExactlyOnce_
     /// packets that should be processed concurrently.
@@ -131,7 +130,7 @@ impl Default for Connect {
             user_name: None,
             password: Default::default(),
             keep_alive: 600,
-            session_expiry_interval: DEFAULT_SESSION_EXPIRY_INTERVAL,
+            session_expiry_interval: None,
             receive_maximum: DEFAULT_RECEIVE_MAXIMUM,
             maximum_packet_size: None,
             topic_alias_maximum: DEFAULT_TOPIC_ALIAS_MAXIMUM,
@@ -183,9 +182,11 @@ impl Connect {
 
         // Properties
         let mut properties = Vec::new();
-        n_bytes += Property::SessionExpiryInterval(self.session_expiry_interval)
-            .encode(&mut properties)
-            .await?;
+        if let Some(session_expiry_interval) = self.session_expiry_interval {
+            n_bytes += Property::SessionExpiryInterval(session_expiry_interval)
+                .encode(&mut properties)
+                .await?;
+        }
         n_bytes += Property::ReceiveMaximum(self.receive_maximum)
             .encode(&mut properties)
             .await?;
@@ -292,7 +293,7 @@ impl Connect {
 
         let keep_alive = codec::read_two_byte_integer(reader).await?;
 
-        let mut session_expiry_interval = DEFAULT_SESSION_EXPIRY_INTERVAL;
+        let mut session_expiry_interval = None;
         let mut receive_maximum = DEFAULT_RECEIVE_MAXIMUM;
         let mut maximum_packet_size = None;
         let mut topic_alias_maximum = DEFAULT_TOPIC_ALIAS_MAXIMUM;
@@ -306,7 +307,7 @@ impl Connect {
 
         while decoder.has_properties() {
             match decoder.read().await? {
-                Property::SessionExpiryInterval(v) => session_expiry_interval = v,
+                Property::SessionExpiryInterval(v) => session_expiry_interval = Some(v),
                 Property::ReceiveMaximum(v) => receive_maximum = v,
                 Property::MaximumPacketSize(v) => maximum_packet_size = Some(v),
                 Property::TopicAliasMaximum(v) => topic_alias_maximum = v,
@@ -448,7 +449,7 @@ mod unit_connect {
 
     fn decoded() -> Connect {
         let keep_alive = 10;
-        let session_expiry_interval = 10;
+        let session_expiry_interval = Some(10);
 
         Connect {
             keep_alive,

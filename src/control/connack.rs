@@ -5,15 +5,12 @@ use crate::{
         DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE,
         DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
     },
-    Authentication, ClientID, Connect, PropertiesDecoder, Property, QoS,
+    Authentication, ClientID, PropertiesDecoder, Property, QoS,
     ReasonCode::{self, ProtocolError},
     Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
-use std::{
-    convert::{From, TryInto},
-    marker::Unpin,
-};
+use std::{convert::TryInto, marker::Unpin};
 
 /// The `Connack` message is sent from the server to the client to acknowledge
 /// the connection request. This can be the direct response to a `Connect`
@@ -70,7 +67,7 @@ pub struct ConnAck {
 
     /// A human readable reason string used to describe the connack. This field
     /// is optional.
-    pub reason_string: String,
+    pub reason_string: Option<String>,
 
     /// General purpose user properties.
     pub user_properties: Vec<(String, String)>,
@@ -163,9 +160,13 @@ impl ConnAck {
         n_bytes += Property::TopicAliasMaximum(self.topic_alias_maximum)
             .encode(&mut properties)
             .await?;
-        n_bytes += Property::ReasonString(self.reason_string)
-            .encode(&mut properties)
-            .await?;
+        if let Some(reason_string) = self.reason_string {
+            if !reason_string.is_empty() {
+                n_bytes += Property::ReasonString(reason_string)
+                    .encode(&mut properties)
+                    .await?;
+            }
+        }
         for (k, v) in self.user_properties {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties).await?;
         }
@@ -217,7 +218,7 @@ impl ConnAck {
         let mut maximum_packet_size = None;
         let mut assigned_client_id = None;
         let mut topic_alias_maximum = DEFAULT_TOPIC_ALIAS_MAXIMUM;
-        let mut reason_string = Default::default();
+        let mut reason_string = None;
         let mut user_properties = Vec::new();
         let mut wildcard_subscription_available = DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE;
         let mut subscription_identifiers_available = DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE;
@@ -238,7 +239,9 @@ impl ConnAck {
                 Property::MaximumPacketSize(v) => maximum_packet_size = Some(v),
                 Property::AssignedClientIdentifier(v) => assigned_client_id = Some(v),
                 Property::TopicAliasMaximum(v) => topic_alias_maximum = v,
-                Property::ReasonString(v) => reason_string = v,
+                Property::ReasonString(v) => {
+                    reason_string = if v.is_empty() { None } else { Some(v) }
+                }
                 Property::UserProperty(k, v) => user_properties.push((k, v)),
                 Property::WildcardSubscriptionAvailable(v) => wildcard_subscription_available = v,
                 Property::SubscriptionIdentifiersAvailable(v) => {
@@ -289,20 +292,6 @@ impl ConnAck {
     }
 }
 
-impl From<Connect> for ConnAck {
-    fn from(connect: Connect) -> Self {
-        ConnAck {
-            reason_code: ReasonCode::Success,
-            session_expiry_interval: Some(connect.session_expiry_interval),
-            maximum_packet_size: connect.maximum_packet_size,
-            assigned_client_id: connect.client_id,
-            topic_alias_maximum: connect.topic_alias_maximum,
-            keep_alive: Some(connect.keep_alive),
-            ..Default::default()
-        }
-    }
-}
-
 #[cfg(test)]
 mod unit {
 
@@ -331,7 +320,7 @@ mod unit {
             maximum_packet_size: Some(256),
             assigned_client_id: Some("WalkThisWay".into()),
             topic_alias_maximum: 10,
-            reason_string: "RUN-DMC".into(),
+            reason_string: Some("RUN-DMC".into()),
             user_properties: vec![("Mogwaï".into(), "Cat".into())],
             wildcard_subscription_available: false,
             subscription_identifiers_available: true,

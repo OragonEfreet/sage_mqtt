@@ -17,7 +17,7 @@ mod authentication;
 /// encode/decode MQTT fundamental types
 pub mod codec;
 mod control;
-mod defaults;
+pub mod defaults;
 mod error;
 mod packet;
 mod packet_type;
