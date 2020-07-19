@@ -4,7 +4,7 @@ use crate::{
     UnSubAck, UnSubscribe,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
-use std::{marker::Unpin, fmt};
+use std::{fmt, marker::Unpin};
 
 #[derive(Debug)]
 struct FixedHeader {

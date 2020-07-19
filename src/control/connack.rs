@@ -5,12 +5,15 @@ use crate::{
         DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE, DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE,
         DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILCARD_SUBSCRIPTION_AVAILABLE,
     },
-    Authentication, ClientID, PropertiesDecoder, Property, QoS,
+    Authentication, ClientID, Connect, PropertiesDecoder, Property, QoS,
     ReasonCode::{self, ProtocolError},
     Result as SageResult,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
-use std::{convert::TryInto, marker::Unpin};
+use std::{
+    convert::{From, TryInto},
+    marker::Unpin,
+};
 
 /// The `Connack` message is sent from the server to the client to acknowledge
 /// the connection request. This can be the direct response to a `Connect`
@@ -89,7 +92,7 @@ pub struct ConnAck {
     /// in `response_information`.
     /// The response information can be used by the client as an hint to
     /// generate reponse topic when making Request/Reponse messages.
-    pub response_information: String,
+    pub response_information: Option<String>,
 
     /// If the reason code is `ServerMoved` or `UserAnotherServer`, the
     /// `reference` field is used to inform the client about why new server to
@@ -175,9 +178,13 @@ impl ConnAck {
         if let Some(v) = self.keep_alive {
             n_bytes += Property::ServerKeepAlive(v).encode(&mut properties).await?;
         }
-        n_bytes += Property::ResponseInformation(self.response_information)
-            .encode(&mut properties)
-            .await?;
+
+        if let Some(v) = self.response_information {
+            n_bytes += Property::ResponseInformation(v)
+                .encode(&mut properties)
+                .await?;
+        }
+
         if let Some(v) = self.reference {
             n_bytes += Property::ServerReference(v).encode(&mut properties).await?;
         }
@@ -216,7 +223,7 @@ impl ConnAck {
         let mut subscription_identifiers_available = DEFAULT_SUBSCRIPTION_IDENTIFIER_AVAILABLE;
         let mut shared_subscription_available = DEFAULT_SHARED_SUBSCRIPTION_AVAILABLE;
         let mut keep_alive = None;
-        let mut response_information = Default::default();
+        let mut response_information = None;
         let mut reference = None;
         let mut authentication_method = None;
         let mut authentication_data = Default::default();
@@ -239,7 +246,7 @@ impl ConnAck {
                 }
                 Property::SharedSubscriptionAvailable(v) => shared_subscription_available = v,
                 Property::ServerKeepAlive(v) => keep_alive = Some(v),
-                Property::ResponseInformation(v) => response_information = v,
+                Property::ResponseInformation(v) => response_information = Some(v),
                 Property::ServerReference(v) => reference = Some(v),
                 Property::AuthenticationMethod(v) => authentication_method = Some(v),
                 Property::AuthenticationData(v) => authentication_data = v,
@@ -282,6 +289,20 @@ impl ConnAck {
     }
 }
 
+impl From<Connect> for ConnAck {
+    fn from(connect: Connect) -> Self {
+        ConnAck {
+            reason_code: ReasonCode::Success,
+            session_expiry_interval: Some(connect.session_expiry_interval),
+            maximum_packet_size: connect.maximum_packet_size,
+            assigned_client_id: connect.client_id,
+            topic_alias_maximum: connect.topic_alias_maximum,
+            keep_alive: Some(connect.keep_alive),
+            ..Default::default()
+        }
+    }
+}
+
 #[cfg(test)]
 mod unit {
 
@@ -316,7 +337,7 @@ mod unit {
             subscription_identifiers_available: true,
             shared_subscription_available: false,
             keep_alive: Some(17),
-            response_information: "Aerosmith".into(),
+            response_information: Some("Aerosmith".into()),
             reference: Some("Paint It Black".into()),
             authentication: Some(Authentication {
                 method: "Willow".into(),
