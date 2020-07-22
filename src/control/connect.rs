@@ -5,7 +5,7 @@ use crate::{
         DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_TOPIC_ALIAS_MAXIMUM,
     },
     Authentication, ClientID, PropertiesDecoder, Property, QoS,
-    ReasonCode::{MalformedPacket, ProtocolError},
+    ReasonCode::{MalformedPacket, ProtocolError, ClientIdentifierNotValid},
     Result as SageResult, Will,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
@@ -341,7 +341,7 @@ impl Connect {
                 None
             } else {
                 if client_id.len() > 23 || client_id.chars().any(|c| c < '0' || c > 'z') {
-                    return Err(MalformedPacket.into());
+                    return Err(ClientIdentifierNotValid.into());
                 }
                 Some(client_id)
             }
