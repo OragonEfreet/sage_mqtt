@@ -50,6 +50,15 @@ mod unit {
     use super::*;
 
     #[async_std::test]
+    async fn encode_empty() {
+        let mut result = Vec::new();
+        let test_data: Authentication = Default::default();
+
+        assert_eq!(test_data.write(&mut result).await.unwrap(), 3);
+        assert_eq!(result, vec![0x15, 0x00, 0x00]);
+    }
+
+    #[async_std::test]
     async fn encode() {
         let mut result = Vec::new();
         let test_data = Authentication {

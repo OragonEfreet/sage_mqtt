@@ -144,6 +144,7 @@ impl Default for Connect {
     }
 }
 
+#[derive(Debug)]
 struct ConnectFlags {
     pub clean_start: bool,
     pub will: bool,
@@ -209,7 +210,7 @@ impl Connect {
         }
 
         if let Some(authentication) = self.authentication {
-            n_bytes += authentication.write(writer).await?;
+            n_bytes += authentication.write(&mut properties).await?;
         }
 
         n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
@@ -434,7 +435,7 @@ impl ConnectFlags {
 }
 
 #[cfg(test)]
-mod unit_connect {
+mod unit {
 
     use super::*;
     use async_std::io::Cursor;
@@ -464,6 +465,35 @@ mod unit_connect {
             }),
             ..Default::default()
         }
+    }
+
+    #[async_std::test]
+    async fn encode_default_auth() {
+        let test_data = Connect {
+            authentication: Some(Default::default()),
+            ..Default::default()
+        };
+        let mut tested_result = Vec::new();
+
+        let n_bytes = test_data.write(&mut tested_result).await.unwrap();
+        assert_eq!(
+            tested_result,
+            vec![0, 4, 77, 81, 84, 84, 5, 0, 2, 88, 3, 21, 0, 0, 0, 0]
+        );
+        assert_eq!(n_bytes, 16);
+    }
+
+    #[async_std::test]
+    async fn decode_default_auth() {
+        let mut test_data = Cursor::new(vec![0, 4, 77, 81, 84, 84, 5, 0, 2, 88, 3, 21, 0, 0, 0, 0]);
+        let tested_result = Connect::read(&mut test_data).await.unwrap();
+        assert_eq!(
+            tested_result,
+            Connect {
+                authentication: Some(Default::default()),
+                ..Default::default()
+            }
+        );
     }
 
     #[async_std::test]

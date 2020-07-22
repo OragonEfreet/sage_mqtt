@@ -26,6 +26,37 @@ async fn default_connect() {
 }
 
 #[async_std::test]
+async fn connect_with_default_auth() {
+    let mut encoded = Vec::new();
+    let send_packet: Packet = Connect {
+        authentication: Some(Default::default()),
+        ..Default::default()
+    }
+    .into();
+    let send_size = send_packet
+        .encode(&mut encoded)
+        .await
+        .expect("Cannot encode Connect packet");
+    assert!(send_size > 0);
+
+    let mut cursor = Cursor::new(encoded);
+    let receive_result = Packet::decode(&mut cursor)
+        .await
+        .expect("Cannot decode Connect");
+    if let Packet::Connect(receive_packet) = receive_result {
+        assert_eq!(
+            receive_packet,
+            Connect {
+                authentication: Some(Default::default()),
+                ..Default::default()
+            }
+        );
+    } else {
+        panic!("Incorrect packet type");
+    }
+}
+
+#[async_std::test]
 async fn default_connack() {
     let mut encoded = Vec::new();
     let send_packet: Packet = ConnAck::default().into();
