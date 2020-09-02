@@ -83,7 +83,7 @@ impl fmt::Display for Packet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Packet::Connect(_) => write!(f, "Connect"),
-            Packet::ConnAck(_) => write!(f, "ConnAck"),
+            Packet::ConnAck(connack) => write!(f, "ConnAck [{:?}]", connack.reason_code),
             Packet::Publish(_) => write!(f, "Publish"),
             Packet::PubAck(_) => write!(f, "PubAck"),
             Packet::PubRec(_) => write!(f, "PubRec"),
@@ -95,7 +95,7 @@ impl fmt::Display for Packet {
             Packet::UnSubAck(_) => write!(f, "UnSubAck"),
             Packet::PingReq => write!(f, "PingReq"),
             Packet::PingResp => write!(f, "PingResp"),
-            Packet::Disconnect(_) => write!(f, "Disconnect"),
+            Packet::Disconnect(disconnect) => write!(f, "Disconnect [{:?}]", disconnect.reason_code),
             Packet::Auth(_) => write!(f, "Auth"),
         }
     }
