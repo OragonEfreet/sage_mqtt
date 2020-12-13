@@ -1,6 +1,6 @@
 [package]
 name = "sage_mqtt"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["Kevin D'ORANGE <kevin.dorange@gmail.com>"]
 edition = "2018"
 description = "Manipulate MQTT 5.0 data types"
@@ -13,8 +13,8 @@ categories = ["data-structures", "encoding"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-futures = "0.3.5"
+futures = "0.3.8"
 unicode_reader = "1.0.0"
 
 [dev-dependencies]
-async-std = {version="1.6.0",features = ["attributes"]}
+async-std = {version="1.8.0",features = ["attributes"]}
