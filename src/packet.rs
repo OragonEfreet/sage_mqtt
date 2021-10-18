@@ -95,7 +95,9 @@ impl fmt::Display for Packet {
             Packet::UnSubAck(_) => write!(f, "UnSubAck"),
             Packet::PingReq => write!(f, "PingReq"),
             Packet::PingResp => write!(f, "PingResp"),
-            Packet::Disconnect(disconnect) => write!(f, "Disconnect [{:?}]", disconnect.reason_code),
+            Packet::Disconnect(disconnect) => {
+                write!(f, "Disconnect [{:?}]", disconnect.reason_code)
+            }
             Packet::Auth(_) => write!(f, "Auth"),
         }
     }
@@ -186,57 +188,57 @@ impl Packet {
         let mut variable_and_payload = Vec::new();
         let (packet_type, remaining_size) = match self {
             Packet::Connect(packet) => (
-                PacketType::CONNECT,
+                PacketType::Connect,
                 packet.write(&mut variable_and_payload).await?,
             ),
             Packet::ConnAck(packet) => (
-                PacketType::CONNACK,
+                PacketType::ConnAck,
                 packet.write(&mut variable_and_payload).await?,
             ),
-            Packet::PingReq => (PacketType::PINGREQ, 0),
-            Packet::PingResp => (PacketType::PINGRESP, 0),
+            Packet::PingReq => (PacketType::PingReq, 0),
+            Packet::PingResp => (PacketType::PingResp, 0),
             Packet::UnSubAck(packet) => (
-                PacketType::UNSUBACK,
+                PacketType::UnSubAck,
                 packet.write(&mut variable_and_payload).await?,
             ),
             Packet::Auth(packet) => (
-                PacketType::AUTH,
+                PacketType::Auth,
                 packet.write(&mut variable_and_payload).await?,
             ),
             Packet::PubAck(packet) => (
-                PacketType::PUBACK,
+                PacketType::PubAck,
                 packet.write(&mut variable_and_payload).await?,
             ),
             Packet::UnSubscribe(packet) => (
-                PacketType::UNSUBSCRIBE,
+                PacketType::UnSubscribe,
                 packet.write(&mut variable_and_payload).await?,
             ),
             Packet::PubRec(packet) => (
-                PacketType::PUBREC,
+                PacketType::PubRec,
                 packet.write(&mut variable_and_payload).await?,
             ),
             Packet::Disconnect(packet) => (
-                PacketType::DISCONNECT,
+                PacketType::Disconnect,
                 packet.write(&mut variable_and_payload).await?,
             ),
             Packet::PubRel(packet) => (
-                PacketType::PUBREL,
+                PacketType::PubRel,
                 packet.write(&mut variable_and_payload).await?,
             ),
             Packet::SubAck(packet) => (
-                PacketType::SUBACK,
+                PacketType::SubAck,
                 packet.write(&mut variable_and_payload).await?,
             ),
             Packet::PubComp(packet) => (
-                PacketType::PUBCOMP,
+                PacketType::PubComp,
                 packet.write(&mut variable_and_payload).await?,
             ),
             Packet::Subscribe(packet) => (
-                PacketType::SUBSCRIBE,
+                PacketType::Subscribe,
                 packet.write(&mut variable_and_payload).await?,
             ),
             Packet::Publish(packet) => (
-                PacketType::PUBLISH {
+                PacketType::Publish {
                     duplicate: packet.duplicate,
                     qos: packet.qos,
                     retain: packet.retain,
@@ -266,40 +268,40 @@ impl Packet {
         let fixed_header = FixedHeader::decode(reader).await?;
 
         let packet = match fixed_header.packet_type {
-            PacketType::CONNECT => Packet::Connect(Connect::read(reader).await?),
-            PacketType::CONNACK => Packet::ConnAck(ConnAck::read(reader).await?),
-            PacketType::PUBACK => {
+            PacketType::Connect => Packet::Connect(Connect::read(reader).await?),
+            PacketType::ConnAck => Packet::ConnAck(ConnAck::read(reader).await?),
+            PacketType::PubAck => {
                 Packet::PubAck(PubAck::read(reader, fixed_header.remaining_size == 2).await?)
             }
-            PacketType::PUBREC => {
+            PacketType::PubRec => {
                 Packet::PubRec(PubRec::read(reader, fixed_header.remaining_size == 2).await?)
             }
-            PacketType::PINGREQ => Packet::PingReq,
-            PacketType::PINGRESP => Packet::PingResp,
-            PacketType::SUBACK => {
+            PacketType::PingReq => Packet::PingReq,
+            PacketType::PingResp => Packet::PingResp,
+            PacketType::SubAck => {
                 Packet::SubAck(SubAck::read(reader, fixed_header.remaining_size).await?)
             }
-            PacketType::UNSUBSCRIBE => {
+            PacketType::UnSubscribe => {
                 Packet::UnSubscribe(UnSubscribe::read(reader, fixed_header.remaining_size).await?)
             }
-            PacketType::AUTH => Packet::Auth(Auth::read(reader).await?),
-            PacketType::PUBREL => {
+            PacketType::Auth => Packet::Auth(Auth::read(reader).await?),
+            PacketType::PubRel => {
                 Packet::PubRel(PubRel::read(reader, fixed_header.remaining_size == 2).await?)
             }
-            PacketType::DISCONNECT => Packet::Disconnect(Disconnect::read(reader).await?),
-            PacketType::PUBCOMP => {
+            PacketType::Disconnect => Packet::Disconnect(Disconnect::read(reader).await?),
+            PacketType::PubComp => {
                 Packet::PubComp(PubComp::read(reader, fixed_header.remaining_size == 2).await?)
             }
 
-            PacketType::SUBSCRIBE => {
+            PacketType::Subscribe => {
                 Packet::Subscribe(Subscribe::read(reader, fixed_header.remaining_size).await?)
             }
 
-            PacketType::UNSUBACK => {
+            PacketType::UnSubAck => {
                 Packet::UnSubAck(UnSubAck::read(reader, fixed_header.remaining_size).await?)
             }
 
-            PacketType::PUBLISH {
+            PacketType::Publish {
                 duplicate,
                 qos,
                 retain,

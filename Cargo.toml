@@ -1,6 +1,6 @@
 [package]
 name = "sage_mqtt"
-version = "0.2.7"
+version = "0.3.0"
 authors = ["Kevin D'ORANGE <kevin.dorange@gmail.com>"]
 edition = "2018"
 description = "Manipulate MQTT 5.0 data types"
