@@ -87,6 +87,7 @@ async fn read_property_id<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Pr
 }
 
 #[derive(Debug, PartialEq)]
+#[allow(clippy::enum_variant_names)]
 pub enum Property {
     PayloadFormatIndicator(bool),
     MessageExpiryInterval(u32),

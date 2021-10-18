@@ -5,7 +5,7 @@ use crate::{
         DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_TOPIC_ALIAS_MAXIMUM,
     },
     Authentication, ClientID, PropertiesDecoder, Property, QoS,
-    ReasonCode::{MalformedPacket, ProtocolError, ClientIdentifierNotValid},
+    ReasonCode::{ClientIdentifierNotValid, MalformedPacket, ProtocolError},
     Result as SageResult, Will,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
@@ -218,7 +218,7 @@ impl Connect {
 
         // Payload
         if let Some(client_id) = self.client_id {
-            if client_id.len() > 23 || client_id.chars().any(|c| c < '0' || c > 'z') {
+            if client_id.len() > 23 || client_id.chars().any(|c| !('0'..='z').contains(&c)) {
                 return Err(MalformedPacket.into());
             }
             n_bytes += codec::write_utf8_string(&client_id, writer).await?;
@@ -340,7 +340,7 @@ impl Connect {
             if client_id.is_empty() {
                 None
             } else {
-                if client_id.len() > 23 || client_id.chars().any(|c| c < '0' || c > 'z') {
+                if client_id.len() > 23 || client_id.chars().any(|c| !('0'..='z').contains(&c)) {
                     return Err(ClientIdentifierNotValid.into());
                 }
                 Some(client_id)
@@ -349,8 +349,10 @@ impl Connect {
 
         let (reader, will) = if flags.will {
             let mut decoder = PropertiesDecoder::take(reader).await?;
-            let mut w = Will::default();
-            w.qos = flags.will_qos;
+            let mut w = Will {
+                qos: flags.will_qos,
+                ..Default::default()
+            };
             while decoder.has_properties() {
                 match decoder.read().await? {
                     Property::WillDelayInterval(v) => w.delay_interval = v,
@@ -427,8 +429,8 @@ impl ConnectFlags {
                 password: (bits & 0b0100_0000) >> 6 > 0,
                 will_retain: (bits & 0b0010_0000) >> 5 > 0,
                 will_qos: ((bits & 0b0001_1000) >> 3).try_into()?,
-                will: (bits & 0b0000_00100) >> 2 > 0,
-                clean_start: (bits & 0b0000_00010) >> 1 > 0,
+                will: (bits & 0b0000_0100) >> 2 > 0,
+                clean_start: (bits & 0b0000_0010) >> 1 > 0,
             })
         }
     }

@@ -3,7 +3,7 @@
 //! written to and read from a stream as well as converted to standard Rust
 //! types.
 #![warn(missing_docs)]
-#![warn(missing_doc_code_examples)]
+#![warn(rustdoc::missing_doc_code_examples)]
 #![allow(clippy::large_enum_variant)]
 
 #[allow(unused_macros)]

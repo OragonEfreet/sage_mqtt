@@ -6,26 +6,26 @@ use crate::QoS;
 /// where values depend on the type.
 #[derive(Debug, Clone, Copy)]
 pub enum PacketType {
-    RESERVED,
-    CONNECT,
-    CONNACK,
-    PUBLISH {
+    Reserved,
+    Connect,
+    ConnAck,
+    Publish {
         duplicate: bool,
         qos: QoS,
         retain: bool,
     },
-    PUBACK,
-    PUBREC,
-    PUBREL,
-    PUBCOMP,
-    SUBSCRIBE,
-    SUBACK,
-    UNSUBSCRIBE,
-    UNSUBACK,
-    PINGREQ,
-    PINGRESP,
-    DISCONNECT,
-    AUTH,
+    PubAck,
+    PubRec,
+    PubRel,
+    PubComp,
+    Subscribe,
+    SubAck,
+    UnSubscribe,
+    UnSubAck,
+    PingReq,
+    PingResp,
+    Disconnect,
+    Auth,
 }
 
 enum PayloadRequirements {
@@ -37,12 +37,12 @@ enum PayloadRequirements {
 impl From<PacketType> for PayloadRequirements {
     fn from(value: PacketType) -> Self {
         match value {
-            PacketType::PUBLISH { .. } => PayloadRequirements::Optional,
-            PacketType::CONNECT
-            | PacketType::SUBSCRIBE
-            | PacketType::SUBACK
-            | PacketType::UNSUBSCRIBE
-            | PacketType::UNSUBACK => PayloadRequirements::Required,
+            PacketType::Publish { .. } => PayloadRequirements::Optional,
+            PacketType::Connect
+            | PacketType::Subscribe
+            | PacketType::SubAck
+            | PacketType::UnSubscribe
+            | PacketType::UnSubAck => PayloadRequirements::Required,
             _ => PayloadRequirements::None,
         }
     }
