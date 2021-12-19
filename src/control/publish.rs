@@ -1,6 +1,6 @@
 use crate::{
     codec, defaults::DEFAULT_PAYLOAD_FORMAT_INDICATOR, PropertiesDecoder, Property, QoS,
-    ReasonCode::ProtocolError, Result as SageResult,
+    ReasonCode::ProtocolError, Result as SageResult, TopicName,
 };
 
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
@@ -23,7 +23,7 @@ pub struct Publish {
     pub retain: bool,
 
     /// The name of the topic to publish the message to.
-    pub topic_name: String,
+    pub topic_name: TopicName,
 
     /// The packet identifier is used in `AtLeastOnce` and `ExactlyOnce`
     /// qualities of service to keep track of the packet.

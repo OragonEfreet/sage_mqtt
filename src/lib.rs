@@ -24,6 +24,7 @@ mod packet_type;
 mod property;
 mod quality_of_service;
 mod reason_code;
+mod topic;
 mod will;
 pub use authentication::Authentication;
 pub use control::{
@@ -36,4 +37,5 @@ use packet_type::PacketType;
 use property::{PropertiesDecoder, Property};
 pub use quality_of_service::QoS;
 pub use reason_code::ReasonCode;
+pub use topic::{TopicFilter, TopicName};
 pub use will::Will;

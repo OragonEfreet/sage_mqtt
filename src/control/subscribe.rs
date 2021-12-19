@@ -3,7 +3,7 @@ use crate::{
     defaults::DEFAULT_MAXIMUM_QOS,
     Error, PropertiesDecoder, Property, QoS,
     ReasonCode::{MalformedPacket, ProtocolError},
-    Result as SageResult,
+    Result as SageResult, TopicFilter,
 };
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::{
@@ -108,7 +108,7 @@ pub struct Subscribe {
 
     /// The list of topics to subscribe to with options.
     /// Each topics can use wildcards.
-    pub subscriptions: Vec<(String, SubscriptionOptions)>,
+    pub subscriptions: Vec<(TopicFilter, SubscriptionOptions)>,
 }
 
 impl Default for Subscribe {

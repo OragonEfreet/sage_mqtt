@@ -1,6 +1,6 @@
 use crate::{
     defaults::{DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_WILL_DELAY_INTERVAL},
-    QoS,
+    QoS, TopicName,
 };
 
 /// Due to the unstable nature of a connexion, the client can loose its
@@ -19,7 +19,7 @@ pub struct Will {
     /// in memory by a broker (one per topic) to sent to future subscriptions.
     pub retain: bool,
 
-    /// Delay in seconds the broket will wait after a deconnction before
+    /// Delay in seconds the broker will wait after a deconnection before
     /// publishing the will message. The will message can also be published
     /// at session expires if it happens first.
     pub delay_interval: u32,
@@ -36,7 +36,7 @@ pub struct Will {
     pub content_type: String,
 
     /// Optional topic used as response if the Will message is a request.
-    pub response_topic: Option<String>,
+    pub response_topic: Option<TopicName>,
 
     /// Optional correlation optionaly used if the Will message is a request.
     pub correlation_data: Option<Vec<u8>>,
@@ -45,7 +45,7 @@ pub struct Will {
     pub user_properties: Vec<(String, String)>,
 
     /// The Last Will Topic. Cannot be empty.
-    pub topic: String,
+    pub topic: TopicName,
 
     /// The last will payload.
     pub message: Vec<u8>,
