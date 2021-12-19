@@ -6,20 +6,43 @@ const LEVEL_SEPARATOR: char = '/';
 /// A topic name a broker or client publishes to
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct TopicName {
-    spec: String,
+    spec: Vec<TopicLevel>,
 }
 
 impl TryFrom<&str> for TopicName {
     type Error = SageError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
-        Ok(TopicName { spec: s.into() })
+        Ok(TopicName {
+            spec: s
+                .split(LEVEL_SEPARATOR)
+                .into_iter()
+                .map(|l| {
+                    if l.len() == 0 {
+                        TopicLevel::Empty
+                    } else {
+                        TopicLevel::Name(l.into())
+                    }
+                })
+                .collect(),
+        })
     }
 }
 
 impl fmt::Display for TopicName {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}", self.spec)
+        write!(
+            formatter,
+            "{}",
+            self.spec
+                .iter()
+                .map(|l| match l {
+                    TopicLevel::Empty => "",
+                    TopicLevel::Name(s) => s.as_ref(),
+                })
+                .collect::<Vec<&str>>()
+                .join("/")
+        )
     }
 }
 
