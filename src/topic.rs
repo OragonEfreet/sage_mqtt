@@ -108,3 +108,12 @@ impl fmt::Display for TopicFilter {
         )
     }
 }
+
+impl TopicFilter {
+    /// Returns true if the filter contains at least one wildcard
+    pub fn has_wildcards(&self) -> bool {
+        self.spec
+            .iter()
+            .any(|x| matches!(x, FilterSegment::Any | FilterSegment::MultipleAny))
+    }
+}
