@@ -1,8 +1,9 @@
 use crate::{
     codec,
     defaults::{
-        DEFAULT_RECEIVE_MAXIMUM, DEFAULT_REQUEST_PROBLEM_INFORMATION,
-        DEFAULT_REQUEST_RESPONSE_INFORMATION, DEFAULT_TOPIC_ALIAS_MAXIMUM,
+        DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_RECEIVE_MAXIMUM,
+        DEFAULT_REQUEST_PROBLEM_INFORMATION, DEFAULT_REQUEST_RESPONSE_INFORMATION,
+        DEFAULT_TOPIC_ALIAS_MAXIMUM, DEFAULT_WILL_DELAY_INTERVAL,
     },
     Authentication, ClientID, PropertiesDecoder, Property, QoS,
     ReasonCode::{ClientIdentifierNotValid, MalformedPacket, ProtocolError},
@@ -348,30 +349,49 @@ impl Connect {
         };
 
         let (reader, will) = if flags.will {
+            let mut delay_interval = DEFAULT_WILL_DELAY_INTERVAL;
+            let mut payload_format_indicator = DEFAULT_PAYLOAD_FORMAT_INDICATOR;
+            let mut message_expiry_interval = None;
+            let mut content_type = Default::default();
+            let mut response_topic = None;
+            let mut correlation_data = None;
+            let mut user_properties = Vec::new();
+
             let mut decoder = PropertiesDecoder::take(reader).await?;
-            let mut w = Will {
-                qos: flags.will_qos,
-                ..Default::default()
-            };
             while decoder.has_properties() {
                 match decoder.read().await? {
-                    Property::WillDelayInterval(v) => w.delay_interval = v,
-                    Property::PayloadFormatIndicator(v) => w.payload_format_indicator = v,
-                    Property::MessageExpiryInterval(v) => w.message_expiry_interval = Some(v),
-                    Property::ContentType(v) => w.content_type = v,
-                    Property::ResponseTopic(v) => w.response_topic = Some(v),
-                    Property::CorrelationData(v) => w.correlation_data = Some(v),
-                    Property::UserProperty(k, v) => w.user_properties.push((k, v)),
+                    Property::WillDelayInterval(v) => delay_interval = v,
+                    Property::PayloadFormatIndicator(v) => payload_format_indicator = v,
+                    Property::MessageExpiryInterval(v) => message_expiry_interval = Some(v),
+                    Property::ContentType(v) => content_type = v,
+                    Property::ResponseTopic(v) => response_topic = Some(v),
+                    Property::CorrelationData(v) => correlation_data = Some(v),
+                    Property::UserProperty(k, v) => user_properties.push((k, v)),
                     _ => return Err(ProtocolError.into()),
                 }
             }
             let reader = decoder.into_inner();
-            w.topic = codec::read_utf8_string(reader).await?;
-            if w.topic.is_empty() {
+            let topic = codec::read_utf8_string(reader).await?;
+            if topic.is_empty() {
                 return Err(ProtocolError.into());
             }
-            w.message = codec::read_binary_data(reader).await?;
-            (reader, Some(w))
+            let message = codec::read_binary_data(reader).await?;
+            (
+                reader,
+                Some(Will {
+                    qos: flags.will_qos,
+                    retain: flags.will_retain,
+                    delay_interval,
+                    payload_format_indicator,
+                    message_expiry_interval,
+                    content_type,
+                    response_topic,
+                    correlation_data,
+                    user_properties,
+                    topic,
+                    message,
+                }),
+            )
         } else {
             (reader, None)
         };
@@ -445,8 +465,8 @@ mod unit {
     fn encoded() -> Vec<u8> {
         vec![
             0, 4, 77, 81, 84, 84, 5, 206, 0, 10, 5, 17, 0, 0, 0, 10, 0, 0, 3, 3, 0, 0, 0, 6, 67,
-            108, 111, 90, 101, 101, 0, 0, 0, 6, 87, 105, 108, 108, 111, 119, 0, 5, 74, 97, 100,
-            101, 110,
+            108, 111, 90, 101, 101, 0, 6, 79, 114, 101, 103, 111, 110, 0, 6, 87, 105, 108, 108,
+            111, 119, 0, 5, 74, 97, 100, 101, 110,
         ]
     }
 
@@ -462,8 +482,7 @@ mod unit {
             password: Some("Jaden".into()),
             will: Some(Will {
                 qos: QoS::AtLeastOnce,
-                topic: "CloZee".into(),
-                ..Default::default()
+                ..Will::with_message("CloZee".try_into().unwrap(), "Oregon")
             }),
             ..Default::default()
         }
@@ -505,7 +524,7 @@ mod unit {
 
         let n_bytes = test_data.write(&mut tested_result).await.unwrap();
         assert_eq!(tested_result, encoded());
-        assert_eq!(n_bytes, 47);
+        assert_eq!(n_bytes, 53);
     }
 
     #[async_std::test]

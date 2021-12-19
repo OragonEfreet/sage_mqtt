@@ -51,8 +51,9 @@ pub struct Will {
     pub message: Vec<u8>,
 }
 
-impl Default for Will {
-    fn default() -> Self {
+impl Will {
+    /// Builds a default Will with specified topic and message
+    pub fn with_message(topic: TopicName, message: &str) -> Self {
         Will {
             qos: QoS::AtMostOnce,
             retain: false,
@@ -63,8 +64,8 @@ impl Default for Will {
             response_topic: None,
             correlation_data: None,
             user_properties: Default::default(),
-            topic: Default::default(),
-            message: Default::default(),
+            topic,
+            message: message.as_bytes().to_vec(),
         }
     }
 }
