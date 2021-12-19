@@ -25,15 +25,20 @@ impl fmt::Display for TopicName {
 /// Clients subscribe to topic filters.
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct TopicFilter {
-    levels: Vec<FilterLevel>,
+    levels: Vec<FilterSegment>,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-enum FilterLevel {
+enum TopicLevel {
     Empty,
+    Name(String),
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+enum FilterSegment {
     Any,
     MultipleAny,
-    Name(String),
+    Level(TopicLevel),
 }
 
 impl TryFrom<&str> for TopicFilter {
@@ -46,12 +51,12 @@ impl TryFrom<&str> for TopicFilter {
                 .into_iter()
                 .map(|l| {
                     if l.len() == 0 {
-                        FilterLevel::Empty
+                        FilterSegment::Level(TopicLevel::Empty)
                     } else {
                         match l {
-                            "+" => FilterLevel::Any,
-                            "#" => FilterLevel::MultipleAny,
-                            _ => FilterLevel::Name(l.into()),
+                            "+" => FilterSegment::Any,
+                            "#" => FilterSegment::MultipleAny,
+                            _ => FilterSegment::Level(TopicLevel::Name(l.into())),
                         }
                     }
                 })
@@ -68,10 +73,10 @@ impl fmt::Display for TopicFilter {
             self.levels
                 .iter()
                 .map(|l| match l {
-                    FilterLevel::Empty => "",
-                    FilterLevel::Any => "+",
-                    FilterLevel::MultipleAny => "#",
-                    FilterLevel::Name(s) => s.as_ref(),
+                    FilterSegment::Any => "+",
+                    FilterSegment::MultipleAny => "#",
+                    FilterSegment::Level(TopicLevel::Empty) => "",
+                    FilterSegment::Level(TopicLevel::Name(s)) => s.as_ref(),
                 })
                 .collect::<Vec<&str>>()
                 .join("/")
