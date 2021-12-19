@@ -7,7 +7,9 @@ pub type TopicName = String;
 /// A topic filter a topic name matches against.
 /// Clients subscribe to topic filters.
 #[derive(Debug, Default, Eq, PartialEq, Clone)]
-pub struct TopicFilter(String);
+pub struct TopicFilter {
+    spec: String,
+}
 
 impl TryFrom<&str> for TopicFilter {
     type Error = SageError;
@@ -20,13 +22,13 @@ impl TryFrom<&str> for TopicFilter {
 impl TryFrom<String> for TopicFilter {
     type Error = SageError;
 
-    fn try_from(s: String) -> Result<Self, Self::Error> {
-        Ok(TopicFilter(s))
+    fn try_from(spec: String) -> Result<Self, Self::Error> {
+        Ok(TopicFilter { spec })
     }
 }
 
 impl AsRef<str> for TopicFilter {
     fn as_ref(&self) -> &str {
-        &self.0
+        &self.spec
     }
 }
