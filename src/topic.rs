@@ -5,19 +5,21 @@ const LEVEL_SEPARATOR: char = '/';
 
 /// A topic name a broker or client publishes to
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct TopicName(String);
+pub struct TopicName {
+    spec: String,
+}
 
 impl TryFrom<&str> for TopicName {
     type Error = SageError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
-        Ok(TopicName(s.into()))
+        Ok(TopicName { spec: s.into() })
     }
 }
 
 impl fmt::Display for TopicName {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}", self.0)
+        write!(formatter, "{}", self.spec)
     }
 }
 
@@ -25,7 +27,7 @@ impl fmt::Display for TopicName {
 /// Clients subscribe to topic filters.
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct TopicFilter {
-    levels: Vec<FilterSegment>,
+    spec: Vec<FilterSegment>,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -46,7 +48,7 @@ impl TryFrom<&str> for TopicFilter {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         Ok(TopicFilter {
-            levels: s
+            spec: s
                 .split(LEVEL_SEPARATOR)
                 .into_iter()
                 .map(|l| {
@@ -70,7 +72,7 @@ impl fmt::Display for TopicFilter {
         write!(
             formatter,
             "{}",
-            self.levels
+            self.spec
                 .iter()
                 .map(|l| match l {
                     FilterSegment::Any => "+",
