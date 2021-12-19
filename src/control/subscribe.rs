@@ -141,7 +141,7 @@ impl Subscribe {
         writer.write_all(&properties).await?;
 
         for option in self.subscriptions {
-            n_bytes += codec::write_utf8_string(option.0.as_ref(), writer).await?;
+            n_bytes += codec::write_utf8_string(&option.0.to_string(), writer).await?;
             n_bytes += option.1.encode(writer).await?;
         }
 
@@ -171,7 +171,7 @@ impl Subscribe {
 
         while reader.limit() > 0 {
             subscriptions.push((
-                codec::read_utf8_string(&mut reader).await?.try_into()?,
+                TopicFilter::try_from(&*codec::read_utf8_string(&mut reader).await?)?,
                 SubscriptionOptions::decode(&mut reader).await?,
             ));
         }
