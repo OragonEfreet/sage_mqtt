@@ -141,7 +141,7 @@ impl Subscribe {
         writer.write_all(&properties).await?;
 
         for option in self.subscriptions {
-            n_bytes += codec::write_utf8_string(&option.0, writer).await?;
+            n_bytes += codec::write_utf8_string(option.0.as_ref(), writer).await?;
             n_bytes += option.1.encode(writer).await?;
         }
 
@@ -171,7 +171,7 @@ impl Subscribe {
 
         while reader.limit() > 0 {
             subscriptions.push((
-                codec::read_utf8_string(&mut reader).await?,
+                codec::read_utf8_string(&mut reader).await?.try_into()?,
                 SubscriptionOptions::decode(&mut reader).await?,
             ));
         }
@@ -209,7 +209,7 @@ mod unit {
             user_properties: vec![("Mogwaï".into(), "Cat".into())],
             subscriptions: vec![
                 (
-                    "harder".into(),
+                    "harder".try_into().unwrap(),
                     SubscriptionOptions {
                         qos: QoS::AtLeastOnce,
                         no_local: false,
@@ -218,7 +218,7 @@ mod unit {
                     },
                 ),
                 (
-                    "better".into(),
+                    "better".try_into().unwrap(),
                     SubscriptionOptions {
                         qos: QoS::AtMostOnce,
                         no_local: true,
@@ -227,7 +227,7 @@ mod unit {
                     },
                 ),
                 (
-                    "faster".into(),
+                    "faster".try_into().unwrap(),
                     SubscriptionOptions {
                         qos: QoS::ExactlyOnce,
                         no_local: true,
@@ -236,7 +236,7 @@ mod unit {
                     },
                 ),
                 (
-                    "stronger".into(),
+                    "stronger".try_into().unwrap(),
                     SubscriptionOptions {
                         qos: QoS::AtLeastOnce,
                         no_local: false,
