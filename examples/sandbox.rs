@@ -4,7 +4,7 @@ use sage_mqtt::*;
 async fn main() {
     let mut encoded = Vec::new();
 
-    Packet::Publish(Default::default())
+    Packet::Publish(Publish::with_message("".into(), ""))
         .encode(&mut encoded)
         .await
         .unwrap();
