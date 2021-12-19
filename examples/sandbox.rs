@@ -1,17 +1,10 @@
-use sage_mqtt::*;
+use sage_mqtt::TopicFilter;
+use std::convert::TryFrom;
 
-#[async_std::main]
-async fn main() {
-    let mut encoded = Vec::new();
+fn main() {
+    let topic = "/pouet//haha/+/chaise/#/";
+    let pouet = TopicFilter::try_from(topic).unwrap();
 
-    Packet::Publish(Publish::with_message("".into(), ""))
-        .encode(&mut encoded)
-        .await
-        .unwrap();
-
-    //     let mut reader = Cursor::new(encoded);
-
-    //     let _ = Packet::decode(&mut reader).unwrap();
-
-    //     // stream.write(&encoded)?;
-} // the stream is closed here
+    println!("{}", pouet);
+    println!("{}", pouet);
+}

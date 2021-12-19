@@ -43,7 +43,7 @@ pub struct Publish {
     /// If the message is part of a Request/Response communication, the response
     /// topic is use to assign the topic which must be used as response. The
     /// presence of a response topic identifies the message as a requestion.
-    pub response_topic: Option<String>,
+    pub response_topic: Option<TopicName>,
 
     /// If the message is part of a Request/Response communication, it can be
     /// optionnaly accompagnied with correlation data which are exchanged
@@ -89,7 +89,7 @@ impl Publish {
 
 impl Publish {
     pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = codec::write_utf8_string(&self.topic_name, writer).await?;
+        let mut n_bytes = codec::write_utf8_string(&self.topic_name.to_string(), writer).await?;
 
         if self.qos != QoS::AtMostOnce {
             if let Some(packet_identifier) = self.packet_identifier {
@@ -152,7 +152,7 @@ impl Publish {
     ) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size);
 
-        let topic_name = codec::read_utf8_string(&mut reader).await?;
+        let topic_name = TopicName::try_from(&*codec::read_utf8_string(&mut reader).await?)?;
 
         let packet_identifier = if qos != QoS::AtMostOnce {
             Some(codec::read_two_byte_integer(&mut reader).await?)
@@ -228,12 +228,12 @@ mod unit {
             duplicate: false,
             qos: QoS::AtLeastOnce,
             retain: true,
-            topic_name: "One More Time".into(),
+            topic_name: "One More Time".try_into().unwrap(),
             packet_identifier: Some(1337),
             payload_format_indicator: true,
             message_expiry_interval: Some(17),
             topic_alias: Some(451),
-            response_topic: Some("Smells Like Teen Spirit".into()),
+            response_topic: Some("Smells Like Teen Spirit".try_into().unwrap()),
             correlation_data: Some(vec![0x0D, 0x15, 0xEA, 0x5E]),
             user_properties: vec![("Mogwaï".into(), "Cat".into())],
             subscription_identifiers: vec![34, 32, 10, 11],

@@ -9,7 +9,7 @@ use crate::{
     },
     QoS,
     ReasonCode::{MalformedPacket, ProtocolError},
-    Result as SageResult,
+    Result as SageResult, TopicName,
 };
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, Take};
 use std::collections::HashSet;
@@ -92,7 +92,7 @@ pub enum Property {
     PayloadFormatIndicator(bool),
     MessageExpiryInterval(u32),
     ContentType(String),
-    ResponseTopic(String),
+    ResponseTopic(TopicName),
     CorrelationData(Vec<u8>),
     SubscriptionIdentifier(u32),
     SessionExpiryInterval(u32),
@@ -169,14 +169,9 @@ impl<'a, R: AsyncRead + Unpin> PropertiesDecoder<R> {
             PropertyId::ContentType => Ok(Property::ContentType(
                 codec::read_utf8_string(reader).await?,
             )),
-            PropertyId::ResponseTopic => {
-                let topic = codec::read_utf8_string(reader).await?;
-                if topic.is_empty() {
-                    Err(ProtocolError.into())
-                } else {
-                    Ok(Property::ResponseTopic(topic))
-                }
-            }
+            PropertyId::ResponseTopic => Ok(Property::ResponseTopic(TopicName::try_from(
+                &*codec::read_utf8_string(reader).await?,
+            )?)),
             PropertyId::CorrelationData => Ok(Property::CorrelationData(
                 codec::read_binary_data(reader).await?,
             )),
@@ -288,12 +283,8 @@ impl Property {
                 Ok(n_bytes + codec::write_utf8_string(&v, writer).await?)
             }
             Property::ResponseTopic(v) => {
-                if v.is_empty() {
-                    Err(ProtocolError.into())
-                } else {
-                    let n_bytes = write_property_id(PropertyId::ResponseTopic, writer).await?;
-                    Ok(n_bytes + codec::write_utf8_string(&v, writer).await?)
-                }
+                let n_bytes = write_property_id(PropertyId::ResponseTopic, writer).await?;
+                Ok(n_bytes + codec::write_utf8_string(&v.to_string(), writer).await?)
             }
             Property::CorrelationData(v) => {
                 let n_bytes = write_property_id(PropertyId::CorrelationData, writer).await?;

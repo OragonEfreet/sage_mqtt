@@ -4,7 +4,22 @@ use std::{convert::TryFrom, fmt};
 const LEVEL_SEPARATOR: char = '/';
 
 /// A topic name a broker or client publishes to
-pub type TopicName = String;
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct TopicName(String);
+
+impl TryFrom<&str> for TopicName {
+    type Error = SageError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        Ok(TopicName(s.into()))
+    }
+}
+
+impl fmt::Display for TopicName {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}", self.0)
+    }
+}
 
 /// A topic filter a topic name matches against.
 /// Clients subscribe to topic filters.

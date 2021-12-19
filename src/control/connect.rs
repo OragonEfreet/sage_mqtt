@@ -7,7 +7,7 @@ use crate::{
     },
     Authentication, ClientID, PropertiesDecoder, Property, QoS,
     ReasonCode::{ClientIdentifierNotValid, MalformedPacket, ProtocolError},
-    Result as SageResult, Will,
+    Result as SageResult, TopicName, Will,
 };
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::convert::TryInto;
@@ -260,10 +260,7 @@ impl Connect {
             n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
             writer.write_all(&properties).await?;
 
-            if w.topic.is_empty() {
-                return Err(ProtocolError.into());
-            }
-            n_bytes += codec::write_utf8_string(&w.topic, writer).await?;
+            n_bytes += codec::write_utf8_string(&w.topic.to_string(), writer).await?;
             n_bytes += codec::write_binary_data(&w.message, writer).await?;
         }
 
@@ -371,10 +368,7 @@ impl Connect {
                 }
             }
             let reader = decoder.into_inner();
-            let topic = codec::read_utf8_string(reader).await?;
-            if topic.is_empty() {
-                return Err(ProtocolError.into());
-            }
+            let topic = TopicName::try_from(&*codec::read_utf8_string(reader).await?)?;
             let message = codec::read_binary_data(reader).await?;
             (
                 reader,
