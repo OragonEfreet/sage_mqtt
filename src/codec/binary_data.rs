@@ -87,9 +87,9 @@ mod unit {
     #[async_std::test]
     async fn decode_eof() {
         let mut test_stream = Cursor::new([0x00, 0x05, 0x41]);
-        assert_matches!(
+        assert!(matches!(
             read_binary_data(&mut test_stream).await,
             Err(Error::Reason(ReasonCode::MalformedPacket))
-        );
+        ));
     }
 }

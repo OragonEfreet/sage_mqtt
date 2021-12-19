@@ -6,13 +6,6 @@
 #![warn(rustdoc::missing_doc_code_examples)]
 #![allow(clippy::large_enum_variant)]
 
-#[allow(unused_macros)]
-macro_rules! assert_matches {
-    ($expression:expr, $( $pattern:pat )|+ $( if $guard: expr )?) => {
-        assert!(matches!($expression, $( $pattern )|+ $( if $guard )?))
-    }
-}
-
 mod authentication;
 /// encode/decode MQTT fundamental types
 pub mod codec;

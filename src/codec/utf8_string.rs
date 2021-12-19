@@ -99,9 +99,9 @@ mod unit {
     #[async_std::test]
     async fn decode_eof() {
         let mut test_stream = AsyncCursor::new([0x00, 0x05, 0x41]);
-        assert_matches!(
+        assert!(matches!(
             read_utf8_string(&mut test_stream).await,
             Err(Error::Reason(ReasonCode::MalformedPacket))
-        );
+        ));
     }
 }

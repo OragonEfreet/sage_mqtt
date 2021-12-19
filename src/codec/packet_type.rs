@@ -103,10 +103,10 @@ mod unit {
                 }
                 let buffer = [*packet_type, *flags, 0x00];
                 let mut test_stream = Cursor::new(buffer);
-                assert_matches!(
+                assert!(matches!(
                     read_control_packet_type(&mut test_stream).await,
                     Err(Error::Reason(ReasonCode::MalformedPacket))
-                );
+                ));
             }
         }
     }

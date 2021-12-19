@@ -262,7 +262,7 @@ mod unit {
         let mut test_stream: Cursor<[u8; 0]> = Default::default();
         let result = read_variable_byte_integer(&mut test_stream).await;
         if let Some(Error::Io(err)) = result.err() {
-            assert_matches!(err.kind(), ErrorKind::UnexpectedEof);
+            assert!(matches!(err.kind(), ErrorKind::UnexpectedEof));
         } else {
             panic!("Should be IO Error");
         }

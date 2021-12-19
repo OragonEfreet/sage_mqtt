@@ -57,7 +57,7 @@ mod unit {
         let mut test_stream = Cursor::new([0x07]);
         let result = read_four_byte_integer(&mut test_stream).await;
         if let Some(Error::Io(err)) = result.err() {
-            assert_matches!(err.kind(), ErrorKind::UnexpectedEof);
+            assert!(matches!(err.kind(), ErrorKind::UnexpectedEof));
         } else {
             panic!("Should be IO Error");
         }
