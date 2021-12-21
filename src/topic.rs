@@ -51,6 +51,7 @@ impl fmt::Display for TopicName {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct TopicFilter {
     spec: Vec<FilterSegment>,
+    share: Option<String>,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -71,6 +72,7 @@ impl TryFrom<&str> for TopicFilter {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         Ok(TopicFilter {
+            share: None,
             spec: s
                 .split(LEVEL_SEPARATOR)
                 .into_iter()
@@ -115,5 +117,10 @@ impl TopicFilter {
         self.spec
             .iter()
             .any(|x| matches!(x, FilterSegment::Any | FilterSegment::MultipleAny))
+    }
+
+    /// Returns the sharing name if the topic is shared
+    pub fn share(&self) -> &Option<String> {
+        &self.share
     }
 }
