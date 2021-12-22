@@ -1,8 +1,5 @@
 use std::fmt;
 
-mod filter;
-pub use filter::TopicFilter;
-
 const LEVEL_SEPARATOR: char = '/';
 
 #[derive(Hash, Debug, Eq, PartialEq, Clone)]
@@ -13,43 +10,19 @@ enum TopicLevel {
 
 /// A topic name a broker or client publishes to
 #[derive(Hash, Debug, Eq, PartialEq, Clone)]
-pub struct TopicName {
+pub struct Topic {
     spec: Vec<TopicLevel>,
 }
 
-impl Default for TopicName {
+impl Default for Topic {
     fn default() -> Self {
-        TopicName {
+        Topic {
             spec: vec![TopicLevel::Empty],
         }
     }
 }
 
-impl From<String> for TopicName {
-    fn from(s: String) -> Self {
-        Self::from(s.as_ref())
-    }
-}
-
-impl From<&str> for TopicName {
-    fn from(s: &str) -> Self {
-        TopicName {
-            spec: s
-                .split(LEVEL_SEPARATOR)
-                .into_iter()
-                .map(|l| {
-                    if l.len() == 0 {
-                        TopicLevel::Empty
-                    } else {
-                        TopicLevel::Name(l.into())
-                    }
-                })
-                .collect(),
-        }
-    }
-}
-
-impl fmt::Display for TopicName {
+impl fmt::Display for Topic {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             formatter,
@@ -66,6 +39,25 @@ impl fmt::Display for TopicName {
     }
 }
 
+impl Topic {
+    /// Builds a new topic has a name
+    pub fn name(s: &str) -> Self {
+        Topic {
+            spec: s
+                .split(LEVEL_SEPARATOR)
+                .into_iter()
+                .map(|l| {
+                    if l.len() == 0 {
+                        TopicLevel::Empty
+                    } else {
+                        TopicLevel::Name(l.into())
+                    }
+                })
+                .collect(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod unit {
     use super::*;
@@ -78,27 +70,21 @@ mod unit {
                     #[test]
                     fn from_string() {
                         let (input, spec) = $value;
-                        assert_eq!(TopicName::from(String::from(input)), TopicName {spec});
+                        assert_eq!(Topic::name(input), Topic {spec});
                     }
 
                     #[test]
                     fn from_str_ref() {
                         let (input, spec) = $value;
-                        assert_eq!(TopicName::from(input), TopicName {spec});
+                        assert_eq!(Topic::name(input), Topic {spec});
                     }
 
-                    #[test]
-                    fn to_string() {
-                        let (input, spec) = $value;
-                        assert_eq!(TopicName {spec}.to_string(), input);
-                    }
                 }
             )*
         }
     }
 
     topic_name_data! {
-        default:          (String::default(), vec![TopicLevel::Empty], ),
         space:            (" ",               vec![TopicLevel::Name(String::from(" "))], ),
         empty_1:          ("",                vec![TopicLevel::Empty ; 1], ),
         empty_2:          ("/",               vec![TopicLevel::Empty ; 2], ),
@@ -118,8 +104,8 @@ mod unit {
     #[test]
     fn default_is_empty() {
         assert_eq!(
-            TopicName::default(),
-            TopicName {
+            Topic::default(),
+            Topic {
                 spec: vec![TopicLevel::Empty],
             },
         );

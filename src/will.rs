@@ -1,6 +1,6 @@
 use crate::{
     defaults::{DEFAULT_PAYLOAD_FORMAT_INDICATOR, DEFAULT_WILL_DELAY_INTERVAL},
-    QoS, TopicName,
+    QoS, Topic,
 };
 
 /// Due to the unstable nature of a connexion, the client can loose its
@@ -36,7 +36,7 @@ pub struct Will {
     pub content_type: String,
 
     /// Optional topic used as response if the Will message is a request.
-    pub response_topic: Option<TopicName>,
+    pub response_topic: Option<Topic>,
 
     /// Optional correlation optionaly used if the Will message is a request.
     pub correlation_data: Option<Vec<u8>>,
@@ -45,7 +45,7 @@ pub struct Will {
     pub user_properties: Vec<(String, String)>,
 
     /// The Last Will Topic. Cannot be empty.
-    pub topic: TopicName,
+    pub topic: Topic,
 
     /// The last will payload.
     pub message: Vec<u8>,
@@ -53,7 +53,7 @@ pub struct Will {
 
 impl Will {
     /// Builds a default Will with specified topic and message
-    pub fn with_message(topic: TopicName, message: &str) -> Self {
+    pub fn with_message(topic: Topic, message: &str) -> Self {
         Will {
             qos: QoS::AtMostOnce,
             retain: false,

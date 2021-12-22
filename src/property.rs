@@ -9,7 +9,7 @@ use crate::{
     },
     QoS,
     ReasonCode::{MalformedPacket, ProtocolError},
-    Result as SageResult, TopicName,
+    Result as SageResult, Topic,
 };
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, Take};
 use std::collections::HashSet;
@@ -92,7 +92,7 @@ pub enum Property {
     PayloadFormatIndicator(bool),
     MessageExpiryInterval(u32),
     ContentType(String),
-    ResponseTopic(TopicName),
+    ResponseTopic(Topic),
     CorrelationData(Vec<u8>),
     SubscriptionIdentifier(u32),
     SessionExpiryInterval(u32),
@@ -169,9 +169,9 @@ impl<'a, R: AsyncRead + Unpin> PropertiesDecoder<R> {
             PropertyId::ContentType => Ok(Property::ContentType(
                 codec::read_utf8_string(reader).await?,
             )),
-            PropertyId::ResponseTopic => Ok(Property::ResponseTopic(
-                codec::read_utf8_string(reader).await?.into(),
-            )),
+            PropertyId::ResponseTopic => Ok(Property::ResponseTopic(Topic::name(
+                &codec::read_utf8_string(reader).await?,
+            ))),
             PropertyId::CorrelationData => Ok(Property::CorrelationData(
                 codec::read_binary_data(reader).await?,
             )),
