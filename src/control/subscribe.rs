@@ -169,7 +169,7 @@ impl Subscribe {
 
         while reader.limit() > 0 {
             subscriptions.push((
-                TopicFilter::try_from(&*codec::read_utf8_string(&mut reader).await?)?,
+                codec::read_utf8_string(&mut reader).await?.into(),
                 SubscriptionOptions::decode(&mut reader).await?,
             ));
         }

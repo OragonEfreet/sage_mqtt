@@ -1,5 +1,4 @@
-use crate::Error as SageError;
-use std::{convert::TryFrom, fmt};
+use std::fmt;
 
 const LEVEL_SEPARATOR: char = '/';
 
@@ -9,11 +8,15 @@ pub struct TopicName {
     spec: Vec<TopicLevel>,
 }
 
-impl TryFrom<&str> for TopicName {
-    type Error = SageError;
+impl From<String> for TopicName {
+    fn from(s: String) -> Self {
+        Self::from(s.as_ref())
+    }
+}
 
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
-        Ok(TopicName {
+impl From<&str> for TopicName {
+    fn from(s: &str) -> Self {
+        TopicName {
             spec: s
                 .split(LEVEL_SEPARATOR)
                 .into_iter()
@@ -25,7 +28,7 @@ impl TryFrom<&str> for TopicName {
                     }
                 })
                 .collect(),
-        })
+        }
     }
 }
 
@@ -67,11 +70,15 @@ enum FilterSegment {
     Level(TopicLevel),
 }
 
-impl TryFrom<&str> for TopicFilter {
-    type Error = SageError;
+impl From<String> for TopicFilter {
+    fn from(s: String) -> Self {
+        Self::from(s.as_ref())
+    }
+}
 
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
-        Ok(TopicFilter {
+impl From<&str> for TopicFilter {
+    fn from(s: &str) -> Self {
+        TopicFilter {
             share: None,
             spec: s
                 .split(LEVEL_SEPARATOR)
@@ -88,7 +95,7 @@ impl TryFrom<&str> for TopicFilter {
                     }
                 })
                 .collect(),
-        })
+        }
     }
 }
 

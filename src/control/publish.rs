@@ -152,7 +152,7 @@ impl Publish {
     ) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size);
 
-        let topic_name = TopicName::try_from(&*codec::read_utf8_string(&mut reader).await?)?;
+        let topic_name = codec::read_utf8_string(&mut reader).await?.into();
 
         let packet_identifier = if qos != QoS::AtMostOnce {
             Some(codec::read_two_byte_integer(&mut reader).await?)
