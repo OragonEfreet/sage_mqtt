@@ -1,7 +1,5 @@
 use crate::{
-    codec,
-    defaults::DEFAULT_MAXIMUM_QOS,
-    Error, PropertiesDecoder, Property, QoS,
+    codec, Error, PropertiesDecoder, Property, QoS,
     ReasonCode::{MalformedPacket, ProtocolError},
     Result as SageResult, TopicFilter,
 };
@@ -59,7 +57,7 @@ pub struct SubscriptionOptions {
 impl Default for SubscriptionOptions {
     fn default() -> Self {
         SubscriptionOptions {
-            qos: DEFAULT_MAXIMUM_QOS,
+            qos: QoS::AtMostOnce,
             no_local: false,
             retain_as_published: false,
             retain_handling: RetainHandling::OnSubscribe,
