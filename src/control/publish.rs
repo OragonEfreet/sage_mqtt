@@ -65,14 +65,14 @@ pub struct Publish {
     pub message: Vec<u8>,
 }
 
-impl Publish {
+impl Default for Publish {
     /// Builds a publish packet with message and topic name
-    pub fn with_message(topic_name: TopicName, message: &str) -> Self {
+    fn default() -> Self {
         Publish {
             duplicate: false,
             qos: QoS::AtMostOnce,
             retain: false,
-            topic_name,
+            topic_name: Default::default(),
             packet_identifier: None,
             payload_format_indicator: DEFAULT_PAYLOAD_FORMAT_INDICATOR,
             message_expiry_interval: None,
@@ -82,7 +82,7 @@ impl Publish {
             user_properties: Default::default(),
             subscription_identifiers: Default::default(),
             content_type: Default::default(),
-            message: message.as_bytes().to_vec(),
+            message: Default::default(),
         }
     }
 }

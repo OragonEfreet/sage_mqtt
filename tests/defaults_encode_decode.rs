@@ -1,7 +1,7 @@
 use async_std::io::Cursor;
 use sage_mqtt::{
-    Auth, ConnAck, Connect, Disconnect, Error, Packet, PubAck, PubComp, PubRec, PubRel, ReasonCode,
-    SubAck, Subscribe, UnSubAck, UnSubscribe,
+    Auth, ConnAck, Connect, Disconnect, Error, Packet, PubAck, PubComp, PubRec, PubRel, Publish,
+    ReasonCode, SubAck, Subscribe, UnSubAck, UnSubscribe,
 };
 
 #[async_std::test]
@@ -72,6 +72,27 @@ async fn default_connack() {
         .expect("Cannot decode ConnAck");
     if let Packet::ConnAck(receive_packet) = receive_result {
         assert_eq!(receive_packet, ConnAck::default());
+    } else {
+        panic!("Incorrect packet type");
+    }
+}
+
+#[async_std::test]
+async fn default_publish() {
+    let mut encoded = Vec::new();
+    let send_packet: Packet = Publish::default().into();
+    let send_size = send_packet
+        .encode(&mut encoded)
+        .await
+        .expect("Cannot encode Publish packet");
+    assert!(send_size > 0);
+
+    let mut cursor = Cursor::new(encoded);
+    let receive_result = Packet::decode(&mut cursor)
+        .await
+        .expect("Cannot decode Publish");
+    if let Packet::Publish(receive_packet) = receive_result {
+        assert_eq!(receive_packet, Publish::default());
     } else {
         panic!("Incorrect packet type");
     }

@@ -3,7 +3,7 @@ use std::fmt;
 const LEVEL_SEPARATOR: char = '/';
 
 /// A topic name a broker or client publishes to
-#[derive(Hash, Debug, Eq, PartialEq, Clone)]
+#[derive(Default, Hash, Debug, Eq, PartialEq, Clone)]
 pub struct TopicName {
     spec: Vec<TopicLevel>,
 }
@@ -51,7 +51,7 @@ impl fmt::Display for TopicName {
 
 /// A topic filter a topic name matches against.
 /// Clients subscribe to topic filters.
-#[derive(Hash, Debug, Eq, PartialEq, Clone)]
+#[derive(Default, Hash, Debug, Eq, PartialEq, Clone)]
 pub struct TopicFilter {
     spec: Vec<FilterSegment>,
     share: Option<String>,

@@ -91,7 +91,7 @@ impl SubscriptionOptions {
 
 /// The subscribe packet is a request from the client to listen to one or more
 /// topics.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Default, Debug, PartialEq, Clone)]
 pub struct Subscribe {
     /// The packet identifier is used to identify the message throughout the
     /// communication.
@@ -107,17 +107,6 @@ pub struct Subscribe {
     /// The list of topics to subscribe to with options.
     /// Each topics can use wildcards.
     pub subscriptions: Vec<(TopicFilter, SubscriptionOptions)>,
-}
-
-impl Default for Subscribe {
-    fn default() -> Self {
-        Subscribe {
-            packet_identifier: 0,
-            subscription_identifier: None,
-            user_properties: Default::default(),
-            subscriptions: Default::default(),
-        }
-    }
 }
 
 impl Subscribe {
