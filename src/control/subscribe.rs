@@ -1,7 +1,7 @@
 use crate::{
     codec, Error, PropertiesDecoder, Property, QoS,
     ReasonCode::{MalformedPacket, ProtocolError},
-    Result as SageResult, TopicFilter,
+    Result as SageResult, Topic,
 };
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::{
@@ -106,7 +106,7 @@ pub struct Subscribe {
 
     /// The list of topics to subscribe to with options.
     /// Each topics can use wildcards.
-    pub subscriptions: Vec<(TopicFilter, SubscriptionOptions)>,
+    pub subscriptions: Vec<(Topic, SubscriptionOptions)>,
 }
 
 impl Subscribe {
@@ -158,7 +158,7 @@ impl Subscribe {
 
         while reader.limit() > 0 {
             subscriptions.push((
-                codec::read_utf8_string(&mut reader).await?.into(),
+                Topic::filter(&codec::read_utf8_string(&mut reader).await?),
                 SubscriptionOptions::decode(&mut reader).await?,
             ));
         }
@@ -196,7 +196,7 @@ mod unit {
             user_properties: vec![("Mogwaï".into(), "Cat".into())],
             subscriptions: vec![
                 (
-                    "harder".try_into().unwrap(),
+                    Topic::filter("harder"),
                     SubscriptionOptions {
                         qos: QoS::AtLeastOnce,
                         no_local: false,
@@ -205,7 +205,7 @@ mod unit {
                     },
                 ),
                 (
-                    "better".try_into().unwrap(),
+                    Topic::filter("better"),
                     SubscriptionOptions {
                         qos: QoS::AtMostOnce,
                         no_local: true,
@@ -214,7 +214,7 @@ mod unit {
                     },
                 ),
                 (
-                    "faster".try_into().unwrap(),
+                    Topic::filter("faster"),
                     SubscriptionOptions {
                         qos: QoS::ExactlyOnce,
                         no_local: true,
@@ -223,7 +223,7 @@ mod unit {
                     },
                 ),
                 (
-                    "stronger".try_into().unwrap(),
+                    Topic::filter("stronger"),
                     SubscriptionOptions {
                         qos: QoS::AtLeastOnce,
                         no_local: false,

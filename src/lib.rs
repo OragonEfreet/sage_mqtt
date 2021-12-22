@@ -12,7 +12,6 @@ pub mod codec;
 mod control;
 pub mod defaults;
 mod error;
-mod former_topic;
 mod packet;
 mod packet_type;
 mod property;
@@ -26,7 +25,6 @@ pub use control::{
     PubRel, Publish, RetainHandling, SubAck, Subscribe, SubscriptionOptions, UnSubAck, UnSubscribe,
 };
 pub use error::{Error, Result};
-pub use former_topic::TopicFilter;
 pub use packet::Packet;
 use packet_type::PacketType;
 use property::{PropertiesDecoder, Property};

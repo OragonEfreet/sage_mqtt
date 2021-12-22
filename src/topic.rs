@@ -6,6 +6,8 @@ const LEVEL_SEPARATOR: char = '/';
 enum TopicLevel {
     Empty,
     Name(String),
+    Any,
+    MultipleAny,
 }
 
 /// A topic name a broker or client publishes to
@@ -32,6 +34,8 @@ impl fmt::Display for Topic {
                 .map(|l| match l {
                     TopicLevel::Empty => "",
                     TopicLevel::Name(s) => s.as_ref(),
+                    TopicLevel::Any => "+",
+                    TopicLevel::MultipleAny => "#",
                 })
                 .collect::<Vec<&str>>()
                 .join("/")
@@ -51,6 +55,27 @@ impl Topic {
                         TopicLevel::Empty
                     } else {
                         TopicLevel::Name(l.into())
+                    }
+                })
+                .collect(),
+        }
+    }
+
+    /// Builds a new topic has a name
+    pub fn filter(s: &str) -> Self {
+        Topic {
+            spec: s
+                .split(LEVEL_SEPARATOR)
+                .into_iter()
+                .map(|l| {
+                    if l.len() == 0 {
+                        TopicLevel::Empty
+                    } else {
+                        match l {
+                            "+" => TopicLevel::Any,
+                            "#" => TopicLevel::MultipleAny,
+                            _ => TopicLevel::Name(l.into()),
+                        }
                     }
                 })
                 .collect(),
@@ -84,21 +109,23 @@ mod unit {
         }
     }
 
+    use super::TopicLevel::*;
+
     topic_name_data! {
-        space:            (" ",               vec![TopicLevel::Name(String::from(" "))], ),
-        empty_1:          ("",                vec![TopicLevel::Empty ; 1], ),
-        empty_2:          ("/",               vec![TopicLevel::Empty ; 2], ),
-        empty_3:          ("//",              vec![TopicLevel::Empty ; 3], ),
-        single:           ("jaden",           vec![TopicLevel::Name(String::from("jaden"))], ),
-        single_head:      ("/jaden",          vec![TopicLevel::Empty, TopicLevel::Name(String::from("jaden"))], ),
-        single_tail:      ("jaden/",          vec![TopicLevel::Name(String::from("jaden")), TopicLevel::Empty], ),
-        single_wrapped:   ("/jaden/",         vec![TopicLevel::Empty, TopicLevel::Name(String::from("jaden")), TopicLevel::Empty], ),
-        multiple:         ("jaden/jarod",     vec![TopicLevel::Name(String::from("jaden")), TopicLevel::Name(String::from("jarod"))], ),
-        multiple_head:    ("/jaden/jarod",    vec![TopicLevel::Empty, TopicLevel::Name(String::from("jaden")), TopicLevel::Name(String::from("jarod"))], ),
-        multiple_tail:    ("jaden/jarod/",    vec![TopicLevel::Name(String::from("jaden")), TopicLevel::Name(String::from("jarod")), TopicLevel::Empty], ),
-        multiple_wrapped: ("/jaden/jarod/",   vec![TopicLevel::Empty, TopicLevel::Name(String::from("jaden")), TopicLevel::Name(String::from("jarod")), TopicLevel::Empty], ),
-        wildcard_plus:    ("+",               vec![TopicLevel::Name(String::from("+"))], ),
-        wildcard_pound:   ("#",               vec![TopicLevel::Name(String::from("#"))], ),
+        space:            (" ",               vec![Name(" ".into())], ),
+        empty_1:          ("",                vec![Empty ; 1], ),
+        empty_2:          ("/",               vec![Empty ; 2], ),
+        empty_3:          ("//",              vec![Empty ; 3], ),
+        single:           ("jaden",           vec![Name("jaden".into())], ),
+        single_head:      ("/jaden",          vec![Empty, Name("jaden".into())], ),
+        single_tail:      ("jaden/",          vec![Name("jaden".into()), Empty], ),
+        single_wrapped:   ("/jaden/",         vec![Empty, Name("jaden".into()), Empty], ),
+        multiple:         ("jaden/jarod",     vec![Name("jaden".into()), Name("jarod".into())], ),
+        multiple_head:    ("/jaden/jarod",    vec![Empty, Name("jaden".into()), Name("jarod".into())], ),
+        multiple_tail:    ("jaden/jarod/",    vec![Name("jaden".into()), Name("jarod".into()), Empty], ),
+        multiple_wrapped: ("/jaden/jarod/",   vec![Empty, Name("jaden".into()), Name("jarod".into()), Empty], ),
+        wildcard_plus:    ("+",               vec![Name("+".into())], ),
+        wildcard_pound:   ("#",               vec![Name("#".into())], ),
     }
 
     #[test]
