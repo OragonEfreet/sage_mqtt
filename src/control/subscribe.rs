@@ -76,7 +76,9 @@ impl SubscriptionOptions {
 
     async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
         let flags = codec::read_byte(reader).await?;
-        if flags & 0b1100_0000 > 0 {
+        if flags & 0b0000_0011 > 0 {
+            Err(MalformedPacket.into())
+        } else if flags & 0b1100_0000 > 0 {
             Err(ProtocolError.into())
         } else {
             Ok(SubscriptionOptions {
