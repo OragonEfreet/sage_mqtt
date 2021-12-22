@@ -368,7 +368,7 @@ impl Connect {
                 }
             }
             let reader = decoder.into_inner();
-            let topic = Topic::name(&codec::read_utf8_string(reader).await?);
+            let topic = Topic::from(codec::read_utf8_string(reader).await?);
             let message = codec::read_binary_data(reader).await?;
             (
                 reader,
@@ -476,7 +476,7 @@ mod unit {
             password: Some("Jaden".into()),
             will: Some(Will {
                 qos: QoS::AtLeastOnce,
-                ..Will::with_message(Topic::name("CloZee"), "Oregon")
+                ..Will::with_message(Topic::from("CloZee"), "Oregon")
             }),
             ..Default::default()
         }

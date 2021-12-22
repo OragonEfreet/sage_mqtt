@@ -169,8 +169,8 @@ impl<'a, R: AsyncRead + Unpin> PropertiesDecoder<R> {
             PropertyId::ContentType => Ok(Property::ContentType(
                 codec::read_utf8_string(reader).await?,
             )),
-            PropertyId::ResponseTopic => Ok(Property::ResponseTopic(Topic::name(
-                &codec::read_utf8_string(reader).await?,
+            PropertyId::ResponseTopic => Ok(Property::ResponseTopic(Topic::from(
+                codec::read_utf8_string(reader).await?,
             ))),
             PropertyId::CorrelationData => Ok(Property::CorrelationData(
                 codec::read_binary_data(reader).await?,

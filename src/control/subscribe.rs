@@ -158,7 +158,7 @@ impl Subscribe {
 
         while reader.limit() > 0 {
             subscriptions.push((
-                Topic::filter(&codec::read_utf8_string(&mut reader).await?),
+                Topic::from(codec::read_utf8_string(&mut reader).await?),
                 SubscriptionOptions::decode(&mut reader).await?,
             ));
         }
@@ -196,7 +196,7 @@ mod unit {
             user_properties: vec![("Mogwaï".into(), "Cat".into())],
             subscriptions: vec![
                 (
-                    Topic::filter("harder"),
+                    Topic::from("harder"),
                     SubscriptionOptions {
                         qos: QoS::AtLeastOnce,
                         no_local: false,
@@ -205,7 +205,7 @@ mod unit {
                     },
                 ),
                 (
-                    Topic::filter("better"),
+                    Topic::from("better"),
                     SubscriptionOptions {
                         qos: QoS::AtMostOnce,
                         no_local: true,
@@ -214,7 +214,7 @@ mod unit {
                     },
                 ),
                 (
-                    Topic::filter("faster"),
+                    Topic::from("faster"),
                     SubscriptionOptions {
                         qos: QoS::ExactlyOnce,
                         no_local: true,
@@ -223,7 +223,7 @@ mod unit {
                     },
                 ),
                 (
-                    Topic::filter("stronger"),
+                    Topic::from("stronger"),
                     SubscriptionOptions {
                         qos: QoS::AtLeastOnce,
                         no_local: false,

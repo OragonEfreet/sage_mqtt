@@ -43,26 +43,15 @@ impl fmt::Display for Topic {
     }
 }
 
-impl Topic {
-    /// Builds a new topic has a name
-    pub fn name(s: &str) -> Self {
-        Topic {
-            spec: s
-                .split(LEVEL_SEPARATOR)
-                .into_iter()
-                .map(|l| {
-                    if l.len() == 0 {
-                        TopicLevel::Empty
-                    } else {
-                        TopicLevel::Name(l.into())
-                    }
-                })
-                .collect(),
-        }
+impl From<String> for Topic {
+    fn from(s: String) -> Self {
+        Topic::from(s.as_ref())
     }
+}
 
+impl From<&str> for Topic {
     /// Builds a new topic has a name
-    pub fn filter(s: &str) -> Self {
+    fn from(s: &str) -> Self {
         Topic {
             spec: s
                 .split(LEVEL_SEPARATOR)
@@ -95,13 +84,13 @@ mod unit {
                     #[test]
                     fn from_string() {
                         let (input, spec) = $value;
-                        assert_eq!(Topic::name(input), Topic {spec});
+                        assert_eq!(Topic::from(input), Topic {spec});
                     }
 
                     #[test]
                     fn from_str_ref() {
                         let (input, spec) = $value;
-                        assert_eq!(Topic::name(input), Topic {spec});
+                        assert_eq!(Topic::from(input), Topic {spec});
                     }
 
                 }
@@ -124,8 +113,8 @@ mod unit {
         multiple_head:    ("/jaden/jarod",    vec![Empty, Name("jaden".into()), Name("jarod".into())], ),
         multiple_tail:    ("jaden/jarod/",    vec![Name("jaden".into()), Name("jarod".into()), Empty], ),
         multiple_wrapped: ("/jaden/jarod/",   vec![Empty, Name("jaden".into()), Name("jarod".into()), Empty], ),
-        wildcard_plus:    ("+",               vec![Name("+".into())], ),
-        wildcard_pound:   ("#",               vec![Name("#".into())], ),
+        wildcard_plus:    ("+",               vec![Any], ),
+        wildcard_pound:   ("#",               vec![MultipleAny], ),
     }
 
     #[test]

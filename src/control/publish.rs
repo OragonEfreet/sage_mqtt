@@ -152,7 +152,7 @@ impl Publish {
     ) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size);
 
-        let topic_name = Topic::name(&codec::read_utf8_string(&mut reader).await?);
+        let topic_name = Topic::from(codec::read_utf8_string(&mut reader).await?);
 
         let packet_identifier = if qos != QoS::AtMostOnce {
             Some(codec::read_two_byte_integer(&mut reader).await?)
@@ -228,12 +228,12 @@ mod unit {
             duplicate: false,
             qos: QoS::AtLeastOnce,
             retain: true,
-            topic_name: Topic::name("One More Time"),
+            topic_name: Topic::from("One More Time"),
             packet_identifier: Some(1337),
             payload_format_indicator: true,
             message_expiry_interval: Some(17),
             topic_alias: Some(451),
-            response_topic: Some(Topic::name("Smells Like Teen Spirit")),
+            response_topic: Some(Topic::from("Smells Like Teen Spirit")),
             correlation_data: Some(vec![0x0D, 0x15, 0xEA, 0x5E]),
             user_properties: vec![("Mogwaï".into(), "Cat".into())],
             subscription_identifiers: vec![34, 32, 10, 11],
