@@ -5,7 +5,7 @@ use std::marker::Unpin;
 use unicode_reader::CodePoints;
 
 /// Write the given string into `writer` according to UTF8 String type MQTT5 specifications
-/// which consists in a two bytes integer representing the string in bytes followed with
+/// which consists in a two bytes integer representing the string size in bytes followed with
 /// the string as bytes.
 /// In case of success returns the written size in bytes.
 pub async fn write_utf8_string<W: AsyncWrite + Unpin>(
