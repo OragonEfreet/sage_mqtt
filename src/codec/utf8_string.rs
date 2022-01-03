@@ -1,7 +1,7 @@
 use crate::{codec, ReasonCode::MalformedPacket, Result as SageResult};
-use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::io::Cursor;
 use std::marker::Unpin;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use unicode_reader::CodePoints;
 
 /// Write the given string into `writer` according to UTF8 String type MQTT5 specifications
@@ -62,43 +62,43 @@ mod unit {
 
     use super::*;
     use crate::{Error, ReasonCode};
-    use futures::io::Cursor as AsyncCursor;
+    use std::io::Cursor;
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode() {
         let mut result = Vec::new();
         assert_eq!(write_utf8_string("A𪛔", &mut result).await.unwrap(), 7);
         assert_eq!(result, vec![0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_empty() {
         let mut result = Vec::new();
         assert_eq!(write_utf8_string("", &mut result).await.unwrap(), 2);
         assert_eq!(result, vec![0x00, 0x00]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_empty() {
-        let mut test_stream = AsyncCursor::new([0x00, 0x00]);
+        let mut test_stream = Cursor::new([0x00, 0x00]);
         assert_eq!(
             read_utf8_string(&mut test_stream).await.unwrap(),
             String::default()
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode() {
-        let mut test_stream = AsyncCursor::new([0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
+        let mut test_stream = Cursor::new([0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
         assert_eq!(
             read_utf8_string(&mut test_stream).await.unwrap(),
             String::from("A𪛔")
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_eof() {
-        let mut test_stream = AsyncCursor::new([0x00, 0x05, 0x41]);
+        let mut test_stream = Cursor::new([0x00, 0x05, 0x41]);
         assert!(matches!(
             read_utf8_string(&mut test_stream).await,
             Err(Error::Reason(ReasonCode::MalformedPacket))

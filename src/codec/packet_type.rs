@@ -1,6 +1,6 @@
 use crate::{codec, PacketType, ReasonCode::MalformedPacket, Result as SageResult};
-use futures::io::{AsyncRead, AsyncWrite};
 use std::{convert::TryInto, marker::Unpin};
+use tokio::io::{AsyncRead, AsyncWrite};
 
 /// Write the given `PacketType` in one byte according to
 /// MQTT5 specifications.
@@ -73,11 +73,11 @@ pub async fn read_control_packet_type<R: AsyncRead + Unpin>(
 mod unit {
 
     use crate::{Error, ReasonCode};
-    use async_std::io::Cursor;
+    use std::io::Cursor;
 
     use super::*;
 
-    #[async_std::test]
+    #[tokio::test]
     async fn mqtt_2_1_3_1() {
         let reserved_flags_per_type = [
             (0b0001, 0b0000),

@@ -1,10 +1,10 @@
-use async_std::io::Cursor;
 use sage_mqtt::{
     Auth, ConnAck, Connect, Disconnect, Error, Packet, PubAck, PubComp, PubRec, PubRel, Publish,
     ReasonCode, SubAck, Subscribe, UnSubAck, UnSubscribe,
 };
+use std::io::Cursor;
 
-#[async_std::test]
+#[tokio::test]
 async fn default_connect() {
     let mut encoded = Vec::new();
     let send_packet: Packet = Connect::default().into();
@@ -25,7 +25,7 @@ async fn default_connect() {
     }
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn connect_with_default_auth() {
     let mut encoded = Vec::new();
     let send_packet: Packet = Connect {
@@ -56,7 +56,7 @@ async fn connect_with_default_auth() {
     }
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_connack() {
     let mut encoded = Vec::new();
     let send_packet: Packet = ConnAck::default().into();
@@ -77,7 +77,7 @@ async fn default_connack() {
     }
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_publish() {
     let mut encoded = Vec::new();
     let send_packet: Packet = Publish::default().into();
@@ -98,7 +98,7 @@ async fn default_publish() {
     }
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_puback() {
     let mut encoded = Vec::new();
     let send_packet: Packet = PubAck::default().into();
@@ -119,7 +119,7 @@ async fn default_puback() {
     }
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_pubrec() {
     let mut encoded = Vec::new();
     let send_packet: Packet = PubRec::default().into();
@@ -140,7 +140,7 @@ async fn default_pubrec() {
     }
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_pubrel() {
     let mut encoded = Vec::new();
     let send_packet: Packet = PubRel::default().into();
@@ -161,7 +161,7 @@ async fn default_pubrel() {
     }
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_pubcomp() {
     let mut encoded = Vec::new();
     let send_packet: Packet = PubComp::default().into();
@@ -182,7 +182,7 @@ async fn default_pubcomp() {
     }
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_subscribe() {
     let mut encoded = Vec::new();
     let send_packet: Packet = Subscribe::default().into();
@@ -200,7 +200,7 @@ async fn default_subscribe() {
     ));
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_suback() {
     let mut encoded = Vec::new();
     let send_packet: Packet = SubAck::default().into();
@@ -221,7 +221,7 @@ async fn default_suback() {
     }
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_unsubscribe() {
     let mut encoded = Vec::new();
     let send_packet: Packet = UnSubscribe::default().into();
@@ -239,7 +239,7 @@ async fn default_unsubscribe() {
     ));
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_unsuback() {
     let mut encoded = Vec::new();
     let send_packet: Packet = UnSubAck::default().into();
@@ -260,7 +260,7 @@ async fn default_unsuback() {
     }
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_pingreq() {
     let mut encoded = Vec::new();
     let send_size = Packet::PingReq
@@ -276,7 +276,7 @@ async fn default_pingreq() {
     assert!(matches!(receive_result, Packet::PingReq));
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_pingresp() {
     let mut encoded = Vec::new();
     let send_size = Packet::PingResp
@@ -292,7 +292,7 @@ async fn default_pingresp() {
     assert!(matches!(receive_result, Packet::PingResp));
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_disconnect() {
     let mut encoded = Vec::new();
     let send_packet: Packet = Disconnect::default().into();
@@ -313,7 +313,7 @@ async fn default_disconnect() {
     }
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn default_auth() {
     let mut encoded = Vec::new();
     let send_packet: Packet = Auth::default().into();

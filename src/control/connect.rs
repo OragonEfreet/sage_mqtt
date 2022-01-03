@@ -9,9 +9,8 @@ use crate::{
     ReasonCode::{ClientIdentifierNotValid, MalformedPacket, ProtocolError},
     Result as SageResult, Topic, Will,
 };
-use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
-use std::convert::TryInto;
-use std::marker::Unpin;
+use std::{convert::TryInto, marker::Unpin};
+use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 
 /// The `Connect` control packet is used to open a session. It is the first
 /// Packet a client must send to a server once the connection is established.
@@ -454,7 +453,7 @@ impl ConnectFlags {
 mod unit {
 
     use super::*;
-    use async_std::io::Cursor;
+    use std::io::Cursor;
 
     fn encoded() -> Vec<u8> {
         vec![
@@ -482,7 +481,7 @@ mod unit {
         }
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_default_auth() {
         let test_data = Connect {
             authentication: Some(Default::default()),
@@ -498,7 +497,7 @@ mod unit {
         assert_eq!(n_bytes, 16);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_default_auth() {
         let mut test_data = Cursor::new(vec![0, 4, 77, 81, 84, 84, 5, 0, 2, 88, 3, 21, 0, 0, 0, 0]);
         let tested_result = Connect::read(&mut test_data).await.unwrap();
@@ -511,7 +510,7 @@ mod unit {
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode() {
         let test_data = decoded();
         let mut tested_result = Vec::new();
@@ -521,7 +520,7 @@ mod unit {
         assert_eq!(n_bytes, 53);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode() {
         let mut test_data = Cursor::new(encoded());
         let tested_result = Connect::read(&mut test_data).await.unwrap();

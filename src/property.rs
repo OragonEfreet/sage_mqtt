@@ -11,9 +11,9 @@ use crate::{
     ReasonCode::{MalformedPacket, ProtocolError},
     Result as SageResult, Topic,
 };
-use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, Take};
 use std::collections::HashSet;
 use std::marker::Unpin;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, Take};
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]
 enum PropertyId {

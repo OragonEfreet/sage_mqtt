@@ -1,6 +1,6 @@
 use crate::{codec, QoS, ReasonCode::ProtocolError, Result as SageResult};
-use futures::io::{AsyncRead, AsyncWrite};
 use std::marker::Unpin;
+use tokio::io::{AsyncRead, AsyncWrite};
 
 /// Write the given `QoS` instance in one byte.
 /// In case of success, returns `1`.
@@ -21,11 +21,11 @@ pub async fn read_qos<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<QoS> {
 #[cfg(test)]
 mod unit {
 
-    use async_std::io::Cursor;
+    use std::io::Cursor;
 
     use super::*;
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode() {
         for (qos, byte) in &[
             (QoS::AtMostOnce, 0x00u8),
@@ -38,7 +38,7 @@ mod unit {
         }
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode() {
         for (qos, byte) in &[
             (QoS::AtMostOnce, 0x00u8),

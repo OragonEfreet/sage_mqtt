@@ -1,6 +1,6 @@
 use crate::Result as SageResult;
-use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 /// Write the given `u32` according to MQTT5 Four Byte Integer specifications.
 /// In case of success, returns `4`.
@@ -28,10 +28,9 @@ mod unit {
 
     use super::*;
     use crate::Error;
-    use async_std::io::Cursor;
-    use futures::io::ErrorKind;
+    use std::io::{Cursor, ErrorKind};
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode() {
         let mut result = Vec::new();
         assert_eq!(
@@ -43,7 +42,7 @@ mod unit {
         assert_eq!(result, vec![0x00, 0x03, 0x5B, 0x60]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode() {
         let mut test_stream = Cursor::new([0x00, 0x03, 0x5B, 0x60]);
         assert_eq!(
@@ -52,7 +51,7 @@ mod unit {
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_eof() {
         let mut test_stream = Cursor::new([0x07]);
         let result = read_four_byte_integer(&mut test_stream).await;

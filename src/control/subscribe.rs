@@ -3,11 +3,11 @@ use crate::{
     ReasonCode::{MalformedPacket, ProtocolError},
     Result as SageResult, Topic,
 };
-use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::{
     convert::{TryFrom, TryInto},
     marker::Unpin,
 };
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 /// This option specifies whether retained messages are sent when the
 /// subscription is established;
@@ -181,7 +181,7 @@ impl Subscribe {
 #[cfg(test)]
 mod unit {
     use super::*;
-    use async_std::io::Cursor;
+    use std::io::Cursor;
 
     fn encoded() -> Vec<u8> {
         vec![
@@ -253,7 +253,7 @@ mod unit {
         }
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode() {
         let test_data = decoded();
         let mut tested_result = Vec::new();
@@ -262,7 +262,7 @@ mod unit {
         assert_eq!(n_bytes, 59);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode() {
         let mut test_data = Cursor::new(encoded());
         let tested_result = Subscribe::read(&mut test_data, 59).await.unwrap();

@@ -1,6 +1,6 @@
 use crate::{ReasonCode::ProtocolError, Result as SageResult};
-use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 /// Write the given byte into `writer`.
 /// In case of success, returns `1`
@@ -44,10 +44,9 @@ mod unit {
 
     use super::*;
     use crate::Error;
-    use async_std::io::Cursor;
-    use futures::io::ErrorKind;
+    use std::io::{Cursor, ErrorKind};
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode() {
         let mut buffer = Vec::new();
         let result = write_byte(0b00101010, &mut buffer).await.unwrap();
@@ -55,14 +54,14 @@ mod unit {
         assert_eq!(buffer, vec![0x2A]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode() {
         let mut test_stream = Cursor::new([0xAF_u8]);
         let result = read_byte(&mut test_stream).await.unwrap();
         assert_eq!(result, 0xAF);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_eof() {
         let mut test_stream: Cursor<[u8; 0]> = Default::default();
         let result = read_byte(&mut test_stream).await;
@@ -73,7 +72,7 @@ mod unit {
         }
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_true() {
         let mut buffer = Vec::new();
         let result = write_bool(true, &mut buffer).await.unwrap();
@@ -81,7 +80,7 @@ mod unit {
         assert_eq!(buffer, vec![0x01]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_false() {
         let mut buffer = Vec::new();
         let result = write_bool(false, &mut buffer).await.unwrap();
@@ -89,14 +88,14 @@ mod unit {
         assert_eq!(buffer, vec![0x00]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_true() {
         let mut test_stream = Cursor::new([0x01_u8]);
         let result = read_bool(&mut test_stream).await.unwrap();
         assert_eq!(result, true);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_false() {
         let mut test_stream = Cursor::new([0x00_u8]);
         let result = read_bool(&mut test_stream).await.unwrap();

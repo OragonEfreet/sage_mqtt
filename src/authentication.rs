@@ -1,6 +1,6 @@
 use crate::{Property, Result as SageResult};
-use futures::io::AsyncWrite;
 use std::marker::Unpin;
+use tokio::io::AsyncWrite;
 
 /// By default, `Connect` packets provide optional `user_name` and `password`
 /// fields which can be used to provide basic authentication.
@@ -49,7 +49,7 @@ mod unit {
 
     use super::*;
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_empty() {
         let mut result = Vec::new();
         let test_data: Authentication = Default::default();
@@ -58,7 +58,7 @@ mod unit {
         assert_eq!(result, vec![0x15, 0x00, 0x00]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode() {
         let mut result = Vec::new();
         let test_data = Authentication {

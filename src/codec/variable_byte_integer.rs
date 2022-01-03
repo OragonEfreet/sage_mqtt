@@ -1,6 +1,6 @@
 use crate::{ReasonCode::MalformedPacket, Result as SageResult};
-use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 ///Write the given `u32` into `writer` according to MQTT5 Variable Byte Integer
 /// specifications, returning the number of bytes written (`1`, `2`, `3` or `4`)
@@ -53,15 +53,14 @@ mod unit {
 
     use super::*;
     use crate::Error;
-    use async_std::io::Cursor;
-    use futures::io::ErrorKind;
+    use std::io::{Cursor, ErrorKind};
 
     // The encoded value MUST use the minimum number of bytes necessary to
     // represent the value
     // Note: This test considers the fact that if VALUE_L and VALUE_R are
     // both encoded into N bytes, then all values between VALUE_L and VALUE_R
     // are encoded into N bytes as well. Meaning: we only check bounds.
-    #[async_std::test]
+    #[tokio::test]
     async fn mqtt_1_5_5_1() {
         let bounds = [
             [0u32, 12],
@@ -89,7 +88,7 @@ mod unit {
         }
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_one_lower_bound() {
         let mut result = Vec::new();
         assert_eq!(
@@ -101,7 +100,7 @@ mod unit {
         assert_eq!(result, vec![0x00]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_one_upper_bound() {
         let mut result = Vec::new();
         assert_eq!(
@@ -113,7 +112,7 @@ mod unit {
         assert_eq!(result, vec![0x7F]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_two_lower_bound() {
         let mut result = Vec::new();
         assert_eq!(
@@ -125,7 +124,7 @@ mod unit {
         assert_eq!(result, vec![0x80, 0x01]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_two_upper_bound() {
         let mut result = Vec::new();
         assert_eq!(
@@ -137,7 +136,7 @@ mod unit {
         assert_eq!(result, vec![0xFF, 0x7F]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_three_lower_bound() {
         let mut result = Vec::new();
         assert_eq!(
@@ -149,7 +148,7 @@ mod unit {
         assert_eq!(result, vec![0x80, 0x80, 0x01]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_three_upper_bound() {
         let mut result = Vec::new();
         assert_eq!(
@@ -161,7 +160,7 @@ mod unit {
         assert_eq!(result, vec![0xFF, 0xFF, 0x7F]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_four_lower_bound() {
         let mut result = Vec::new();
         assert_eq!(
@@ -173,7 +172,7 @@ mod unit {
         assert_eq!(result, vec![0x80, 0x80, 0x80, 0x01]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_four_upper_bound() {
         let mut result = Vec::new();
         assert_eq!(
@@ -185,7 +184,7 @@ mod unit {
         assert_eq!(result, vec![0xFF, 0xFF, 0xFF, 0x7F]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_one_lower_bound() {
         let mut test_stream = Cursor::new([0x00]);
         assert_eq!(
@@ -194,7 +193,7 @@ mod unit {
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_one_upper_bound() {
         let mut test_stream = Cursor::new([0x7F]);
         assert_eq!(
@@ -203,7 +202,7 @@ mod unit {
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_two_lower_bound() {
         let mut test_stream = Cursor::new([0x80, 0x01]);
         assert_eq!(
@@ -212,7 +211,7 @@ mod unit {
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_two_upper_bound() {
         let mut test_stream = Cursor::new([0xFF, 0x7F]);
         assert_eq!(
@@ -221,7 +220,7 @@ mod unit {
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_three_lower_bound() {
         let mut test_stream = Cursor::new([0x80, 0x80, 0x01]);
         assert_eq!(
@@ -230,7 +229,7 @@ mod unit {
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_three_upper_bound() {
         let mut test_stream = Cursor::new([0xFF, 0xFF, 0x7F]);
         assert_eq!(
@@ -239,7 +238,7 @@ mod unit {
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_four_lower_bound() {
         let mut test_stream = Cursor::new([0x80, 0x80, 0x80, 0x01]);
         assert_eq!(
@@ -248,7 +247,7 @@ mod unit {
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_four_upper_bound() {
         let mut test_stream = Cursor::new([0xFF, 0xFF, 0xFF, 0x7F]);
         assert_eq!(
@@ -257,7 +256,7 @@ mod unit {
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_eof() {
         let mut test_stream: Cursor<[u8; 0]> = Default::default();
         let result = read_variable_byte_integer(&mut test_stream).await;

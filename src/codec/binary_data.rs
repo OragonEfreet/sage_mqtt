@@ -1,8 +1,6 @@
 use crate::{codec, ReasonCode::MalformedPacket, Result as SageResult};
-use futures::io::{
-    AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, Error as IOError, ErrorKind,
-};
 use std::marker::Unpin;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, Error as IOError, ErrorKind};
 
 /// Write the given `data` into `writer` according to Binary Data type MQTT5 specifications
 /// which consists in a two bytes integer representing the data size in bytes followed with
@@ -46,9 +44,9 @@ mod unit {
 
     use super::*;
     use crate::{Error, ReasonCode};
-    use async_std::io::Cursor;
+    use std::io::Cursor;
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode() {
         let input = Vec::from("A𪛔".as_bytes());
         let mut result = Vec::new();
@@ -56,7 +54,7 @@ mod unit {
         assert_eq!(result, vec![0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode_empty() {
         let mut result = Vec::new();
         assert_eq!(
@@ -66,7 +64,7 @@ mod unit {
         assert_eq!(result, vec![0x00, 0x00]);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode() {
         let mut test_stream = Cursor::new([0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94]);
         assert_eq!(
@@ -75,7 +73,7 @@ mod unit {
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_empty() {
         let mut test_stream = Cursor::new([0x00, 0x00]);
         assert_eq!(
@@ -84,7 +82,7 @@ mod unit {
         );
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode_eof() {
         let mut test_stream = Cursor::new([0x00, 0x05, 0x41]);
         assert!(matches!(

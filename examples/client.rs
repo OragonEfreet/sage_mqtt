@@ -3,7 +3,7 @@ use std::net::TcpStream;
 
 use sage_mqtt::Packet;
 
-#[async_std::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> std::io::Result<()> {
     let mut stream = TcpStream::connect("127.0.0.1:7878")?;
 

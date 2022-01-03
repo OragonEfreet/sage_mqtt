@@ -3,8 +3,8 @@ use crate::{
     ReasonCode::{self, ProtocolError},
     Result as SageResult,
 };
-use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::{convert::TryInto, marker::Unpin};
+use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 
 /// A `Disconnect` packet can be sent by the client or the server to gracefully
 /// disconnect.
@@ -134,7 +134,7 @@ impl Disconnect {
 mod unit {
 
     use super::*;
-    use async_std::io::Cursor;
+    use std::io::Cursor;
 
     fn encoded() -> Vec<u8> {
         vec![
@@ -158,7 +158,7 @@ mod unit {
         }
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode() {
         let test_data = decoded();
         let mut tested_result = Vec::new();
@@ -167,7 +167,7 @@ mod unit {
         assert_eq!(n_bytes, 76);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode() {
         let mut test_data = Cursor::new(encoded());
         let tested_result = Disconnect::read(&mut test_data).await.unwrap();

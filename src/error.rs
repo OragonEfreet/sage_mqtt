@@ -1,8 +1,8 @@
 use crate::ReasonCode;
-use futures::io::Error as AsyncIOError;
 use std::{
     error::Error as StdError,
     fmt::{Display, Formatter, Result as FmtResult},
+    io::Error as IOError,
     result::Result as StdResult,
 };
 
@@ -13,7 +13,7 @@ pub type Result<T> = StdResult<T, Error>;
 #[derive(Debug)]
 pub enum Error {
     /// Standard Rust IO Error
-    Io(AsyncIOError),
+    Io(IOError),
 
     /// Error described using a MQTT Reason code
     Reason(ReasonCode),
@@ -37,8 +37,8 @@ impl StdError for Error {
     }
 }
 
-impl From<AsyncIOError> for Error {
-    fn from(err: AsyncIOError) -> Self {
+impl From<IOError> for Error {
+    fn from(err: IOError) -> Self {
         Error::Io(err)
     }
 }

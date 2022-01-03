@@ -1,6 +1,5 @@
 use crate::Error as SageError;
-use futures::io::ErrorKind;
-use std::convert::TryFrom;
+use std::{convert::TryFrom, io::ErrorKind};
 
 /// A `ReasonCode` is an identifier describing a response in any ackowledgement
 /// packet (such as `Connack` or `SubAck`)

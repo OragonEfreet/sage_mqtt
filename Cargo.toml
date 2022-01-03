@@ -13,8 +13,8 @@ categories = ["data-structures", "encoding"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-futures = "0.3.8"
 unicode_reader = "1.0.0"
+tokio = { version = "1.15.0", features = ["io-util"] }
 
 [dev-dependencies]
-async-std = {version="1.10.0",features = ["attributes"]}
+tokio = { version = "1.15.0", features = ["macros", "rt", "io-util"] }

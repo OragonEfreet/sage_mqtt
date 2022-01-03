@@ -1,6 +1,6 @@
 use crate::{codec, ReasonCode, Result as SageResult};
-use futures::io::AsyncWrite;
 use std::marker::Unpin;
+use tokio::io::AsyncWrite;
 
 ///Write the given `ReasonCode`in one byte, returning `1` in case of success.
 pub async fn write_reason_code<W: AsyncWrite + Unpin>(
@@ -63,7 +63,7 @@ mod unit {
 
     use super::*;
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode() {
         for (reason_code, byte) in vec![
             (ReasonCode::Success, 0x00_u8),

@@ -3,8 +3,8 @@ use crate::{
     PubRec, PubRel, Publish, ReasonCode::ProtocolError, Result as SageResult, SubAck, Subscribe,
     UnSubAck, UnSubscribe,
 };
-use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use std::{fmt, marker::Unpin};
+use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 
 #[derive(Debug)]
 struct FixedHeader {

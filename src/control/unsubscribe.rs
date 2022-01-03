@@ -1,6 +1,6 @@
 use crate::{codec, PropertiesDecoder, Property, ReasonCode::ProtocolError, Result as SageResult};
-use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 /// An `Unsubscribe` packet is sent from the client to unsubsribe to a topic.
 #[derive(Debug, PartialEq, Clone)]
@@ -83,7 +83,7 @@ impl UnSubscribe {
 #[cfg(test)]
 mod unit {
     use super::*;
-    use async_std::io::Cursor;
+    use std::io::Cursor;
 
     fn encoded() -> Vec<u8> {
         vec![
@@ -106,7 +106,7 @@ mod unit {
         }
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn encode() {
         let test_data = decoded();
         let mut tested_result = Vec::new();
@@ -115,7 +115,7 @@ mod unit {
         assert_eq!(n_bytes, 52);
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn decode() {
         let mut test_data = Cursor::new(encoded());
         let tested_result = UnSubscribe::read(&mut test_data, 52).await.unwrap();
