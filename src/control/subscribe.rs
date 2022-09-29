@@ -138,7 +138,7 @@ impl Subscribe {
     }
 
     pub(crate) async fn read<R: AsyncRead + Unpin>(
-        reader: &mut R,
+        reader: R,
         remaining_size: usize,
     ) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size as u64);

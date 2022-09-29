@@ -155,10 +155,10 @@ struct ConnectFlags {
 }
 
 impl Connect {
-    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
+    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, mut writer: W) -> SageResult<usize> {
         // Variable Header (into content)
-        let mut n_bytes = codec::write_utf8_string("MQTT", writer).await?;
-        n_bytes += codec::write_byte(0x05, writer).await?;
+        let mut n_bytes = codec::write_utf8_string("MQTT", &mut writer).await?;
+        n_bytes += codec::write_byte(0x05, &mut writer).await?;
 
         n_bytes += ConnectFlags {
             clean_start: self.clean_start,
@@ -176,10 +176,10 @@ impl Connect {
             user_name: self.user_name.is_some(),
             password: self.password.is_some(),
         }
-        .write(writer)
+        .write(&mut writer)
         .await?;
 
-        n_bytes += codec::write_two_byte_integer(self.keep_alive, writer).await?;
+        n_bytes += codec::write_two_byte_integer(self.keep_alive, &mut writer).await?;
 
         // Properties
         let mut properties = Vec::new();
@@ -213,7 +213,7 @@ impl Connect {
             n_bytes += authentication.write(&mut properties).await?;
         }
 
-        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, &mut writer).await?;
         writer.write_all(&properties).await?;
 
         // Payload
@@ -221,10 +221,10 @@ impl Connect {
             if client_id.len() > 23 || client_id.chars().any(|c| !('0'..='z').contains(&c)) {
                 return Err(MalformedPacket.into());
             }
-            n_bytes += codec::write_utf8_string(&client_id, writer).await?;
+            n_bytes += codec::write_utf8_string(&client_id, &mut writer).await?;
         } else {
             // Still write empty client id
-            n_bytes += codec::write_utf8_string("", writer).await?;
+            n_bytes += codec::write_utf8_string("", &mut writer).await?;
         }
 
         if let Some(w) = self.will {
@@ -256,40 +256,40 @@ impl Connect {
                 n_bytes += Property::UserProperty(k, v).encode(&mut properties).await?;
             }
 
-            n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
+            n_bytes += codec::write_variable_byte_integer(properties.len() as u32, &mut writer).await?;
             writer.write_all(&properties).await?;
 
-            n_bytes += codec::write_utf8_string(&w.topic.to_string(), writer).await?;
-            n_bytes += codec::write_binary_data(&w.message, writer).await?;
+            n_bytes += codec::write_utf8_string(&w.topic.to_string(), &mut writer).await?;
+            n_bytes += codec::write_binary_data(&w.message, &mut writer).await?;
         }
 
         if let Some(v) = self.user_name {
-            n_bytes += codec::write_utf8_string(&v, writer).await?;
+            n_bytes += codec::write_utf8_string(&v, &mut writer).await?;
         }
 
         if let Some(v) = self.password {
-            n_bytes += codec::write_binary_data(&v, writer).await?;
+            n_bytes += codec::write_binary_data(&v, &mut writer).await?;
         }
 
         Ok(n_bytes)
     }
 
-    pub(crate) async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
-        let protocol_name = codec::read_utf8_string(reader).await?;
+    pub(crate) async fn read<R: AsyncRead + Unpin>(mut reader: R) -> SageResult<Self> {
+        let protocol_name = codec::read_utf8_string(&mut reader).await?;
         if protocol_name != "MQTT" {
             return Err(MalformedPacket.into());
         }
 
-        let protocol_version = codec::read_byte(reader).await?;
+        let protocol_version = codec::read_byte(&mut reader).await?;
         if protocol_version != 0x05 {
             return Err(MalformedPacket.into());
         }
 
-        let flags = ConnectFlags::read(reader).await?;
+        let flags = ConnectFlags::read(&mut reader).await?;
 
         let clean_start = flags.clean_start;
 
-        let keep_alive = codec::read_two_byte_integer(reader).await?;
+        let keep_alive = codec::read_two_byte_integer(&mut reader).await?;
 
         let mut session_expiry_interval = None;
         let mut receive_maximum = DEFAULT_RECEIVE_MAXIMUM;
@@ -301,7 +301,7 @@ impl Connect {
         let mut authentication_method = None;
         let mut authentication_data = Default::default();
 
-        let mut decoder = PropertiesDecoder::take(reader).await?;
+        let mut decoder = PropertiesDecoder::take(&mut reader).await?;
 
         while decoder.has_properties() {
             match decoder.read().await? {

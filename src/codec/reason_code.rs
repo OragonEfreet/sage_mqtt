@@ -5,7 +5,7 @@ use tokio::io::AsyncWrite;
 ///Write the given `ReasonCode`in one byte, returning `1` in case of success.
 pub async fn write_reason_code<W: AsyncWrite + Unpin>(
     code: ReasonCode,
-    writer: &mut W,
+    writer: W,
 ) -> SageResult<usize> {
     codec::write_byte(
         match code {

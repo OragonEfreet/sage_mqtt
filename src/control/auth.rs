@@ -42,8 +42,8 @@ impl Default for Auth {
 }
 
 impl Auth {
-    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = codec::write_reason_code(self.reason_code, writer).await?;
+    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, mut writer: W) -> SageResult<usize> {
+        let mut n_bytes = codec::write_reason_code(self.reason_code, &mut writer).await?;
         let mut properties = Vec::new();
 
         n_bytes += self.authentication.write(&mut properties).await?;
@@ -54,17 +54,17 @@ impl Auth {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties).await?;
         }
 
-        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, &mut writer).await?;
         writer.write_all(&properties).await?;
 
         Ok(n_bytes)
     }
 
-    pub(crate) async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
-        let reason_code = ReasonCode::try_from(codec::read_byte(reader).await?)?;
+    pub(crate) async fn read<R: AsyncRead + Unpin>(mut reader: R) -> SageResult<Self> {
+        let reason_code = ReasonCode::try_from(codec::read_byte(&mut reader).await?)?;
 
         let mut user_properties = Vec::new();
-        let mut properties = PropertiesDecoder::take(reader).await?;
+        let mut properties = PropertiesDecoder::take(&mut reader).await?;
         let mut reason_string = None;
         let mut authentication_method = None;
         let mut authentication_data = Default::default();

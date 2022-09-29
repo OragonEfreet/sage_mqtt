@@ -7,7 +7,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 /// In case of success, returns `1`.
 pub async fn write_control_packet_type<W: AsyncWrite + Unpin>(
     cpt: PacketType,
-    writer: &mut W,
+    writer: W,
 ) -> SageResult<usize> {
     codec::write_byte(
         match cpt {
@@ -40,7 +40,7 @@ pub async fn write_control_packet_type<W: AsyncWrite + Unpin>(
 /// Read the given `reader` for a `PacketType`.
 /// In case of success, returns a `PacketType` instance.
 pub async fn read_control_packet_type<R: AsyncRead + Unpin>(
-    reader: &mut R,
+    reader: R,
 ) -> SageResult<PacketType> {
     let packet_type = codec::read_byte(reader).await?;
     let packet_type = match (packet_type >> 4, packet_type & 0b0000_1111) {

@@ -144,7 +144,7 @@ impl Publish {
     }
 
     pub(crate) async fn read<R: AsyncRead + Unpin>(
-        reader: &mut R,
+        reader: R,
         duplicate: bool,
         qos: QoS,
         retain: bool,

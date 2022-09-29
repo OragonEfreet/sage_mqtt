@@ -127,9 +127,9 @@ impl Default for ConnAck {
 }
 
 impl ConnAck {
-    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = codec::write_bool(self.session_present, writer).await?;
-        n_bytes += codec::write_reason_code(self.reason_code, writer).await?;
+    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, mut writer: W) -> SageResult<usize> {
+        let mut n_bytes = codec::write_bool(self.session_present, &mut writer).await?;
+        n_bytes += codec::write_reason_code(self.reason_code, &mut writer).await?;
 
         let mut properties = Vec::new();
 
@@ -200,16 +200,16 @@ impl ConnAck {
             }
         }
 
-        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, &mut writer).await?;
         writer.write_all(&properties).await?;
 
         Ok(n_bytes)
     }
 
-    pub(crate) async fn read<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
-        let session_present = codec::read_bool(reader).await?;
+    pub(crate) async fn read<R: AsyncRead + Unpin>(mut reader: R) -> SageResult<Self> {
+        let session_present = codec::read_bool(&mut reader).await?;
 
-        let reason_code = codec::read_byte(reader).await?.try_into()?;
+        let reason_code = codec::read_byte(&mut reader).await?.try_into()?;
 
         let mut session_expiry_interval = None;
         let mut receive_maximum = DEFAULT_RECEIVE_MAXIMUM;
