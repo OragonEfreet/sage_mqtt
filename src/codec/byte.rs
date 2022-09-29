@@ -4,7 +4,7 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 /// Write the given byte into `writer`.
 /// In case of success, returns `1`
-pub async fn write_byte<W: AsyncWrite + Unpin>(byte: u8, writer: &mut W) -> SageResult<usize> {
+pub async fn write_byte<W: AsyncWrite + Unpin>(byte: u8, mut writer: W) -> SageResult<usize> {
     Ok(writer.write(&[byte]).await?)
 }
 
@@ -13,13 +13,13 @@ pub async fn write_byte<W: AsyncWrite + Unpin>(byte: u8, writer: &mut W) -> Sage
 /// with a byte being `0x00` for `false` or `0x01` for `false`. Other values are
 /// considered incorrect.
 /// In case of success, returns `1`
-pub async fn write_bool<W: AsyncWrite + Unpin>(data: bool, writer: &mut W) -> SageResult<usize> {
+pub async fn write_bool<W: AsyncWrite + Unpin>(data: bool, mut writer: W) -> SageResult<usize> {
     Ok(writer.write(&[data as u8]).await?)
 }
 
 /// Read the given `reader` for a byte value.
 /// In case of success, returns an `u8`
-pub async fn read_byte<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<u8> {
+pub async fn read_byte<R: AsyncRead + Unpin>(mut reader: R) -> SageResult<u8> {
     let mut buf = [0u8; 1];
     reader.read_exact(&mut buf).await?;
     Ok(buf[0])
@@ -30,7 +30,7 @@ pub async fn read_byte<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<u8> {
 /// with a byte being `0x00` for `false` or `0x01` for `false`. Other values are
 /// considered incorrect.
 /// In case of success, returns an `bool`
-pub async fn read_bool<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<bool> {
+pub async fn read_bool<R: AsyncRead + Unpin>(reader: R) -> SageResult<bool> {
     let byte = read_byte(reader).await?;
     match byte {
         0 => Ok(false),

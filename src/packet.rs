@@ -13,15 +13,15 @@ struct FixedHeader {
 }
 
 impl FixedHeader {
-    async fn encode<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n = codec::write_control_packet_type(self.packet_type, writer).await?;
-        n += codec::write_variable_byte_integer(self.remaining_size as u32, writer).await?;
+    async fn encode<W: AsyncWrite + Unpin>(self, mut writer: W) -> SageResult<usize> {
+        let mut n = codec::write_control_packet_type(self.packet_type, &mut writer).await?;
+        n += codec::write_variable_byte_integer(self.remaining_size as u32, &mut writer).await?;
         Ok(n)
     }
 
-    async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
-        let packet_type = codec::read_control_packet_type(reader).await?;
-        let remaining_size = codec::read_variable_byte_integer(reader).await? as usize;
+    async fn decode<R: AsyncRead + Unpin>(mut reader: R) -> SageResult<Self> {
+        let packet_type = codec::read_control_packet_type(&mut reader).await?;
+        let remaining_size = codec::read_variable_byte_integer(&mut reader).await? as usize;
         Ok(FixedHeader {
             packet_type,
             remaining_size,
@@ -264,8 +264,8 @@ impl Packet {
     /// Read a control packet from `reader`, returning a new `Packet`.
     /// In case of failure, the operation will return any MQTT-related error, or
     /// `std::io::Error`.
-    pub async fn decode<R: AsyncRead + Unpin>(reader: &mut R) -> SageResult<Self> {
-        let fixed_header = FixedHeader::decode(reader).await?;
+    pub async fn decode<R: AsyncRead + Unpin>(mut reader: R) -> SageResult<Self> {
+        let fixed_header = FixedHeader::decode(&mut reader).await?;
 
         let packet = match fixed_header.packet_type {
             PacketType::Connect => Packet::Connect(Connect::read(reader).await?),

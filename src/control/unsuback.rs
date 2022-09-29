@@ -37,8 +37,8 @@ impl Default for UnSubAck {
 }
 
 impl UnSubAck {
-    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
+    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, mut writer: W) -> SageResult<usize> {
+        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, &mut writer).await?;
 
         let mut properties = Vec::new();
 
@@ -51,18 +51,18 @@ impl UnSubAck {
             n_bytes += Property::UserProperty(k, v).encode(&mut properties).await?;
         }
 
-        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
+        n_bytes += codec::write_variable_byte_integer(properties.len() as u32, &mut writer).await?;
         writer.write_all(&properties).await?;
 
         for reason_code in self.reason_codes {
-            n_bytes += codec::write_reason_code(reason_code, writer).await?;
+            n_bytes += codec::write_reason_code(reason_code, &mut writer).await?;
         }
 
         Ok(n_bytes)
     }
 
     pub(crate) async fn read<R: AsyncRead + Unpin>(
-        reader: &mut R,
+        reader: R,
         remaining_size: usize,
     ) -> SageResult<Self> {
         let mut reader = reader.take(remaining_size as u64);

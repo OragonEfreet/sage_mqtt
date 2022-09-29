@@ -45,8 +45,8 @@ impl Default for PubAck {
 }
 
 impl PubAck {
-    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, writer: &mut W) -> SageResult<usize> {
-        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, writer).await?;
+    pub(crate) async fn write<W: AsyncWrite + Unpin>(self, mut writer: W) -> SageResult<usize> {
+        let mut n_bytes = codec::write_two_byte_integer(self.packet_identifier, &mut writer).await?;
 
         let mut properties = Vec::new();
 
@@ -60,18 +60,18 @@ impl PubAck {
         if n_bytes == 2 && self.reason_code != ReasonCode::Success {
             Ok(2)
         } else {
-            n_bytes += codec::write_reason_code(self.reason_code, writer).await?;
-            n_bytes += codec::write_variable_byte_integer(properties.len() as u32, writer).await?;
+            n_bytes += codec::write_reason_code(self.reason_code, &mut writer).await?;
+            n_bytes += codec::write_variable_byte_integer(properties.len() as u32, &mut writer).await?;
             writer.write_all(&properties).await?;
             Ok(n_bytes)
         }
     }
 
     pub(crate) async fn read<R: AsyncRead + Unpin>(
-        reader: &mut R,
+        mut reader: R,
         shortened: bool,
     ) -> SageResult<Self> {
-        let packet_identifier = codec::read_two_byte_integer(reader).await?;
+        let packet_identifier = codec::read_two_byte_integer(&mut reader).await?;
 
         let mut puback = PubAck {
             packet_identifier,
@@ -81,9 +81,9 @@ impl PubAck {
         if shortened {
             puback.reason_code = ReasonCode::Success;
         } else {
-            puback.reason_code = codec::read_byte(reader).await?.try_into()?;
+            puback.reason_code = codec::read_byte(&mut reader).await?.try_into()?;
 
-            let mut properties = PropertiesDecoder::take(reader).await?;
+            let mut properties = PropertiesDecoder::take(&mut reader).await?;
             while properties.has_properties() {
                 match properties.read().await? {
                     Property::ReasonString(v) => puback.reason_string = Some(v),
